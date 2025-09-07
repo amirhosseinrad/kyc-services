@@ -1,0 +1,23 @@
+package ir.ipaam.kycservices.infrastructure.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+
+import java.time.LocalDateTime;
+
+@Entity
+public class KycProcessInstance {
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String camundaInstanceId;
+    private String status; // ACTIVE, COMPLETED, REJECTED
+    private LocalDateTime startedAt;
+    private LocalDateTime completedAt;
+
+    @ManyToOne
+    private Customer customer;
+}
