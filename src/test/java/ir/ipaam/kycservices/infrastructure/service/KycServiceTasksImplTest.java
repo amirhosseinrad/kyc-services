@@ -31,5 +31,10 @@ class KycServiceTasksImplTest {
         assertThrows(IllegalArgumentException.class,
                 () -> tasks.validateNationalCodeChecksum("123456789", "proc4"));
     }
+
+    @Test
+    void checkKycStatusDefaultsToUnknown() {
+        assertEquals("UNKNOWN", tasks.checkKycStatus("0024683416"));
+    }
 }
 
