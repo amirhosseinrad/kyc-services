@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.application.api;
 
+import ir.ipaam.kycservices.application.api.controller.KycController;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
