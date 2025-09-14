@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.workflow;
+package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
