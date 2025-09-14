@@ -8,6 +8,7 @@ import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
 import org.axonframework.queryhandling.SubscriptionQueryResult;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import java.util.Map;
 
 @Component
@@ -25,11 +26,11 @@ public class CheckKycStatusWorker {
                 ResponseTypes.instanceOf(String.class),
                 ResponseTypes.instanceOf(String.class));
         try {
-            String initial = result.initialResult().join();
+            String initial = result.initialResult().block();
             if (!"UNKNOWN".equals(initial)) {
                 return Map.of("kycStatus", initial);
             }
-            String update = result.updates()
+            String update = Flux.from(result.updates())
                     .filter(status -> !"UNKNOWN".equals(status))
                     .blockFirst();
             return Map.of("kycStatus", update);
