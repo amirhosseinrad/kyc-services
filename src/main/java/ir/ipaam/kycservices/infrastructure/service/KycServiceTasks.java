@@ -17,10 +17,9 @@ public interface KycServiceTasks {
 
     void callShahkarService(String nationalCode, String mobile, String processInstanceId);
 
-    // Customer History
-    void checkCustomerHistory(String nationalCode, String processInstanceId);
-
     // KYC Status
+    String checkKycStatus(String nationalCode);
+
     void updateKycStatus(String processInstanceId, String status);
 
     // Logging & Retry
