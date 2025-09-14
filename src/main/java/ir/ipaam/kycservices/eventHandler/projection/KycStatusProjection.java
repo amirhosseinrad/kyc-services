@@ -1,9 +1,9 @@
-package ir.ipaam.kycservices.domain;
+package ir.ipaam.kycservices.eventHandler.projection;
 
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
-import ir.ipaam.kycservices.infrastructure.model.KycStatusView;
+import ir.ipaam.kycservices.domain.model.entity.KycStatusView;
 import ir.ipaam.kycservices.infrastructure.repository.KycStatusViewRepository;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.eventhandling.EventHandler;

@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.infrastructure.model;
+package ir.ipaam.kycservices.domain.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

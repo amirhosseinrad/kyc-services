@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.domain;
+package ir.ipaam.kycservices.domain.model.aggregate;
 
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;

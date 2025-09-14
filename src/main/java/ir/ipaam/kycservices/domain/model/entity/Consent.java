@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.infrastructure.model;
+package ir.ipaam.kycservices.domain.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -8,7 +8,7 @@ import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
 
 @Entity
-public class OtpVerification {
+public class Consent {
     @Id
     @GeneratedValue
     private Long id;
@@ -16,9 +16,7 @@ public class OtpVerification {
     @ManyToOne
     private KycProcessInstance process;
 
-    private String mobile;
-    private String otpCode;
-    private LocalDateTime sentAt;
-    private LocalDateTime verifiedAt;
-    private boolean success;
+    private boolean accepted;
+    private LocalDateTime acceptedAt;
+    private String termsVersion;
 }

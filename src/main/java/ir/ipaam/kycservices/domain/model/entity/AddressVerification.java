@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.infrastructure.model;
+package ir.ipaam.kycservices.domain.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -6,15 +6,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 
 @Entity
-public class OcrResult {
+public class AddressVerification {
     @Id
     @GeneratedValue
     private Long id;
 
     @ManyToOne
-    private Document document;
+    private KycProcessInstance process;
 
-    private String extractedText;
-    private boolean matchedWithProvidedData;
-    private double confidenceScore;
+    private String address;
+    private String zipCode;
+    private boolean zipValid;
 }

@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.infrastructure.model;
+package ir.ipaam.kycservices.domain.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -6,7 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 
 @Entity
-public class SimVerification {
+public class CredentialSetup {
     @Id
     @GeneratedValue
     private Long id;
@@ -14,8 +14,6 @@ public class SimVerification {
     @ManyToOne
     private KycProcessInstance process;
 
-    private String mobile;
-    private boolean matchedWithNationalCode;
-    private int retryCount;
-    private String status; // SUCCESS, FAILED, TIMEOUT
+    private String passwordHash;
+    private String fingerprintHash;
 }

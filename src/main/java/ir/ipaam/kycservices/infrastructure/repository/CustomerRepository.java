@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.repository;
 
-import ir.ipaam.kycservices.infrastructure.model.Customer;
+import ir.ipaam.kycservices.domain.model.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
