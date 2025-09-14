@@ -1,10 +1,12 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
-import ir.ipaam.kycservices.infrastructure.model.KycProcessInstance;
-import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
-import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
+import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import lombok.RequiredArgsConstructor;
+import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.axonframework.messaging.responsetypes.ResponseTypes;
+import org.axonframework.queryhandling.QueryGateway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,8 +17,8 @@ public class KycServiceTasksImpl implements KycServiceTasks {
 
     private static final Logger log = LoggerFactory.getLogger(KycServiceTasksImpl.class);
 
-    private final CustomerRepository customerRepository;
-    private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final CommandGateway commandGateway;
+    private final QueryGateway queryGateway;
 
     @Override
     public void validateNationalCodeChecksum(String nationalCode, String processInstanceId) {
@@ -73,19 +75,26 @@ public class KycServiceTasksImpl implements KycServiceTasks {
 
     @Override
     public String checkKycStatus(String nationalCode) {
-        if (customerRepository == null || kycProcessInstanceRepository == null) {
-            log.warn("Repositories not initialized, returning UNKNOWN status");
+        if (queryGateway == null) {
+            log.warn("QueryGateway not initialized, returning UNKNOWN status");
             return "UNKNOWN";
         }
-        return kycProcessInstanceRepository
-                .findTopByCustomer_NationalCodeOrderByStartedAtDesc(nationalCode)
-                .map(KycProcessInstance::getStatus)
-                .orElse("UNKNOWN");
+        try {
+            return queryGateway.query(new FindKycStatusQuery(nationalCode),
+                    ResponseTypes.instanceOf(String.class)).join();
+        } catch (Exception e) {
+            log.error("Failed to query KYC status", e);
+            return "UNKNOWN";
+        }
     }
 
     @Override
     public void updateKycStatus(String processInstanceId, String status) {
-        // TODO: implement integration
+        if (commandGateway == null) {
+            log.warn("CommandGateway not initialized, skipping status update");
+            return;
+        }
+        commandGateway.send(new UpdateKycStatusCommand(processInstanceId, status));
     }
 
     @Override
