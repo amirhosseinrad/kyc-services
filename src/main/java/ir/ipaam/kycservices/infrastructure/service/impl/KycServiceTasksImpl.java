@@ -1,5 +1,8 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
+import ir.ipaam.kycservices.infrastructure.model.KycProcessInstance;
+import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +12,20 @@ import org.springframework.stereotype.Service;
 public class KycServiceTasksImpl implements KycServiceTasks {
 
     private static final Logger log = LoggerFactory.getLogger(KycServiceTasksImpl.class);
+
+    private final CustomerRepository customerRepository;
+    private final KycProcessInstanceRepository kycProcessInstanceRepository;
+
+    public KycServiceTasksImpl(CustomerRepository customerRepository,
+                               KycProcessInstanceRepository kycProcessInstanceRepository) {
+        this.customerRepository = customerRepository;
+        this.kycProcessInstanceRepository = kycProcessInstanceRepository;
+    }
+
+    public KycServiceTasksImpl() {
+        this.customerRepository = null;
+        this.kycProcessInstanceRepository = null;
+    }
 
     @Override
     public void validateNationalCodeChecksum(String nationalCode, String processInstanceId) {
@@ -64,8 +81,15 @@ public class KycServiceTasksImpl implements KycServiceTasks {
     }
 
     @Override
-    public void checkCustomerHistory(String nationalCode, String processInstanceId) {
-        // TODO: implement integration
+    public String checkKycStatus(String nationalCode) {
+        if (customerRepository == null || kycProcessInstanceRepository == null) {
+            log.warn("Repositories not initialized, returning UNKNOWN status");
+            return "UNKNOWN";
+        }
+        return kycProcessInstanceRepository
+                .findTopByCustomer_NationalCodeOrderByStartedAtDesc(nationalCode)
+                .map(KycProcessInstance::getStatus)
+                .orElse("UNKNOWN");
     }
 
     @Override
