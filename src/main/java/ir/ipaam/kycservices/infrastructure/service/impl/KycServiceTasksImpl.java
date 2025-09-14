@@ -4,28 +4,19 @@ import ir.ipaam.kycservices.infrastructure.model.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class KycServiceTasksImpl implements KycServiceTasks {
 
     private static final Logger log = LoggerFactory.getLogger(KycServiceTasksImpl.class);
 
     private final CustomerRepository customerRepository;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
-
-    public KycServiceTasksImpl(CustomerRepository customerRepository,
-                               KycProcessInstanceRepository kycProcessInstanceRepository) {
-        this.customerRepository = customerRepository;
-        this.kycProcessInstanceRepository = kycProcessInstanceRepository;
-    }
-
-    public KycServiceTasksImpl() {
-        this.customerRepository = null;
-        this.kycProcessInstanceRepository = null;
-    }
 
     @Override
     public void validateNationalCodeChecksum(String nationalCode, String processInstanceId) {
