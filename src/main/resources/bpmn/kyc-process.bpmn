@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_02m23tv" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.10.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.15.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_02m23tv" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.10.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.15.0">
   <bpmn:process id="kyc-process" name="kyc-process" isExecutable="true">
     <bpmn:task id="check-kyc-status" name="check-kyc-status">
-      <bpmn:incoming>Flow_0hlzwoj</bpmn:incoming>
+      <bpmn:incoming>Flow_0mkvv15</bpmn:incoming>
       <bpmn:outgoing>Flow_0dmbp43</bpmn:outgoing>
     </bpmn:task>
     <bpmn:task id="Activity_1lbjv3o" name="upload front and back of  card with back number">
       <bpmn:incoming>Flow_0ayjnrf</bpmn:incoming>
-      <bpmn:incoming>Flow_0yv09ix</bpmn:incoming>
       <bpmn:outgoing>Flow_1gyum9g</bpmn:outgoing>
     </bpmn:task>
     <bpmn:task id="Activity_0c3vph7" name="OCR extraction of text">
@@ -32,9 +31,11 @@
     </bpmn:exclusiveGateway>
     <bpmn:task id="Activity_14yb00p" name="notification">
       <bpmn:incoming>Flow_08qkrgn</bpmn:incoming>
-      <bpmn:outgoing>Flow_0yv09ix</bpmn:outgoing>
+      <bpmn:outgoing>Flow_16i0xj4</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_08qkrgn" sourceRef="Gateway_039mf43" targetRef="Activity_14yb00p" />
+    <bpmn:sequenceFlow id="Flow_08qkrgn" sourceRef="Gateway_039mf43" targetRef="Activity_14yb00p">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(match)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:task id="Activity_10347zg" name="update counter and log fail and retry">
       <bpmn:incoming>Flow_0hl5zl8</bpmn:incoming>
       <bpmn:outgoing>Flow_1elia8p</bpmn:outgoing>
@@ -52,15 +53,18 @@
       <bpmn:outgoing>Flow_0prl3kq</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_0jhb3l4" sourceRef="Activity_0phc2h9" targetRef="Gateway_0evrolw" />
-    <bpmn:sequenceFlow id="Flow_0ayjnrf" sourceRef="Gateway_0evrolw" targetRef="Activity_1lbjv3o" />
+    <bpmn:sequenceFlow id="Flow_0ayjnrf" sourceRef="Gateway_0evrolw" targetRef="Activity_1lbjv3o">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=card</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:task id="Activity_0qyvwow" name="store data">
       <bpmn:incoming>Flow_0qttu2i</bpmn:incoming>
       <bpmn:outgoing>Flow_0r7tnc6</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_0qttu2i" sourceRef="Gateway_039mf43" targetRef="Activity_0qyvwow" />
+    <bpmn:sequenceFlow id="Flow_0qttu2i" sourceRef="Gateway_039mf43" targetRef="Activity_0qyvwow">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=match</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:task id="Activity_1ox6x3w" name="collect: Zip-Code and address">
       <bpmn:incoming>Flow_0r7tnc6</bpmn:incoming>
-      <bpmn:incoming>Flow_0aem4sx</bpmn:incoming>
       <bpmn:outgoing>Flow_1qr1csz</bpmn:outgoing>
     </bpmn:task>
     <bpmn:sequenceFlow id="Flow_0r7tnc6" sourceRef="Activity_0qyvwow" targetRef="Activity_1ox6x3w" />
@@ -79,13 +83,16 @@
       <bpmn:incoming>Flow_0roeltn</bpmn:incoming>
       <bpmn:outgoing>Flow_03g3dw4</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_0roeltn" sourceRef="Gateway_1gctxw2" targetRef="Activity_1emgltl" />
+    <bpmn:sequenceFlow id="Flow_0roeltn" sourceRef="Gateway_1gctxw2" targetRef="Activity_1emgltl">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=valid</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:task id="Activity_070byyo" name="notification">
       <bpmn:incoming>Flow_0v4jsue</bpmn:incoming>
-      <bpmn:outgoing>Flow_0aem4sx</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0bsxg6p</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_0v4jsue" sourceRef="Gateway_1gctxw2" targetRef="Activity_070byyo" />
-    <bpmn:sequenceFlow id="Flow_0aem4sx" sourceRef="Activity_070byyo" targetRef="Activity_1ox6x3w" />
+    <bpmn:sequenceFlow id="Flow_0v4jsue" sourceRef="Gateway_1gctxw2" targetRef="Activity_070byyo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(valid)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:task id="Activity_1ou5oet" name="upload signature">
       <bpmn:incoming>Flow_03g3dw4</bpmn:incoming>
       <bpmn:outgoing>Flow_1te1f82</bpmn:outgoing>
@@ -94,12 +101,13 @@
     <bpmn:intermediateThrowEvent id="Event_0m1cck6">
       <bpmn:incoming>Flow_1180tca</bpmn:incoming>
     </bpmn:intermediateThrowEvent>
-    <bpmn:sequenceFlow id="Flow_0yv09ix" sourceRef="Activity_14yb00p" targetRef="Activity_1lbjv3o" />
     <bpmn:task id="Activity_0h6mzvy" name="store tracking number for new Card">
       <bpmn:incoming>Flow_0prl3kq</bpmn:incoming>
       <bpmn:outgoing>Flow_0hiwvch</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_0prl3kq" sourceRef="Gateway_0evrolw" targetRef="Activity_0h6mzvy" />
+    <bpmn:sequenceFlow id="Flow_0prl3kq" sourceRef="Gateway_0evrolw" targetRef="Activity_0h6mzvy">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(card)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:task id="Activity_0ub0wqi" name="save personal photo and live face video">
       <bpmn:incoming>Flow_0hiwvch</bpmn:incoming>
       <bpmn:outgoing>Flow_1q4axgf</bpmn:outgoing>
@@ -123,10 +131,18 @@
     </bpmn:task>
     <bpmn:sequenceFlow id="Flow_1te1f82" sourceRef="Activity_1ou5oet" targetRef="Activity_0us5yta" />
     <bpmn:sequenceFlow id="Flow_1180tca" sourceRef="Activity_0us5yta" targetRef="Event_0m1cck6" />
-    <bpmn:intermediateThrowEvent id="Event_0xuj3t4">
-      <bpmn:outgoing>Flow_0hlzwoj</bpmn:outgoing>
+    <bpmn:startEvent id="Event_114ocnc">
+      <bpmn:outgoing>Flow_0mkvv15</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0mkvv15" sourceRef="Event_114ocnc" targetRef="check-kyc-status" />
+    <bpmn:intermediateThrowEvent id="Event_0j0ru6j">
+      <bpmn:incoming>Flow_16i0xj4</bpmn:incoming>
     </bpmn:intermediateThrowEvent>
-    <bpmn:sequenceFlow id="Flow_0hlzwoj" sourceRef="Event_0xuj3t4" targetRef="check-kyc-status" />
+    <bpmn:sequenceFlow id="Flow_16i0xj4" sourceRef="Activity_14yb00p" targetRef="Event_0j0ru6j" />
+    <bpmn:intermediateThrowEvent id="Event_1oraag3">
+      <bpmn:incoming>Flow_0bsxg6p</bpmn:incoming>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="Flow_0bsxg6p" sourceRef="Activity_070byyo" targetRef="Event_1oraag3" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_kyc-process">
     <bpmndi:BPMNPlane id="BPMNPlane_kyc-process" bpmnElement="kyc-process">
@@ -227,8 +243,14 @@
         <dc:Bounds x="2270" y="230" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0xuj3t4_di" bpmnElement="Event_0xuj3t4">
-        <dc:Bounds x="-298" y="252" width="36" height="36" />
+      <bpmndi:BPMNShape id="Event_114ocnc_di" bpmnElement="Event_114ocnc">
+        <dc:Bounds x="-288" y="252" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0j0ru6j_di" bpmnElement="Event_0j0ru6j">
+        <dc:Bounds x="1272" y="112" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1oraag3_di" bpmnElement="Event_1oraag3">
+        <dc:Bounds x="1912" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0noqqub_di" bpmnElement="Flow_0noqqub">
         <di:waypoint x="650" y="270" />
@@ -286,19 +308,9 @@
         <di:waypoint x="1800" y="245" />
         <di:waypoint x="1800" y="160" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0aem4sx_di" bpmnElement="Flow_0aem4sx">
-        <di:waypoint x="1750" y="120" />
-        <di:waypoint x="1460" y="120" />
-        <di:waypoint x="1460" y="230" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_03g3dw4_di" bpmnElement="Flow_03g3dw4">
         <di:waypoint x="2010" y="270" />
         <di:waypoint x="2100" y="270" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0yv09ix_di" bpmnElement="Flow_0yv09ix">
-        <di:waypoint x="1110" y="130" />
-        <di:waypoint x="310" y="130" />
-        <di:waypoint x="310" y="230" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0prl3kq_di" bpmnElement="Flow_0prl3kq">
         <di:waypoint x="200" y="295" />
@@ -333,9 +345,17 @@
         <di:waypoint x="2370" y="270" />
         <di:waypoint x="2452" y="270" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0hlzwoj_di" bpmnElement="Flow_0hlzwoj">
-        <di:waypoint x="-262" y="270" />
+      <bpmndi:BPMNEdge id="Flow_0mkvv15_di" bpmnElement="Flow_0mkvv15">
+        <di:waypoint x="-252" y="270" />
         <di:waypoint x="-150" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16i0xj4_di" bpmnElement="Flow_16i0xj4">
+        <di:waypoint x="1210" y="130" />
+        <di:waypoint x="1272" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0bsxg6p_di" bpmnElement="Flow_0bsxg6p">
+        <di:waypoint x="1850" y="120" />
+        <di:waypoint x="1912" y="120" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

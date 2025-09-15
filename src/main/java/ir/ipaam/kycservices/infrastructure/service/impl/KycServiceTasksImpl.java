@@ -22,59 +22,6 @@ public class KycServiceTasksImpl implements KycServiceTasks {
     private final QueryGateway queryGateway;
 
     @Override
-    public void validateNationalCodeChecksum(String nationalCode, String processInstanceId) {
-        if (nationalCode == null || !nationalCode.matches("\\d{10}")) {
-            throw new IllegalArgumentException("National code must be exactly 10 digits");
-        }
-
-        // Reject codes where all digits are the same
-        boolean allSame = nationalCode.chars().allMatch(ch -> ch == nationalCode.charAt(0));
-        if (allSame) {
-            throw new IllegalArgumentException("National code cannot contain all identical digits");
-        }
-
-        int checksumDigit = Character.getNumericValue(nationalCode.charAt(9));
-        int sum = 0;
-        for (int i = 0; i < 9; i++) {
-            int digit = Character.getNumericValue(nationalCode.charAt(i));
-            sum += digit * (10 - i);
-        }
-        int remainder = sum % 11;
-        int expected = remainder < 2 ? remainder : 11 - remainder;
-
-        if (checksumDigit != expected) {
-            String message = String.format("Invalid national code checksum for process %s", processInstanceId);
-            log.warn(message);
-            throw new IllegalArgumentException(message);
-        }
-    }
-
-    @Override
-    public void callNationalRegistry(String nationalCode, String processInstanceId) {
-        // TODO: implement integration
-    }
-
-    @Override
-    public void sendOtp(String mobile, String processInstanceId) {
-        // TODO: implement integration
-    }
-
-    @Override
-    public void checkOtp(String mobile, String otpCode, String processInstanceId) {
-        // TODO: implement integration
-    }
-
-    @Override
-    public void checkMobileFormat(String mobile, String processInstanceId) {
-        // TODO: implement integration
-    }
-
-    @Override
-    public void callShahkarService(String nationalCode, String mobile, String processInstanceId) {
-        // TODO: implement integration
-    }
-
-    @Override
     public KycProcessInstance checkKycStatus(String nationalCode) {
         if (queryGateway == null) {
             log.warn("QueryGateway not initialized, returning null");

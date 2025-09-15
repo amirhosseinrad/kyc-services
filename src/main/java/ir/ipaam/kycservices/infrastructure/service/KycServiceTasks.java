@@ -4,21 +4,6 @@ import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 
 public interface KycServiceTasks {
 
-    // National Code
-    void validateNationalCodeChecksum(String nationalCode, String processInstanceId);
-
-    void callNationalRegistry(String nationalCode, String processInstanceId);
-
-    // OTP
-    void sendOtp(String mobile, String processInstanceId);
-
-    void checkOtp(String mobile, String otpCode, String processInstanceId);
-
-    // Mobile / Shahkar
-    void checkMobileFormat(String mobile, String processInstanceId);
-
-    void callShahkarService(String nationalCode, String mobile, String processInstanceId);
-
     // KYC Status
     KycProcessInstance checkKycStatus(String nationalCode);
 

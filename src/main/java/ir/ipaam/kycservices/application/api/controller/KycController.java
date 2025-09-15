@@ -41,7 +41,7 @@ public class KycController {
     public ResponseEntity<Map<String, String>> startProcess(@Valid @RequestBody StartKycRequest request) {
         try {
             long key = zeebeClient.newCreateInstanceCommand()
-                    .bpmnProcessId("kyc-process")
+                    .bpmnProcessId("bpmn/kyc-process")
                     .latestVersion()
                     .variables(Map.of("nationalCode", request.nationalCode()))
                     .send()
