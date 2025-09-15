@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
+import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.service.impl.KycServiceTasksImpl;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -45,10 +46,11 @@ class KycServiceTasksImplTest {
     }
 
     @Test
-    void checkKycStatusDefaultsToUnknown() {
-        when(queryGateway.query(any(FindKycStatusQuery.class), eq(ResponseTypes.instanceOf(String.class))))
-                .thenReturn(CompletableFuture.completedFuture("UNKNOWN"));
-        assertEquals("UNKNOWN", tasks.checkKycStatus("0024683416"));
+    void checkKycStatusReturnsProcessInstance() {
+        KycProcessInstance instance = new KycProcessInstance();
+        when(queryGateway.query(any(FindKycStatusQuery.class), eq(ResponseTypes.instanceOf(KycProcessInstance.class))))
+                .thenReturn(CompletableFuture.completedFuture(instance));
+        assertEquals(instance, tasks.checkKycStatus("0024683416"));
     }
 }
 

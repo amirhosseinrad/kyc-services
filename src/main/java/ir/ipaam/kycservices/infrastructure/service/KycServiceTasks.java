@@ -1,5 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
+import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+
 public interface KycServiceTasks {
 
     // National Code
@@ -18,7 +20,7 @@ public interface KycServiceTasks {
     void callShahkarService(String nationalCode, String mobile, String processInstanceId);
 
     // KYC Status
-    String checkKycStatus(String nationalCode);
+    KycProcessInstance checkKycStatus(String nationalCode);
 
     void updateKycStatus(String processInstanceId, String status);
 
