@@ -57,7 +57,7 @@ public class KycController {
         }
     }
 
-    @PutMapping("/status/{processInstanceId}")
+    @PostMapping("/status/{processInstanceId}")
     public ResponseEntity<Void> updateStatus(
             @PathVariable("processInstanceId")
             @Pattern(regexp = "^[a-zA-Z0-9-]+$", message = "invalid processInstanceId") String processInstanceId,
