@@ -37,12 +37,12 @@ public class KycServiceTasksImpl implements KycServiceTasks {
     }
 
     @Override
-    public void updateKycStatus(String processInstanceId, String status) {
+    public void updateKycStatus(String processInstanceId, String status, String stepName, String state) {
         if (commandGateway == null) {
             log.warn("CommandGateway not initialized, skipping status update");
             return;
         }
-        commandGateway.send(new UpdateKycStatusCommand(processInstanceId, status));
+        commandGateway.send(new UpdateKycStatusCommand(processInstanceId, status, stepName, state));
     }
 
     @Override

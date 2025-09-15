@@ -76,7 +76,7 @@ public class KycController {
             @Pattern(regexp = "^[a-zA-Z0-9-]+$", message = "invalid processInstanceId") String processInstanceId,
             @Valid @RequestBody KycStatusUpdateRequest request) {
         try {
-            kycServiceTasks.updateKycStatus(processInstanceId, request.status());
+            kycServiceTasks.updateKycStatus(processInstanceId, request.status(), request.stepName(), request.state());
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

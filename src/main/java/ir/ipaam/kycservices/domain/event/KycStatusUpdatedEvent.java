@@ -11,5 +11,7 @@ public class KycStatusUpdatedEvent {
     private final String processInstanceId;
     private final String nationalCode;
     private final String status;
+    private final String stepName;
+    private final String state;
     private final LocalDateTime updatedAt;
 }

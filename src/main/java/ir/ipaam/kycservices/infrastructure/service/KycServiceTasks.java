@@ -7,7 +7,7 @@ public interface KycServiceTasks {
     // KYC Status
     KycProcessInstance checkKycStatus(String nationalCode);
 
-    void updateKycStatus(String processInstanceId, String status);
+    void updateKycStatus(String processInstanceId, String status, String stepName, String state);
 
     // Logging & Retry
     void logFailureAndRetry(String stepName, String reason, String processInstanceId);
