@@ -8,6 +8,7 @@ import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.KycStatusUpdateRequest;
 import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
+import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import jakarta.validation.Valid;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/kyc")
@@ -30,6 +30,7 @@ public class KycController {
 
     private final KycServiceTasks kycServiceTasks;
     private final CommandGateway commandGateway;
+    private final ZeebeClient zeebeClient;
 
     @Operation(summary = "Start a new KYC process")
     @ApiResponses({
@@ -38,10 +39,22 @@ public class KycController {
     })
     @PostMapping("/process")
     public ResponseEntity<Map<String, String>> startProcess(@Valid @RequestBody StartKycRequest request) {
-        String processInstanceId = UUID.randomUUID().toString();
-        commandGateway.send(new StartKycProcessCommand(processInstanceId, request.nationalCode()));
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("processInstanceId", processInstanceId));
+        try {
+            long key = zeebeClient.newCreateInstanceCommand()
+                    .bpmnProcessId("kyc-process")
+                    .latestVersion()
+                    .variables(Map.of("nationalCode", request.nationalCode()))
+                    .send()
+                    .join()
+                    .getProcessInstanceKey();
+            String processInstanceKey = Long.toString(key);
+            commandGateway.send(new StartKycProcessCommand(processInstanceKey, request.nationalCode()));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("processInstanceKey", processInstanceKey));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/status")
