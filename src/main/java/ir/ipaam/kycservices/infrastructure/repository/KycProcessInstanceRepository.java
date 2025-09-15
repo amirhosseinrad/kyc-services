@@ -19,5 +19,13 @@ public interface KycProcessInstanceRepository extends JpaRepository<KycProcessIn
      * @return optional most recent KYC process instance
      */
     Optional<KycProcessInstance> findTopByCustomer_NationalCodeOrderByStartedAtDesc(String nationalCode);
+
+    /**
+     * Finds a KYC process instance by its Camunda process instance identifier.
+     *
+     * @param camundaInstanceId Camunda process instance id
+     * @return optional process instance for the given Camunda id
+     */
+    Optional<KycProcessInstance> findByCamundaInstanceId(String camundaInstanceId);
 }
 
