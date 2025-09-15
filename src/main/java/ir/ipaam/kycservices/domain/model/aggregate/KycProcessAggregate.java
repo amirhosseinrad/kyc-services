@@ -36,6 +36,8 @@ public class KycProcessAggregate {
                 command.getProcessInstanceId(),
                 this.nationalCode,
                 command.getStatus(),
+                command.getStepName(),
+                command.getState(),
                 LocalDateTime.now()));
     }
 

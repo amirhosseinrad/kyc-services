@@ -10,4 +10,6 @@ public class UpdateKycStatusCommand {
     @TargetAggregateIdentifier
     private final String processInstanceId;
     private final String status;
+    private final String stepName;
+    private final String state;
 }
