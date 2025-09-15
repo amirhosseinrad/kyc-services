@@ -17,5 +17,6 @@ import lombok.Setter;
 public class KycStatusView {
     @Id
     private String nationalCode;
+    private String camundaInstanceId;
     private String status;
 }

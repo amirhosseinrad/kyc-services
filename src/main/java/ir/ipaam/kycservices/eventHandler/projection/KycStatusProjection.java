@@ -18,12 +18,12 @@ public class KycStatusProjection {
 
     @EventHandler
     public void on(KycProcessStartedEvent event) {
-        repository.save(new KycStatusView(event.getNationalCode(), "STARTED"));
+        repository.save(new KycStatusView(event.getNationalCode(), event.getProcessInstanceId(), "STARTED"));
     }
 
     @EventHandler
     public void on(KycStatusUpdatedEvent event) {
-        repository.save(new KycStatusView(event.getNationalCode(), event.getStatus()));
+        repository.save(new KycStatusView(event.getNationalCode(), event.getProcessInstanceId(), event.getStatus()));
     }
 
     @QueryHandler
