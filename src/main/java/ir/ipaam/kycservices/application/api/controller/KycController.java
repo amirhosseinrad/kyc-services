@@ -1,17 +1,26 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.KycStatusUpdateRequest;
+import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
+import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
+
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/kyc")
@@ -20,6 +29,20 @@ import org.springframework.validation.annotation.Validated;
 public class KycController {
 
     private final KycServiceTasks kycServiceTasks;
+    private final CommandGateway commandGateway;
+
+    @Operation(summary = "Start a new KYC process")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Process started"),
+            @ApiResponse(responseCode = "400", description = "Invalid input")
+    })
+    @PostMapping("/process")
+    public ResponseEntity<Map<String, String>> startProcess(@Valid @RequestBody StartKycRequest request) {
+        String processInstanceId = UUID.randomUUID().toString();
+        commandGateway.send(new StartKycProcessCommand(processInstanceId, request.nationalCode()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("processInstanceId", processInstanceId));
+    }
 
     @PostMapping("/status")
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
