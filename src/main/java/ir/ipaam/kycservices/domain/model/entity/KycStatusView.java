@@ -28,4 +28,5 @@ public class KycStatusView {
 
     @ManyToOne
     private Customer customer;
+
 }
