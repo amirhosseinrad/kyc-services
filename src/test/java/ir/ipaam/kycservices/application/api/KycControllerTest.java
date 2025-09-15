@@ -97,30 +97,4 @@ class KycControllerTest {
                 .andExpect(jsonPath("$.error").value("failure"));
     }
 
-    @Test
-    void updateStatusReturnsNoContent() throws Exception {
-        mockMvc.perform(put("/kyc/status/proc1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"APPROVED\",\"stepName\":\"OCR\",\"state\":\"PASSED\"}"))
-                .andExpect(status().isNoContent());
-        verify(tasks).updateKycStatus("proc1", "APPROVED", "OCR", "PASSED");
-    }
-
-    @Test
-    void missingStatusReturnsBadRequest() throws Exception {
-        mockMvc.perform(put("/kyc/status/proc1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest());
-        verify(tasks, never()).updateKycStatus(anyString(), anyString(), anyString(), anyString());
-    }
-
-    @Test
-    void invalidProcessInstanceIdReturnsBadRequest() throws Exception {
-        mockMvc.perform(put("/kyc/status/proc1!")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"APPROVED\",\"stepName\":\"OCR\",\"state\":\"PASSED\"}"))
-                .andExpect(status().isBadRequest());
-        verify(tasks, never()).updateKycStatus(anyString(), anyString(), anyString(), anyString());
-    }
 }

@@ -5,14 +5,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
-import ir.ipaam.kycservices.application.api.dto.KycStatusUpdateRequest;
 import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
@@ -67,19 +65,6 @@ public class KycController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(KycStatusResponse.error(e.getMessage()));
-        }
-    }
-    @Operation(summary = "Update KYC process state")
-    @PostMapping("/status/{processInstanceId}")
-    public ResponseEntity<Void> updateStatus(
-            @PathVariable("processInstanceId")
-            @Pattern(regexp = "^[a-zA-Z0-9-]+$", message = "invalid processInstanceId") String processInstanceId,
-            @Valid @RequestBody KycStatusUpdateRequest request) {
-        try {
-            kycServiceTasks.updateKycStatus(processInstanceId, request.status(), request.stepName(), request.state());
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
         }
     }
 }
