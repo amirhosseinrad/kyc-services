@@ -1,6 +1,5 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
-import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
@@ -34,15 +33,6 @@ public class KycServiceTasksImpl implements KycServiceTasks {
             log.error("Failed to query KYC status", e);
             return null;
         }
-    }
-
-    @Override
-    public void updateKycStatus(String processInstanceId, String status, String stepName, String state) {
-        if (commandGateway == null) {
-            log.warn("CommandGateway not initialized, skipping status update");
-            return;
-        }
-        commandGateway.send(new UpdateKycStatusCommand(processInstanceId, status, stepName, state));
     }
 
     @Override
