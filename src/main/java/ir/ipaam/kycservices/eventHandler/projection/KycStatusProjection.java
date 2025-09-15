@@ -2,9 +2,11 @@ package ir.ipaam.kycservices.eventHandler.projection;
 
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
+import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.domain.model.entity.KycStatusView;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStatusViewRepository;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.eventhandling.EventHandler;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class KycStatusProjection {
 
     private final KycStatusViewRepository repository;
+    private final KycProcessInstanceRepository processRepository;
     private final CustomerRepository customerRepository;
 
     @EventHandler

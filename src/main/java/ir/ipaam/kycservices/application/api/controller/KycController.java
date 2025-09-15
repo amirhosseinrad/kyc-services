@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.application.api.controller;
 import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.KycStatusUpdateRequest;
+import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
@@ -23,8 +24,8 @@ public class KycController {
     @PostMapping("/status")
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
         try {
-            String status = kycServiceTasks.checkKycStatus(request.nationalCode());
-            return ResponseEntity.ok(KycStatusResponse.success(status));
+            KycProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
+            return ResponseEntity.ok(KycStatusResponse.success(instance));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(KycStatusResponse.error(e.getMessage()));
         } catch (Exception e) {

@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
+import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -74,17 +75,17 @@ public class KycServiceTasksImpl implements KycServiceTasks {
     }
 
     @Override
-    public String checkKycStatus(String nationalCode) {
+    public KycProcessInstance checkKycStatus(String nationalCode) {
         if (queryGateway == null) {
-            log.warn("QueryGateway not initialized, returning UNKNOWN status");
-            return "UNKNOWN";
+            log.warn("QueryGateway not initialized, returning null");
+            return null;
         }
         try {
             return queryGateway.query(new FindKycStatusQuery(nationalCode),
-                    ResponseTypes.instanceOf(String.class)).join();
+                    ResponseTypes.instanceOf(KycProcessInstance.class)).join();
         } catch (Exception e) {
             log.error("Failed to query KYC status", e);
-            return "UNKNOWN";
+            return null;
         }
     }
 

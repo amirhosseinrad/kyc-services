@@ -1,7 +1,11 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.KycController;
+import ir.ipaam.kycservices.domain.model.entity.Customer;
+import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -24,13 +28,30 @@ class KycControllerTest {
 
     @Test
     void statusEndpointReturnsStatus() throws Exception {
-        when(tasks.checkKycStatus("0024683416")).thenReturn("APPROVED");
+        Customer customer = new Customer();
+        customer.setNationalCode("0024683416");
+        customer.setFirstName("John");
+        customer.setLastName("Doe");
+        customer.setBirthDate(LocalDate.of(1990, 1, 1));
+        customer.setMobile("09123456789");
+        customer.setEmail("john@example.com");
+
+        KycProcessInstance instance = new KycProcessInstance();
+        instance.setCamundaInstanceId("proc1");
+        instance.setStatus("APPROVED");
+        instance.setStartedAt(LocalDateTime.of(2023, 1, 1, 0, 0));
+        instance.setCompletedAt(LocalDateTime.of(2023, 1, 2, 0, 0));
+        instance.setCustomer(customer);
+
+        when(tasks.checkKycStatus("0024683416")).thenReturn(instance);
 
         mockMvc.perform(post("/kyc/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nationalCode\":\"0024683416\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("APPROVED"));
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.camundaInstanceId").value("proc1"))
+                .andExpect(jsonPath("$.customer.nationalCode").value("0024683416"));
     }
 
     @Test
