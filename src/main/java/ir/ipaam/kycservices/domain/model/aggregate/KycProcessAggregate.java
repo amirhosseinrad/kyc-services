@@ -11,6 +11,8 @@ import org.axonframework.spring.stereotype.Aggregate;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 
+import java.time.LocalDateTime;
+
 @Aggregate
 @NoArgsConstructor
 public class KycProcessAggregate {
@@ -24,7 +26,8 @@ public class KycProcessAggregate {
     public KycProcessAggregate(StartKycProcessCommand command) {
         AggregateLifecycle.apply(new KycProcessStartedEvent(
                 command.getProcessInstanceId(),
-                command.getNationalCode()));
+                command.getNationalCode(),
+                LocalDateTime.now()));
     }
 
     @CommandHandler
@@ -32,7 +35,8 @@ public class KycProcessAggregate {
         AggregateLifecycle.apply(new KycStatusUpdatedEvent(
                 command.getProcessInstanceId(),
                 this.nationalCode,
-                command.getStatus()));
+                command.getStatus(),
+                LocalDateTime.now()));
     }
 
     @EventSourcingHandler

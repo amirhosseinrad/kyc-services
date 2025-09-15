@@ -3,8 +3,8 @@ package ir.ipaam.kycservices.domain.model.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,9 +22,10 @@ public class KycStatusView {
     @Id
     private String nationalCode;
     private String status;
-    private String processInstanceId;
+    private String camundaInstanceId;
+    private LocalDateTime startedAt;
+    private LocalDateTime completedAt;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id")
     private Customer customer;
 }
