@@ -3,9 +3,11 @@ package ir.ipaam.kycservices.application.api;
 import ir.ipaam.kycservices.application.api.controller.KycController;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.KycStepStatus;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -43,6 +45,12 @@ class KycControllerTest {
         instance.setCompletedAt(LocalDateTime.of(2023, 1, 2, 0, 0));
         instance.setCustomer(customer);
 
+        KycStepStatus stepStatus = new KycStepStatus();
+        stepStatus.setStepName("OCR");
+        stepStatus.setState(KycStepStatus.State.PASSED);
+        stepStatus.setTimestamp(LocalDateTime.of(2023, 1, 1, 1, 0));
+        instance.setStatuses(List.of(stepStatus));
+
         when(tasks.checkKycStatus("0024683416")).thenReturn(instance);
 
         mockMvc.perform(post("/kyc/status")
@@ -51,7 +59,10 @@ class KycControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.camundaInstanceId").value("proc1"))
-                .andExpect(jsonPath("$.customer.nationalCode").value("0024683416"));
+                .andExpect(jsonPath("$.customer.nationalCode").value("0024683416"))
+                .andExpect(jsonPath("$.stepHistory").isArray())
+                .andExpect(jsonPath("$.stepHistory[0].stepName").value("OCR"))
+                .andExpect(jsonPath("$.stepHistory[0].state").value("PASSED"));
     }
 
     @Test
