@@ -23,7 +23,6 @@ public class KycStatusView {
     private String nationalCode;
     private String camundaInstanceId;
     private String status;
-    private String camundaInstanceId;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
 

@@ -61,7 +61,7 @@ public class KycStatusProjection {
 
     @QueryHandler
     public String handle(FindKycStatusQuery query) {
-        return repository.findById(query.getNationalCode())
+        return repository.findById(query.nationalCode())
                 .map(KycStatusView::getStatus)
                 .orElse("UNKNOWN");
     }
