@@ -41,7 +41,7 @@ public class KycController {
     public ResponseEntity<Map<String, String>> startProcess(@Valid @RequestBody StartKycRequest request) {
         try {
             long key = zeebeClient.newCreateInstanceCommand()
-                    .bpmnProcessId("bpmn/kyc-process")
+                    .bpmnProcessId("kyc-process")
                     .latestVersion()
                     .variables(Map.of("nationalCode", request.nationalCode()))
                     .send()
@@ -56,7 +56,7 @@ public class KycController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-
+    @Operation(summary = "Get KYC process state")
     @PostMapping("/status")
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
         try {
@@ -69,7 +69,7 @@ public class KycController {
                     .body(KycStatusResponse.error(e.getMessage()));
         }
     }
-
+    @Operation(summary = "Update KYC process state")
     @PostMapping("/status/{processInstanceId}")
     public ResponseEntity<Void> updateStatus(
             @PathVariable("processInstanceId")

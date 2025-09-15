@@ -16,10 +16,10 @@ public class KycProcessDeployer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         try (InputStream bpmnStream = getClass().getClassLoader()
-                .getResourceAsStream("bpmn/kyc-process.bpmn")) {
+                .getResourceAsStream("kyc-process.bpmn")) {
 
             if (bpmnStream == null) {
-                throw new IllegalStateException("Cannot find BPMN file on classpath: bpmn/kyc-process.bpmn");
+                throw new IllegalStateException("Cannot find BPMN file on classpath:kyc-process.bpmn");
             }
 
             zeebeClient.newDeployResourceCommand()
