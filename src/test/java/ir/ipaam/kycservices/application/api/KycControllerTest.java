@@ -2,8 +2,8 @@ package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.KycController;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
-import ir.ipaam.kycservices.domain.model.entity.KycStepStatus;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,16 +38,16 @@ class KycControllerTest {
         customer.setMobile("09123456789");
         customer.setEmail("john@example.com");
 
-        KycProcessInstance instance = new KycProcessInstance();
+        ProcessInstance instance = new ProcessInstance();
         instance.setCamundaInstanceId("proc1");
         instance.setStatus("APPROVED");
         instance.setStartedAt(LocalDateTime.of(2023, 1, 1, 0, 0));
         instance.setCompletedAt(LocalDateTime.of(2023, 1, 2, 0, 0));
         instance.setCustomer(customer);
 
-        KycStepStatus stepStatus = new KycStepStatus();
+        StepStatus stepStatus = new StepStatus();
         stepStatus.setStepName("OCR");
-        stepStatus.setState(KycStepStatus.State.PASSED);
+        stepStatus.setState(StepStatus.State.PASSED);
         stepStatus.setTimestamp(LocalDateTime.of(2023, 1, 1, 1, 0));
         instance.setStatuses(List.of(stepStatus));
 

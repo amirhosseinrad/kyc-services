@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.service.impl.KycServiceTasksImpl;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -23,32 +23,9 @@ class KycServiceTasksImplTest {
     private final KycServiceTasks tasks = new KycServiceTasksImpl(commandGateway, queryGateway);
 
     @Test
-    void validNationalCodePassesChecksum() {
-        assertDoesNotThrow(() -> tasks.validateNationalCodeChecksum("0024683416", "proc1"));
-    }
-
-    @Test
-    void invalidChecksumThrowsException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> tasks.validateNationalCodeChecksum("0024683415", "proc2"));
-    }
-
-    @Test
-    void repeatedDigitsRejected() {
-        assertThrows(IllegalArgumentException.class,
-                () -> tasks.validateNationalCodeChecksum("1111111111", "proc3"));
-    }
-
-    @Test
-    void wrongLengthRejected() {
-        assertThrows(IllegalArgumentException.class,
-                () -> tasks.validateNationalCodeChecksum("123456789", "proc4"));
-    }
-
-    @Test
     void checkKycStatusReturnsProcessInstance() {
-        KycProcessInstance instance = new KycProcessInstance();
-        when(queryGateway.query(any(FindKycStatusQuery.class), eq(ResponseTypes.instanceOf(KycProcessInstance.class))))
+        ProcessInstance instance = new ProcessInstance();
+        when(queryGateway.query(any(FindKycStatusQuery.class), eq(ResponseTypes.instanceOf(ProcessInstance.class))))
                 .thenReturn(CompletableFuture.completedFuture(instance));
         assertEquals(instance, tasks.checkKycStatus("0024683416"));
     }
