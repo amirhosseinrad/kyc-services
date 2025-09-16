@@ -84,6 +84,11 @@
             <artifactId>zeebe-client-java</artifactId>
             <version>${camunda.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.camunda</groupId>
+            <artifactId>zeebe-bpmn-model</artifactId>
+            <version>${camunda.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
