@@ -1,10 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_02m23tv" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.10.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.15.0">
+<bpmn:definitions   xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+                    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+                    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                    id="Definitions_02m23tv"
+                    targetNamespace="http://bpmn.io/schema/bpmn"
+                    exporter="Camunda Modeler"
+                    exporterVersion="4.10.0"
+                    modeler:executionPlatform="Camunda Platform"
+                    modeler:executionPlatformVersion="7.15.0">
   <bpmn:process id="kyc-process" name="kyc-process" isExecutable="true">
-    <bpmn:task id="check-kyc-status" name="check-kyc-status">
+    <bpmn:serviceTask id="check-kyc-status" name="check-kyc-status">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="check-kyc-status" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_0mkvv15</bpmn:incoming>
       <bpmn:outgoing>Flow_0dmbp43</bpmn:outgoing>
-    </bpmn:task>
+    </bpmn:serviceTask>
+
     <bpmn:task id="Activity_1lbjv3o" name="upload front and back of  card with back number">
       <bpmn:incoming>Flow_0ayjnrf</bpmn:incoming>
       <bpmn:outgoing>Flow_1gyum9g</bpmn:outgoing>
