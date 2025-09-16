@@ -3,10 +3,18 @@ package ir.ipaam.kycservices.domain.model.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "KYC_AUDITLOG")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
 public class AuditLog {
     @Id
     @GeneratedValue

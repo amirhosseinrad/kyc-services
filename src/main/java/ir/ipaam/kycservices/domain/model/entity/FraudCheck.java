@@ -1,11 +1,15 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
+@Table(name = "KYC_FRAUD_CHECK")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
 public class FraudCheck {
     @Id
     @GeneratedValue

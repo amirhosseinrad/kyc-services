@@ -8,7 +8,7 @@ import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import io.camunda.zeebe.client.ZeebeClient;
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +58,7 @@ public class KycController {
     @PostMapping("/status")
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
         try {
-            KycProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
+            ProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
             return ResponseEntity.ok(KycStatusResponse.success(instance));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(KycStatusResponse.error(e.getMessage()));

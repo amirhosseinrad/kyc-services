@@ -1,20 +1,24 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "KYC_CONSENT")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
 public class Consent {
     @Id
     @GeneratedValue
     private Long id;
 
     @ManyToOne
-    private KycProcessInstance process;
+    private ProcessInstance process;
 
     private boolean accepted;
     private LocalDateTime acceptedAt;

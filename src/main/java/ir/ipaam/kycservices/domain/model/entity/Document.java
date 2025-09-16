@@ -1,11 +1,15 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
+@Table(name = "KYC_DOCUMENT")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
 public class Document {
     @Id
     @GeneratedValue
@@ -17,5 +21,5 @@ public class Document {
     private boolean verified;
 
     @ManyToOne
-    private KycProcessInstance process;
+    private ProcessInstance process;
 }

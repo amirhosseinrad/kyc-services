@@ -1,13 +1,17 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "KYC_USER_TASK_DATA")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
 public class UserTaskData {
     @Id
     @GeneratedValue
@@ -18,5 +22,5 @@ public class UserTaskData {
     private LocalDateTime submittedAt;
 
     @ManyToOne
-    private KycProcessInstance process;
+    private ProcessInstance process;
 }

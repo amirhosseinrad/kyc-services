@@ -1,26 +1,18 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "KYC_STEP_STATUS")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = "process")
-public class KycStepStatus {
+public class StepStatus {
 
     @Id
     @GeneratedValue
@@ -34,7 +26,7 @@ public class KycStepStatus {
     private LocalDateTime timestamp;
 
     @ManyToOne
-    private KycProcessInstance process;
+    private ProcessInstance process;
 
     public enum State {
         STARTED,

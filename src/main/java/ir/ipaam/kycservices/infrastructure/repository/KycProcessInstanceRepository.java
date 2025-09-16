@@ -1,16 +1,16 @@
 package ir.ipaam.kycservices.infrastructure.repository;
 
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 /**
- * Repository for accessing {@link KycProcessInstance} entities.
+ * Repository for accessing {@link ProcessInstance} entities.
  */
 @Repository
-public interface KycProcessInstanceRepository extends JpaRepository<KycProcessInstance, Long> {
+public interface KycProcessInstanceRepository extends JpaRepository<ProcessInstance, Long> {
 
     /**
      * Finds the most recent process instance for a customer identified by national code.
@@ -18,7 +18,7 @@ public interface KycProcessInstanceRepository extends JpaRepository<KycProcessIn
      * @param nationalCode national identification code of the customer
      * @return optional most recent KYC process instance
      */
-    Optional<KycProcessInstance> findTopByCustomer_NationalCodeOrderByStartedAtDesc(String nationalCode);
+    Optional<ProcessInstance> findTopByCustomer_NationalCodeOrderByStartedAtDesc(String nationalCode);
 
     /**
      * Finds a KYC process instance by its Camunda process instance identifier.
@@ -26,6 +26,6 @@ public interface KycProcessInstanceRepository extends JpaRepository<KycProcessIn
      * @param camundaInstanceId Camunda process instance id
      * @return optional process instance for the given Camunda id
      */
-    Optional<KycProcessInstance> findByCamundaInstanceId(String camundaInstanceId);
+    Optional<ProcessInstance> findByCamundaInstanceId(String camundaInstanceId);
 }
 

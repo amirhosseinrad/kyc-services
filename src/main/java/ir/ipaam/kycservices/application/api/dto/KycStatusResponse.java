@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.application.api.dto;
 
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,7 +14,7 @@ public record KycStatusResponse(
         List<KycStepStatusDto> stepHistory,
         String error
 ) {
-    public static KycStatusResponse success(KycProcessInstance instance) {
+    public static KycStatusResponse success(ProcessInstance instance) {
         if (instance == null) {
             return new KycStatusResponse(null, null, null, null, null, null, null);
         }

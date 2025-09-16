@@ -1,19 +1,17 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "process_deployment")
+@Table(name = "KYC_PROCESS_DEPLOYMENT")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 public class ProcessDeployment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

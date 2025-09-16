@@ -1,11 +1,6 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -13,12 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "KYC_PROCESS_INSTANCE")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-public class KycProcessInstance {
+public class ProcessInstance {
     @Id
     @GeneratedValue
     private Long id;
@@ -33,5 +29,5 @@ public class KycProcessInstance {
 
     @OneToMany(mappedBy = "process", cascade = CascadeType.ALL)
     @ToString.Exclude
-    private List<KycStepStatus> statuses = new ArrayList<>();
+    private List<StepStatus> statuses = new ArrayList<>();
 }

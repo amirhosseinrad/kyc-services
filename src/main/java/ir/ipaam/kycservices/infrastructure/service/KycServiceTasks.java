@@ -1,11 +1,11 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 
 public interface KycServiceTasks {
 
     // KYC Status
-    KycProcessInstance checkKycStatus(String nationalCode);
+    ProcessInstance checkKycStatus(String nationalCode);
 
     // Logging & Retry
     void logFailureAndRetry(String stepName, String reason, String processInstanceId);

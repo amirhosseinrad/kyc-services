@@ -3,8 +3,8 @@ package ir.ipaam.kycservices.infrastructure.handler;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
-import ir.ipaam.kycservices.domain.model.entity.KycProcessInstance;
-import ir.ipaam.kycservices.domain.model.entity.KycStepStatus;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -34,7 +34,7 @@ public class KycProcessEventHandler {
                     return customerRepository.save(c);
                 });
 
-        KycProcessInstance instance = new KycProcessInstance();
+        ProcessInstance instance = new ProcessInstance();
         instance.setCamundaInstanceId(event.getProcessInstanceId());
         instance.setStatus("STARTED");
         instance.setStartedAt(LocalDateTime.now());
@@ -49,12 +49,12 @@ public class KycProcessEventHandler {
                 .ifPresent(instance -> {
                     instance.setStatus(event.getStatus());
 
-                    KycStepStatus stepStatus = new KycStepStatus();
+                    StepStatus stepStatus = new StepStatus();
                     stepStatus.setProcess(instance);
                     stepStatus.setStepName(event.getStepName());
                     stepStatus.setTimestamp(event.getUpdatedAt());
                     if (event.getState() != null) {
-                        stepStatus.setState(KycStepStatus.State.valueOf(event.getState().toUpperCase(Locale.ROOT)));
+                        stepStatus.setState(StepStatus.State.valueOf(event.getState().toUpperCase(Locale.ROOT)));
                     }
 
                     instance.getStatuses().add(stepStatus);
@@ -65,11 +65,11 @@ public class KycProcessEventHandler {
     }
 
     @QueryHandler
-    public KycProcessInstance handle(FindKycStatusQuery query) {
+    public ProcessInstance handle(FindKycStatusQuery query) {
         return kycProcessInstanceRepository
                 .findTopByCustomer_NationalCodeOrderByStartedAtDesc(query.nationalCode())
                 .orElseGet(() -> {
-                    KycProcessInstance instance = new KycProcessInstance();
+                    ProcessInstance instance = new ProcessInstance();
                     instance.setStatus("UNKNOWN");
                     return instance;
                 });

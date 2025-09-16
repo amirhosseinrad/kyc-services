@@ -3,14 +3,18 @@ package ir.ipaam.kycservices.domain.model.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.persistence.Table;
+import lombok.*;
 
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "KYC_CUSTOMER")
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
 public class Customer {
     @Id
     @GeneratedValue
