@@ -1,0 +1,192 @@
+package ir.ipaam.kycservices.application.api;
+
+import ir.ipaam.kycservices.application.api.controller.VideoController;
+import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import org.axonframework.commandhandling.CommandExecutionException;
+import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.nio.charset.StandardCharsets;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(VideoController.class)
+class VideoControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private CommandGateway commandGateway;
+
+    @Test
+    void uploadVideoDispatchesCommand() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                " process-456 ".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(commandGateway.sendAndWait(any(UploadVideoCommand.class))).thenReturn(null);
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.processInstanceId").value("process-456"))
+                .andExpect(jsonPath("$.status").value("VIDEO_RECEIVED"))
+                .andExpect(jsonPath("$.videoSize").value(video.getBytes().length));
+
+        ArgumentCaptor<UploadVideoCommand> captor = ArgumentCaptor.forClass(UploadVideoCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+        UploadVideoCommand command = captor.getValue();
+        assertThat(command.processInstanceId()).isEqualTo("process-456");
+        assertThat(command.videoDescriptor().filename()).isEqualTo("video_process-456");
+        assertThat(command.videoDescriptor().data()).isEqualTo(video.getBytes());
+    }
+
+    @Test
+    void blankProcessIdReturnsBadRequest() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "   ".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("processInstanceId must be provided"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+    }
+
+    @Test
+    void emptyVideoReturnsBadRequest() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                new byte[0]
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("video must be provided"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+    }
+
+    @Test
+    void oversizedVideoReturnsBadRequest() throws Exception {
+        byte[] large = new byte[(int) VideoController.MAX_VIDEO_SIZE_BYTES + 1];
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                large
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("video exceeds maximum size of "
+                        + VideoController.MAX_VIDEO_SIZE_BYTES + " bytes"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+    }
+
+    @Test
+    void commandValidationErrorReturnsBadRequest() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
+                .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("invalid"));
+    }
+
+    @Test
+    void unexpectedErrorsReturnServerError() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
+                .thenThrow(new RuntimeException("boom"));
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("Failed to process video"));
+    }
+}
