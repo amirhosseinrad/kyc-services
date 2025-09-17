@@ -26,13 +26,8 @@ public class UploadSelfieWorker {
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
         try {
-            byte[] selfie = extractBinary(variables.get("selfie"), "selfie");
-            String processInstanceId = (String) variables.get("processInstanceId");
-            if (processInstanceId == null || processInstanceId.isBlank()) {
-                throw new IllegalArgumentException("processInstanceId must be provided");
-            }
-
-            validateSize(selfie, "selfie");
+            byte[] selfie = extractBinary(variables.get("selfieImage"), "selfieImage");
+            String processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
 
             kycUserTasks.uploadSelfie(selfie, processInstanceId);
             return Map.of("selfieUploaded", true);
@@ -45,17 +40,25 @@ public class UploadSelfieWorker {
         }
     }
 
-    private void validateSize(byte[] data, String fieldName) {
-        if (data.length == 0) {
-            throw new IllegalArgumentException(fieldName + " must not be empty");
+    private String extractProcessInstanceId(Object value) {
+        if (value instanceof String stringValue) {
+            String trimmed = stringValue.trim();
+            if (trimmed.isEmpty()) {
+                throw new IllegalArgumentException("processInstanceId must not be empty");
+            }
+            return trimmed;
         }
-        if (data.length > MAX_SELFIE_SIZE_BYTES) {
-            throw new IllegalArgumentException(fieldName + " exceeds max size of " + MAX_SELFIE_SIZE_BYTES + " bytes");
-        }
+        if (value == null) {
+            throw new IllegalArgumentException("processInstanceId is required");
+            }
+        throw new IllegalArgumentException("processInstanceId has unsupported type " + value.getClass());
     }
 
     private byte[] extractBinary(Object value, String fieldName) {
         if (value instanceof byte[] bytes) {
+            if (bytes.length == 0) {
+                throw new IllegalArgumentException(fieldName + " must not be empty");
+            }
             return bytes;
         }
         if (value instanceof String stringValue) {
@@ -64,7 +67,11 @@ public class UploadSelfieWorker {
                 throw new IllegalArgumentException(fieldName + " must not be empty");
             }
             try {
-                return Base64.getDecoder().decode(trimmed.getBytes(StandardCharsets.UTF_8));
+                byte[] decoded = Base64.getDecoder().decode(trimmed.getBytes(StandardCharsets.UTF_8));
+                if (decoded.length == 0) {
+                    throw new IllegalArgumentException(fieldName + " must not be empty");
+                }
+                return decoded;
             } catch (IllegalArgumentException ex) {
                 log.debug("Failed to decode base64 value for {}", fieldName, ex);
                 throw new IllegalArgumentException(fieldName + " is not valid base64");

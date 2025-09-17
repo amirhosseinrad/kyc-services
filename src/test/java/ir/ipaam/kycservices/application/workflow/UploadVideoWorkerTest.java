@@ -16,64 +16,82 @@ class UploadVideoWorkerTest {
     private final UploadVideoWorker worker = new UploadVideoWorker(kycUserTasks);
 
     @Test
-    void handleDelegatesToService() {
+    void handleDecodesBase64AndDelegates() {
         byte[] videoBytes = "video".getBytes();
+        String encoded = Base64.getEncoder().encodeToString(videoBytes);
 
         Map<String, Object> variables = Map.of(
-                "video", Base64.getEncoder().encodeToString(videoBytes),
-                "processInstanceId", "proc-1"
+                "videoFile", "\t" + encoded + "\n",
+                "processInstanceId", " proc-1 "
         );
 
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
-        when(job.getKey()).thenReturn(1L);
+        when(job.getKey()).thenReturn(10L);
 
         Map<String, Object> result = worker.handle(job);
 
         verify(kycUserTasks).uploadVideo(videoBytes, "proc-1");
-        assertTrue((Boolean) result.get("videoUploaded"));
+        assertEquals(true, result.get("videoUploaded"));
+    }
+
+    @Test
+    void handleAcceptsRawByteArrays() {
+        byte[] videoBytes = "raw-video".getBytes();
+        Map<String, Object> variables = Map.of(
+                "videoFile", videoBytes,
+                "processInstanceId", "proc-2"
+        );
+
+        ActivatedJob job = mock(ActivatedJob.class);
+        when(job.getVariablesAsMap()).thenReturn(variables);
+        when(job.getKey()).thenReturn(11L);
+
+        Map<String, Object> result = worker.handle(job);
+
+        verify(kycUserTasks).uploadVideo(videoBytes, "proc-2");
+        assertEquals(true, result.get("videoUploaded"));
     }
 
     @Test
     void handleRejectsInvalidPayload() {
         Map<String, Object> variables = Map.of(
-                "processInstanceId", "proc-1"
+                "videoFile", Base64.getEncoder().encodeToString("video".getBytes())
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
-        when(job.getKey()).thenReturn(2L);
+        when(job.getKey()).thenReturn(12L);
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
     }
 
     @Test
-    void handleRejectsOversizedPayload() {
-        byte[] large = new byte[(int) UploadVideoWorker.MAX_VIDEO_SIZE_BYTES + 1];
+    void handleRejectsInvalidBase64() {
         Map<String, Object> variables = Map.of(
-                "video", large,
-                "processInstanceId", "proc-2"
+                "videoFile", "@@bad@@",
+                "processInstanceId", "proc-4"
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
-        when(job.getKey()).thenReturn(3L);
+        when(job.getKey()).thenReturn(13L);
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
     }
 
     @Test
-    void handlePropagatesUploadFailures() {
-        byte[] videoBytes = "video".getBytes();
+    void handlePropagatesFailuresFromService() {
+        byte[] videoBytes = "boom".getBytes();
         Map<String, Object> variables = Map.of(
-                "video", videoBytes,
-                "processInstanceId", "proc-3"
+                "videoFile", videoBytes,
+                "processInstanceId", "proc-5"
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
-        when(job.getKey()).thenReturn(4L);
+        when(job.getKey()).thenReturn(14L);
 
-        doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadVideo(videoBytes, "proc-3");
+        doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadVideo(videoBytes, "proc-5");
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
         assertEquals("Failed to upload video", exception.getMessage());

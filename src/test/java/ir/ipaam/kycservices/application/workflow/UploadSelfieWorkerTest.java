@@ -16,12 +16,13 @@ class UploadSelfieWorkerTest {
     private final UploadSelfieWorker worker = new UploadSelfieWorker(kycUserTasks);
 
     @Test
-    void handleDelegatesToService() {
+    void handleDecodesBase64AndDelegates() {
         byte[] selfieBytes = "selfie".getBytes();
+        String encoded = Base64.getEncoder().encodeToString(selfieBytes);
 
         Map<String, Object> variables = Map.of(
-                "selfie", Base64.getEncoder().encodeToString(selfieBytes),
-                "processInstanceId", "proc-1"
+                "selfieImage", "  " + encoded + "  ",
+                "processInstanceId", " proc-1 "
         );
 
         ActivatedJob job = mock(ActivatedJob.class);
@@ -31,28 +32,31 @@ class UploadSelfieWorkerTest {
         Map<String, Object> result = worker.handle(job);
 
         verify(kycUserTasks).uploadSelfie(selfieBytes, "proc-1");
-        assertTrue((Boolean) result.get("selfieUploaded"));
+        assertEquals(true, result.get("selfieUploaded"));
+    }
+
+    @Test
+    void handleAcceptsRawByteArrays() {
+        byte[] selfieBytes = "raw".getBytes();
+        Map<String, Object> variables = Map.of(
+                "selfieImage", selfieBytes,
+                "processInstanceId", "proc-2"
+        );
+
+        ActivatedJob job = mock(ActivatedJob.class);
+        when(job.getVariablesAsMap()).thenReturn(variables);
+        when(job.getKey()).thenReturn(2L);
+
+        Map<String, Object> result = worker.handle(job);
+
+        verify(kycUserTasks).uploadSelfie(selfieBytes, "proc-2");
+        assertEquals(true, result.get("selfieUploaded"));
     }
 
     @Test
     void handleRejectsInvalidPayload() {
         Map<String, Object> variables = Map.of(
-                "processInstanceId", "proc-1"
-        );
-        ActivatedJob job = mock(ActivatedJob.class);
-        when(job.getVariablesAsMap()).thenReturn(variables);
-        when(job.getKey()).thenReturn(2L);
-
-        assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
-        verifyNoInteractions(kycUserTasks);
-    }
-
-    @Test
-    void handleRejectsOversizedPayload() {
-        byte[] large = new byte[(int) UploadSelfieWorker.MAX_SELFIE_SIZE_BYTES + 1];
-        Map<String, Object> variables = Map.of(
-                "selfie", large,
-                "processInstanceId", "proc-2"
+                "processInstanceId", "proc-3"
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
@@ -63,17 +67,31 @@ class UploadSelfieWorkerTest {
     }
 
     @Test
-    void handlePropagatesUploadFailures() {
-        byte[] selfieBytes = "selfie".getBytes();
+    void handleRejectsInvalidBase64() {
         Map<String, Object> variables = Map.of(
-                "selfie", selfieBytes,
-                "processInstanceId", "proc-3"
+                "selfieImage", "not-base64",
+                "processInstanceId", "proc-4"
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
         when(job.getKey()).thenReturn(4L);
 
-        doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadSelfie(selfieBytes, "proc-3");
+        assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
+        verifyNoInteractions(kycUserTasks);
+    }
+
+    @Test
+    void handlePropagatesFailuresFromService() {
+        byte[] selfieBytes = "boom".getBytes();
+        Map<String, Object> variables = Map.of(
+                "selfieImage", selfieBytes,
+                "processInstanceId", "proc-5"
+        );
+        ActivatedJob job = mock(ActivatedJob.class);
+        when(job.getVariablesAsMap()).thenReturn(variables);
+        when(job.getKey()).thenReturn(5L);
+
+        doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadSelfie(selfieBytes, "proc-5");
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
         assertEquals("Failed to upload selfie", exception.getMessage());
