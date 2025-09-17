@@ -116,7 +116,7 @@
     <bpmn:sequenceFlow id="Flow_0v4jsue" sourceRef="Gateway_1gctxw2" targetRef="Activity_070byyo">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(valid)</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:task id="Activity_1ou5oet" name="upload signature">
+    <bpmn:task id="Activity_1ou5oet" name="upload-signature">
       <bpmn:incoming>Flow_03g3dw4</bpmn:incoming>
       <bpmn:outgoing>Flow_1te1f82</bpmn:outgoing>
     </bpmn:task>
