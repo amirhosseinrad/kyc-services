@@ -4,12 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
-@Data
-@AllArgsConstructor
-public class UpdateKycStatusCommand {
-    @TargetAggregateIdentifier
-    private final String processInstanceId;
-    private final String status;
-    private final String stepName;
-    private final String state;
+public record UpdateKycStatusCommand(
+        @TargetAggregateIdentifier
+        String processInstanceId,
+        String status,
+        String stepName,
+        String state) {
 }

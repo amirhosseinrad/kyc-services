@@ -35,19 +35,19 @@ public class KycProcessAggregate {
     @CommandHandler
     public KycProcessAggregate(StartKycProcessCommand command) {
         AggregateLifecycle.apply(new KycProcessStartedEvent(
-                command.getProcessInstanceId(),
-                command.getNationalCode(),
+                command.processInstanceId(),
+                command.nationalCode(),
                 LocalDateTime.now()));
     }
 
     @CommandHandler
     public void handle(UpdateKycStatusCommand command) {
         AggregateLifecycle.apply(new KycStatusUpdatedEvent(
-                command.getProcessInstanceId(),
+                command.processInstanceId(),
                 this.nationalCode,
-                command.getStatus(),
-                command.getStepName(),
-                command.getState(),
+                command.status(),
+                command.stepName(),
+                command.state(),
                 LocalDateTime.now()));
     }
 
@@ -57,19 +57,19 @@ public class KycProcessAggregate {
             throw new IllegalStateException("KYC process has not been started");
         }
 
-        if (!command.getProcessInstanceId().equals(this.processInstanceId)) {
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
             throw new IllegalArgumentException("Process instance identifier mismatch");
         }
 
-        if (command.getFrontDescriptor() == null || command.getBackDescriptor() == null) {
+        if (command.frontDescriptor() == null || command.backDescriptor() == null) {
             throw new IllegalArgumentException("Document descriptors must be provided");
         }
 
         AggregateLifecycle.apply(new CardDocumentsUploadedEvent(
-                command.getProcessInstanceId(),
+                command.processInstanceId(),
                 this.nationalCode,
-                command.getFrontDescriptor(),
-                command.getBackDescriptor(),
+                command.frontDescriptor(),
+                command.backDescriptor(),
                 LocalDateTime.now()));
     }
 
@@ -142,23 +142,23 @@ public class KycProcessAggregate {
             throw new IllegalStateException("KYC process has not been started");
         }
 
-        if (!command.getProcessInstanceId().equals(this.processInstanceId)) {
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
             throw new IllegalArgumentException("Process instance identifier mismatch");
         }
 
-        if (command.getTermsVersion() == null || command.getTermsVersion().isBlank()) {
+        if (command.termsVersion() == null || command.termsVersion().isBlank()) {
             throw new IllegalArgumentException("termsVersion must be provided");
         }
 
-        if (!command.isAccepted()) {
+        if (!command.accepted()) {
             throw new IllegalArgumentException("Consent must be accepted");
         }
 
         AggregateLifecycle.apply(new ConsentAcceptedEvent(
-                command.getProcessInstanceId(),
+                command.processInstanceId(),
                 this.nationalCode,
-                command.getTermsVersion().trim(),
-                command.isAccepted(),
+                command.termsVersion().trim(),
+                command.accepted(),
                 LocalDateTime.now()));
     }
 
