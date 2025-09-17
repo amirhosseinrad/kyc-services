@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.infrastructure.service;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.infrastructure.service.impl.KycUserTasksImpl;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -103,6 +104,42 @@ class KycUserTasksImplTest {
         doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
 
         assertThrows(RuntimeException.class, () -> tasks.uploadSelfie(selfie, "process-1"));
+    }
+
+    @Test
+    void uploadSignatureDispatchesCommand() {
+        byte[] signature = "signature".getBytes(StandardCharsets.UTF_8);
+
+        tasks.uploadSignature(signature, " process-1 ");
+
+        ArgumentCaptor<UploadSignatureCommand> captor = ArgumentCaptor.forClass(UploadSignatureCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+
+        UploadSignatureCommand command = captor.getValue();
+        assertEquals("process-1", command.processInstanceId());
+        assertNotNull(command.signatureDescriptor());
+        assertTrue(command.signatureDescriptor().filename().startsWith(KycUserTasksImpl.SIGNATURE_FILENAME));
+        assertArrayEquals(signature, command.signatureDescriptor().data());
+    }
+
+    @Test
+    void uploadSignatureValidatesInput() {
+        byte[] signature = "signature".getBytes(StandardCharsets.UTF_8);
+
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadSignature(null, "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadSignature(new byte[0], "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadSignature(signature, " "));
+
+        verify(commandGateway, never()).sendAndWait(any());
+    }
+
+    @Test
+    void uploadSignaturePropagatesGatewayErrors() {
+        byte[] signature = "signature".getBytes(StandardCharsets.UTF_8);
+
+        doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
+
+        assertThrows(RuntimeException.class, () -> tasks.uploadSignature(signature, "process-1"));
     }
 
     @Test
