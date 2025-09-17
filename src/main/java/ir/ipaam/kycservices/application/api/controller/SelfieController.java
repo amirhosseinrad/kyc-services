@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -28,6 +29,7 @@ public class SelfieController {
     public static final long MAX_SELFIE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
     private final CommandGateway commandGateway;
+    private final KycProcessInstanceRepository kycProcessInstanceRepository;
 
     @PostMapping(path = "/selfie", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadSelfie(
@@ -38,6 +40,13 @@ public class SelfieController {
             String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
             byte[] selfieBytes = selfie.getBytes();
+
+            if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
+                log.warn("Process instance with id {} not found", normalizedProcessId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Process instance not found"));
+            }
+
             DocumentPayloadDescriptor descriptor =
                     new DocumentPayloadDescriptor(selfieBytes, "selfie_" + normalizedProcessId);
 

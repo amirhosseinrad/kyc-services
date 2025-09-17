@@ -2,6 +2,8 @@ package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.CardDocumentController;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -13,6 +15,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +35,9 @@ class CardDocumentControllerTest {
 
     @MockBean
     private CommandGateway commandGateway;
+
+    @MockBean
+    private KycProcessInstanceRepository kycProcessInstanceRepository;
 
     @Test
     void uploadCardDocumentsDispatchesCommand() throws Exception {
@@ -53,6 +60,8 @@ class CardDocumentControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadCardDocumentsCommand.class))).thenReturn(null);
 
         mockMvc.perform(multipart("/kyc/documents/card")
@@ -162,6 +171,8 @@ class CardDocumentControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadCardDocumentsCommand.class)))
                 .thenThrow(new RuntimeException("gateway failure"));
 
@@ -171,5 +182,39 @@ class CardDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("Failed to process card documents"));
+    }
+
+    @Test
+    void missingProcessInstanceReturnsNotFound() throws Exception {
+        MockMultipartFile front = new MockMultipartFile(
+                "frontImage",
+                "front.png",
+                MediaType.IMAGE_PNG_VALUE,
+                "front".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile back = new MockMultipartFile(
+                "backImage",
+                "back.png",
+                MediaType.IMAGE_PNG_VALUE,
+                "back".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-123".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(multipart("/kyc/documents/card")
+                        .file(front)
+                        .file(back)
+                        .file(process))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Process instance not found"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
     }
 }

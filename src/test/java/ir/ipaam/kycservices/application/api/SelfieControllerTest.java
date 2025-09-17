@@ -2,6 +2,8 @@ package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.SelfieController;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +36,9 @@ class SelfieControllerTest {
     @MockBean
     private CommandGateway commandGateway;
 
+    @MockBean
+    private KycProcessInstanceRepository kycProcessInstanceRepository;
+
     @Test
     void uploadSelfieDispatchesCommand() throws Exception {
         MockMultipartFile selfie = new MockMultipartFile(
@@ -48,6 +54,8 @@ class SelfieControllerTest {
                 "  process-123  ".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class))).thenReturn(null);
 
         mockMvc.perform(multipart("/kyc/selfie")
@@ -129,6 +137,8 @@ class SelfieControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -154,6 +164,8 @@ class SelfieControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -162,5 +174,32 @@ class SelfieControllerTest {
                         .file(process))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("Failed to process selfie"));
+    }
+
+    @Test
+    void missingProcessInstanceReturnsNotFound() throws Exception {
+        MockMultipartFile selfie = new MockMultipartFile(
+                "selfie",
+                "selfie.png",
+                MediaType.IMAGE_PNG_VALUE,
+                "selfie".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-123".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(multipart("/kyc/selfie")
+                        .file(selfie)
+                        .file(process))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Process instance not found"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
     }
 }
