@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class ConsentController {
 
     private final CommandGateway commandGateway;
+    private final KycProcessInstanceRepository kycProcessInstanceRepository;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> acceptConsent(@Valid @RequestBody ConsentRequest request) {
@@ -34,6 +36,12 @@ public class ConsentController {
             String termsVersion = normalizeTermsVersion(request.termsVersion());
             if (!request.accepted()) {
                 throw new IllegalArgumentException("accepted must be true");
+            }
+
+            if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
+                log.warn("Process instance with id {} not found", processInstanceId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Process instance not found"));
             }
 
             AcceptConsentCommand command = new AcceptConsentCommand(

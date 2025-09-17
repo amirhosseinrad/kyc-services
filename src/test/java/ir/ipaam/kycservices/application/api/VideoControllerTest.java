@@ -2,6 +2,8 @@ package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.VideoController;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +36,9 @@ class VideoControllerTest {
     @MockBean
     private CommandGateway commandGateway;
 
+    @MockBean
+    private KycProcessInstanceRepository kycProcessInstanceRepository;
+
     @Test
     void uploadVideoDispatchesCommand() throws Exception {
         MockMultipartFile video = new MockMultipartFile(
@@ -48,6 +54,8 @@ class VideoControllerTest {
                 " process-456 ".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class))).thenReturn(null);
 
         mockMvc.perform(multipart("/kyc/video")
@@ -155,6 +163,8 @@ class VideoControllerTest {
                 "process-456".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -180,6 +190,8 @@ class VideoControllerTest {
                 "process-456".getBytes(StandardCharsets.UTF_8)
         );
 
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -188,5 +200,32 @@ class VideoControllerTest {
                         .file(process))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("Failed to process video"));
+    }
+
+    @Test
+    void missingProcessInstanceReturnsNotFound() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Process instance not found"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
     }
 }
