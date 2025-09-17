@@ -2,6 +2,8 @@ package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
@@ -17,33 +19,38 @@ public class KycUserTasksImpl implements KycUserTasks {
 
     static final String FRONT_FILENAME = "front-image";
     static final String BACK_FILENAME = "back-image";
+    static final String SELFIE_FILENAME = "selfie-image";
+    static final String VIDEO_FILENAME = "video-file";
 
     private final CommandGateway commandGateway;
 
     @Override
     public void uploadCardDocuments(byte[] frontImage, byte[] backImage, String processInstanceId) {
-        validateInput(frontImage, backImage, processInstanceId);
+        validateDocument(frontImage, "frontImage");
+        validateDocument(backImage, "backImage");
+        String normalizedProcessInstanceId = normalizeProcessInstanceId(processInstanceId);
 
         DocumentPayloadDescriptor frontDescriptor = new DocumentPayloadDescriptor(frontImage, randomizeFilename(FRONT_FILENAME));
         DocumentPayloadDescriptor backDescriptor = new DocumentPayloadDescriptor(backImage, randomizeFilename(BACK_FILENAME));
 
         commandGateway.sendAndWait(new UploadCardDocumentsCommand(
-                processInstanceId,
+                normalizedProcessInstanceId,
                 frontDescriptor,
                 backDescriptor
         ));
     }
 
-    private void validateInput(byte[] frontImage, byte[] backImage, String processInstanceId) {
-        if (frontImage == null || frontImage.length == 0) {
-            throw new IllegalArgumentException("frontImage must be provided");
+    private void validateDocument(byte[] document, String fieldName) {
+        if (document == null || document.length == 0) {
+            throw new IllegalArgumentException(fieldName + " must be provided");
         }
-        if (backImage == null || backImage.length == 0) {
-            throw new IllegalArgumentException("backImage must be provided");
-        }
+    }
+
+    private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
             throw new IllegalArgumentException("processInstanceId must be provided");
         }
+        return processInstanceId.trim();
     }
 
     private String randomizeFilename(String baseName) {
@@ -83,8 +90,29 @@ public class KycUserTasksImpl implements KycUserTasks {
     }
 
     @Override
-    public void uploadSelfieAndVideo(byte[] photo, byte[] video, String processInstanceId) {
-        // TODO: implement integration
+    public void uploadSelfie(byte[] selfie, String processInstanceId) {
+        validateDocument(selfie, "selfie");
+        String normalizedProcessInstanceId = normalizeProcessInstanceId(processInstanceId);
+
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(selfie, randomizeFilename(SELFIE_FILENAME));
+
+        commandGateway.sendAndWait(new UploadSelfieCommand(
+                normalizedProcessInstanceId,
+                descriptor
+        ));
+    }
+
+    @Override
+    public void uploadVideo(byte[] video, String processInstanceId) {
+        validateDocument(video, "video");
+        String normalizedProcessInstanceId = normalizeProcessInstanceId(processInstanceId);
+
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(video, randomizeFilename(VIDEO_FILENAME));
+
+        commandGateway.sendAndWait(new UploadVideoCommand(
+                normalizedProcessInstanceId,
+                descriptor
+        ));
     }
 
     @Override
