@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -43,12 +44,8 @@ public class CardDocumentController {
 
             UploadCardDocumentsCommand command = new UploadCardDocumentsCommand(
                     normalizedProcessId,
-                    frontBytes,
-                    backBytes,
-                    frontImage.getOriginalFilename(),
-                    backImage.getOriginalFilename(),
-                    frontImage.getContentType(),
-                    backImage.getContentType()
+                    new DocumentPayloadDescriptor(frontBytes,"frontImage_"+processInstanceId),
+                    new DocumentPayloadDescriptor(backBytes,"backImage_"+processInstanceId)
             );
 
             commandGateway.sendAndWait(command);

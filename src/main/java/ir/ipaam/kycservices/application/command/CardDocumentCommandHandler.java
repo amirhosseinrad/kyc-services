@@ -18,8 +18,8 @@ public class CardDocumentCommandHandler {
     public void handle(UploadCardDocumentsCommand command) {
         log.debug("Handling card document upload for process {}", command.getProcessInstanceId());
         kycUserTasks.uploadCardDocuments(
-                command.getFrontImage(),
-                command.getBackImage(),
+                command.getFrontDescriptor().data(),
+                command.getBackDescriptor().data(),
                 command.getProcessInstanceId()
         );
     }
