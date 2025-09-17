@@ -1,14 +1,17 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
+import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
+import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
+import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
@@ -35,6 +38,7 @@ class KycProcessEventHandlerTest {
     private CustomerRepository customerRepository;
     private KycStepStatusRepository stepStatusRepository;
     private DocumentRepository documentRepository;
+    private ConsentRepository consentRepository;
     private WebClient webClient;
     private KycProcessEventHandler handler;
 
@@ -44,6 +48,7 @@ class KycProcessEventHandlerTest {
         customerRepository = mock(CustomerRepository.class);
         stepStatusRepository = mock(KycStepStatusRepository.class);
         documentRepository = mock(DocumentRepository.class);
+        consentRepository = mock(ConsentRepository.class);
 
         ExchangeFunction exchangeFunction = request -> Mono.just(
                 ClientResponse.create(HttpStatus.OK)
@@ -54,7 +59,7 @@ class KycProcessEventHandlerTest {
         );
         webClient = WebClient.builder().exchangeFunction(exchangeFunction).build();
 
-        handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository, webClient);
+        handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository, consentRepository, webClient);
     }
 
     @Test
@@ -123,6 +128,27 @@ class KycProcessEventHandlerTest {
         assertEquals("CARD_BACK", saved.get(1).getType());
         assertEquals("back-path", saved.get(1).getStoragePath());
         assertEquals(processInstance, saved.get(1).getProcess());
+    }
+
+    @Test
+    void onConsentAcceptedEventPersistsConsent() {
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        LocalDateTime acceptedAt = LocalDateTime.of(2024, 1, 1, 12, 0);
+        ConsentAcceptedEvent event = new ConsentAcceptedEvent("proc1", "123", "v1", true, acceptedAt);
+
+        handler.on(event);
+
+        verify(instanceRepository).save(processInstance);
+        ArgumentCaptor<Consent> captor = ArgumentCaptor.forClass(Consent.class);
+        verify(consentRepository).save(captor.capture());
+        Consent consent = captor.getValue();
+        assertEquals(processInstance, consent.getProcess());
+        assertTrue(consent.isAccepted());
+        assertEquals("v1", consent.getTermsVersion());
+        assertEquals(acceptedAt, consent.getAcceptedAt());
+        assertEquals("CONSENT_ACCEPTED", processInstance.getStatus());
     }
 
     @Test

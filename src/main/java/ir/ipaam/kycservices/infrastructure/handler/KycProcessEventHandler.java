@@ -1,14 +1,17 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
+import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
+import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.Document;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
+import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
@@ -43,6 +46,7 @@ public class KycProcessEventHandler {
     private final CustomerRepository customerRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final DocumentRepository documentRepository;
+    private final ConsentRepository consentRepository;
     @Qualifier("cardDocumentWebClient")
     private final WebClient documentWebClient;
 
@@ -120,6 +124,22 @@ public class KycProcessEventHandler {
 
         persistMetadata(response.getFront(), DOCUMENT_TYPE_FRONT, event.getProcessInstanceId(), processInstance);
         persistMetadata(response.getBack(), DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
+    }
+
+    @EventHandler
+    public void on(ConsentAcceptedEvent event) {
+        kycProcessInstanceRepository.findByCamundaInstanceId(event.getProcessInstanceId())
+                .ifPresentOrElse(instance -> {
+                    instance.setStatus("CONSENT_ACCEPTED");
+                    kycProcessInstanceRepository.save(instance);
+
+                    Consent consent = new Consent();
+                    consent.setProcess(instance);
+                    consent.setAccepted(event.isAccepted());
+                    consent.setAcceptedAt(event.getAcceptedAt());
+                    consent.setTermsVersion(event.getTermsVersion());
+                    consentRepository.save(consent);
+                }, () -> log.warn("No persisted process instance found for Camunda id {}", event.getProcessInstanceId()));
     }
 
     @QueryHandler

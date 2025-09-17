@@ -1,9 +1,11 @@
 package ir.ipaam.kycservices.domain.model.aggregate;
 
+import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
+import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import lombok.NoArgsConstructor;
@@ -65,6 +67,32 @@ public class KycProcessAggregate {
                 LocalDateTime.now()));
     }
 
+    @CommandHandler
+    public void handle(AcceptConsentCommand command) {
+        if (this.processInstanceId == null) {
+            throw new IllegalStateException("KYC process has not been started");
+        }
+
+        if (!command.getProcessInstanceId().equals(this.processInstanceId)) {
+            throw new IllegalArgumentException("Process instance identifier mismatch");
+        }
+
+        if (command.getTermsVersion() == null || command.getTermsVersion().isBlank()) {
+            throw new IllegalArgumentException("termsVersion must be provided");
+        }
+
+        if (!command.isAccepted()) {
+            throw new IllegalArgumentException("Consent must be accepted");
+        }
+
+        AggregateLifecycle.apply(new ConsentAcceptedEvent(
+                command.getProcessInstanceId(),
+                this.nationalCode,
+                command.getTermsVersion().trim(),
+                command.isAccepted(),
+                LocalDateTime.now()));
+    }
+
     @EventSourcingHandler
     public void on(KycProcessStartedEvent event) {
         this.processInstanceId = event.getProcessInstanceId();
@@ -80,5 +108,10 @@ public class KycProcessAggregate {
     @EventSourcingHandler
     public void on(CardDocumentsUploadedEvent event) {
         this.status = "CARD_DOCUMENTS_UPLOADED";
+    }
+
+    @EventSourcingHandler
+    public void on(ConsentAcceptedEvent event) {
+        this.status = "CONSENT_ACCEPTED";
     }
 }

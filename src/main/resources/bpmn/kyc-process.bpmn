@@ -63,10 +63,13 @@
     <bpmn:sequenceFlow id="Flow_0hl5zl8" sourceRef="Activity_0wfzi8k" targetRef="Activity_10347zg" />
     <bpmn:sequenceFlow id="Flow_1elia8p" sourceRef="Activity_10347zg" targetRef="Gateway_039mf43" />
     <bpmn:sequenceFlow id="Flow_0dmbp43" sourceRef="check-kyc-status" targetRef="Activity_0phc2h9" />
-    <bpmn:task id="Activity_0phc2h9" name="Consent &#38; Declarations">
+    <bpmn:serviceTask id="Activity_0phc2h9" name="Consent &#38; Declarations">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="accept-consent" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_0dmbp43</bpmn:incoming>
       <bpmn:outgoing>Flow_0jhb3l4</bpmn:outgoing>
-    </bpmn:task>
+    </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_0evrolw" name="New National Card?">
       <bpmn:incoming>Flow_0jhb3l4</bpmn:incoming>
       <bpmn:outgoing>Flow_0ayjnrf</bpmn:outgoing>
