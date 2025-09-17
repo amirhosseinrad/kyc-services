@@ -18,6 +18,7 @@ public class Document {
     private String type;       // CARD, ID_BOOKLET, PHOTO, VIDEO, SIGNATURE
     private String storagePath;
     private String hash;
+    private String inquiryDocumentId;
     private boolean verified;
 
     @ManyToOne

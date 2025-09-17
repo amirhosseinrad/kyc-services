@@ -39,6 +39,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,7 @@ class KycProcessEventHandlerTest {
     private AtomicReference<String> lastVideoToken;
     private AtomicReference<String> lastSignatureToken;
     private AtomicBoolean tokenEndpointShouldFail;
+    private List<CardDocumentRequest> inquiryCardRequests;
 
     @BeforeEach
     void setUp() {
@@ -81,6 +83,7 @@ class KycProcessEventHandlerTest {
         lastVideoToken = new AtomicReference<>();
         lastSignatureToken = new AtomicReference<>();
         tokenEndpointShouldFail = new AtomicBoolean(false);
+        inquiryCardRequests = new ArrayList<>();
 
         ExchangeFunction cardExchangeFunction = request -> Mono.just(
                 ClientResponse.create(HttpStatus.OK)
@@ -122,6 +125,22 @@ class KycProcessEventHandlerTest {
                     lastSignatureToken.set(null);
                 }
                 body = "{\"Result\":\"Signature inserted into DB successfully with ID: signature-id\",\"RespnseCode\":0}";
+            } else if (path.endsWith("/SavePersonDocument")) {
+                String payload = readBody(request, strategies);
+                try {
+                    JsonNode node = mapper.readTree(payload);
+                    CardDocumentRequest cardRequest = new CardDocumentRequest(
+                            node.path("tokenValue").asText(null),
+                            node.path("documentType").asInt(),
+                            node.path("fileData").path("fileName").asText(null),
+                            node.path("fileData").path("content").asText(null)
+                    );
+                    inquiryCardRequests.add(cardRequest);
+                    String documentId = cardRequest.documentType == 101 ? "inquiry-front-id" : "inquiry-back-id";
+                    body = "{\"Result\":\"Document inserted into DB successfully with ID: " + documentId + "\",\"RespnseCode\":0}";
+                } catch (Exception e) {
+                    body = "{\"RespnseCode\":1}";
+                }
             } else {
                 body = "{}";
             }
@@ -200,10 +219,52 @@ class KycProcessEventHandlerTest {
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
         assertEquals("CARD_FRONT", saved.get(0).getType());
         assertEquals("front-path", saved.get(0).getStoragePath());
+        assertEquals("front-hash", saved.get(0).getHash());
+        assertEquals("inquiry-front-id", saved.get(0).getInquiryDocumentId());
         assertEquals(processInstance, saved.get(0).getProcess());
         assertEquals("CARD_BACK", saved.get(1).getType());
         assertEquals("back-path", saved.get(1).getStoragePath());
+        assertEquals("back-hash", saved.get(1).getHash());
+        assertEquals("inquiry-back-id", saved.get(1).getInquiryDocumentId());
         assertEquals(processInstance, saved.get(1).getProcess());
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertEquals(2, inquiryCardRequests.size());
+        CardDocumentRequest frontRequest = inquiryCardRequests.get(0);
+        assertEquals("token-for-proc1", frontRequest.token());
+        assertEquals(101, frontRequest.documentType());
+        assertEquals("front-file", frontRequest.fileName());
+        assertEquals("ZnJvbnQ=", frontRequest.content());
+        CardDocumentRequest backRequest = inquiryCardRequests.get(1);
+        assertEquals("token-for-proc1", backRequest.token());
+        assertEquals(102, backRequest.documentType());
+        assertEquals("back-file", backRequest.fileName());
+        assertEquals("YmFjaw==", backRequest.content());
+    }
+
+    @Test
+    void onCardDocumentsUploadedEventSkipsInquiryWhenTokenGenerationFails() {
+        tokenEndpointShouldFail.set(true);
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        CardDocumentsUploadedEvent event = new CardDocumentsUploadedEvent(
+                "proc1",
+                "123",
+                new DocumentPayloadDescriptor("front".getBytes(), "front-file"),
+                new DocumentPayloadDescriptor("back".getBytes(), "back-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository, times(2)).save(captor.capture());
+        List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
+        assertEquals("front-path", saved.get(0).getStoragePath());
+        assertEquals("back-path", saved.get(1).getStoragePath());
+        assertTrue(inquiryCardRequests.isEmpty());
+        assertEquals("proc1", lastTokenRequestProcessId.get());
     }
 
     @Test
@@ -417,5 +478,8 @@ class KycProcessEventHandlerTest {
             end = body.length();
         }
         return body.substring(start, end).trim();
+    }
+
+    private record CardDocumentRequest(String token, int documentType, String fileName, String content) {
     }
 }

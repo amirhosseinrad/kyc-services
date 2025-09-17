@@ -12,6 +12,7 @@ import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.Document;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
+import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
@@ -22,6 +23,8 @@ import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import ir.ipaam.kycservices.infrastructure.service.dto.GenerateTempTokenResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
+import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentRequest;
+import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureRequest;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
@@ -53,6 +56,9 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
     private static final String DEFAULT_THRESHOLD = "-1";
     private static final String DEFAULT_RANDOM_TEXT = "";
+    private static final int INQUIRY_DOCUMENT_TYPE_FRONT = 101;
+    private static final int INQUIRY_DOCUMENT_TYPE_BACK = 102;
+    private static final String FILE_DATA_PART_NAME = "FileData";
 
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
@@ -123,6 +129,26 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(CardDocumentsUploadedEvent event) {
+        String token = fetchInquiryToken(event.getProcessInstanceId());
+        String frontInquiryId = null;
+        String backInquiryId = null;
+        if (token == null) {
+            log.warn("Skipping inquiry card upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
+        } else {
+            frontInquiryId = uploadInquiryCardDocument(
+                    token,
+                    event.getFrontDescriptor(),
+                    INQUIRY_DOCUMENT_TYPE_FRONT,
+                    event.getProcessInstanceId(),
+                    "front card");
+            backInquiryId = uploadInquiryCardDocument(
+                    token,
+                    event.getBackDescriptor(),
+                    INQUIRY_DOCUMENT_TYPE_BACK,
+                    event.getProcessInstanceId(),
+                    "back card");
+        }
+
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("frontImage", asResource(event.getFrontDescriptor().data(), event.getFrontDescriptor().filename()))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -149,8 +175,17 @@ public class KycProcessEventHandler {
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
 
-        persistMetadata(response.getFront(), DOCUMENT_TYPE_FRONT, event.getProcessInstanceId(), processInstance);
-        persistMetadata(response.getBack(), DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
+        DocumentMetadata frontMetadata = response.getFront();
+        if (frontMetadata != null) {
+            frontMetadata.setInquiryDocumentId(frontInquiryId);
+        }
+        persistMetadata(frontMetadata, DOCUMENT_TYPE_FRONT, event.getProcessInstanceId(), processInstance);
+
+        DocumentMetadata backMetadata = response.getBack();
+        if (backMetadata != null) {
+            backMetadata.setInquiryDocumentId(backInquiryId);
+        }
+        persistMetadata(backMetadata, DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
     }
 
     @EventHandler
@@ -229,7 +264,7 @@ public class KycProcessEventHandler {
             return;
         }
 
-        String signatureId = extractSignatureId(response.getResult());
+        String signatureId = extractResultId(response.getResult());
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         DocumentMetadata metadata = new DocumentMetadata();
@@ -394,13 +429,14 @@ public class KycProcessEventHandler {
         document.setType(type);
         document.setStoragePath(metadata.getPath());
         document.setHash(metadata.getHash());
+        document.setInquiryDocumentId(metadata.getInquiryDocumentId());
         document.setVerified(false);
         document.setProcess(processInstance);
         documentRepository.save(document);
         log.info("Persisted document metadata for type {} at path {} for process {}", type, metadata.getPath(), processInstanceId);
     }
 
-    private String extractSignatureId(String resultMessage) {
+    private String extractResultId(String resultMessage) {
         if (resultMessage == null) {
             return null;
         }
@@ -409,6 +445,58 @@ public class KycProcessEventHandler {
             return resultMessage.substring(index + 1).trim();
         }
         return resultMessage.trim();
+    }
+
+    private String uploadInquiryCardDocument(String token, DocumentPayloadDescriptor descriptor, int documentType,
+                                             String processInstanceId, String logContext) {
+        SavePersonDocumentRequest.FileData fileData = new SavePersonDocumentRequest.FileData(
+                FILE_DATA_PART_NAME,
+                descriptor.filename(),
+                Base64.getEncoder().encodeToString(descriptor.data()));
+
+        SavePersonDocumentRequest request = new SavePersonDocumentRequest(token, documentType, fileData);
+
+        SavePersonDocumentResponse response = inquiryWebClient.post()
+                .uri("/api/Inquiry/SavePersonDocument")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(SavePersonDocumentResponse.class)
+                .onErrorResume(throwable -> {
+                    log.error("Failed to upload {} to inquiry service for process {}", logContext, processInstanceId, throwable);
+                    return Mono.error(throwable);
+                })
+                .block();
+
+        if (response == null) {
+            log.warn("Inquiry service returned empty response for process {} when uploading {}", processInstanceId, logContext);
+            return null;
+        }
+
+        Integer responseCode = response.getResponseCode();
+        if (responseCode != null && responseCode != 0) {
+            String message = response.getResponseMessage();
+            if (response.getException() != null && response.getException().getErrorMessage() != null) {
+                message = response.getException().getErrorMessage();
+            }
+            log.error("Inquiry service reported error code {} for process {} when uploading {}: {}",
+                    responseCode, processInstanceId, logContext, message);
+            return null;
+        }
+
+        String result = response.getResult();
+        if (result == null || result.isBlank()) {
+            log.warn("Inquiry service returned empty identifier for process {} when uploading {}", processInstanceId, logContext);
+            return null;
+        }
+
+        String documentId = extractResultId(result);
+        if (documentId == null || documentId.isBlank()) {
+            log.warn("Inquiry service returned invalid identifier for process {} when uploading {}", processInstanceId, logContext);
+            return null;
+        }
+
+        return documentId;
     }
 
     private ByteArrayResource asResource(byte[] data, String filename) {
