@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.application.api;
 
-import ir.ipaam.kycservices.application.api.controller.KycController;
+import ir.ipaam.kycservices.application.api.controller.KycProcessController;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
@@ -19,8 +19,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(KycController.class)
-class KycControllerTest {
+@WebMvcTest(KycProcessController.class)
+class KycProcessControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

@@ -24,7 +24,7 @@ import java.util.Map;
 @RequestMapping("/kyc")
 @RequiredArgsConstructor
 @Validated
-public class KycController {
+public class KycProcessController {
 
     private final KycServiceTasks kycServiceTasks;
     private final CommandGateway commandGateway;
