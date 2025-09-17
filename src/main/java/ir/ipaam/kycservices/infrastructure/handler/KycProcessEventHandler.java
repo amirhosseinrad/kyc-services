@@ -20,6 +20,7 @@ import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
+import ir.ipaam.kycservices.infrastructure.service.dto.GenerateTempTokenResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureRequest;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureResponse;
@@ -154,8 +155,14 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SelfieUploadedEvent event) {
+        String token = fetchInquiryToken(event.getProcessInstanceId());
+        if (token == null) {
+            log.warn("Skipping selfie upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
+            return;
+        }
+
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("tokenValue", event.getProcessInstanceId());
+        bodyBuilder.part("tokenValue", token);
         bodyBuilder.part("faceThreshold", DEFAULT_THRESHOLD);
         bodyBuilder.part("fileData", asResource(event.getDescriptor().data(), event.getDescriptor().filename()))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -181,12 +188,18 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SignatureUploadedEvent event) {
+        String token = fetchInquiryToken(event.getProcessInstanceId());
+        if (token == null) {
+            log.warn("Skipping signature upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
+            return;
+        }
+
         SaveSignatureRequest.FileData fileData = new SaveSignatureRequest.FileData(
                 "FileData",
                 event.getDescriptor().filename(),
                 Base64.getEncoder().encodeToString(event.getDescriptor().data()));
 
-        SaveSignatureRequest request = new SaveSignatureRequest(event.getProcessInstanceId(), fileData);
+        SaveSignatureRequest request = new SaveSignatureRequest(token, fileData);
 
         SaveSignatureResponse response = inquiryWebClient.post()
                 .uri("/api/Inquiry/SaveSignature")
@@ -226,8 +239,14 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(VideoUploadedEvent event) {
+        String token = fetchInquiryToken(event.getProcessInstanceId());
+        if (token == null) {
+            log.warn("Skipping video upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
+            return;
+        }
+
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("tokenValue", event.getProcessInstanceId());
+        bodyBuilder.part("tokenValue", token);
         bodyBuilder.part("randomText", DEFAULT_RANDOM_TEXT);
         bodyBuilder.part("faceThreshold", DEFAULT_THRESHOLD);
         bodyBuilder.part("voiceThreshold", DEFAULT_THRESHOLD);
@@ -311,6 +330,47 @@ public class KycProcessEventHandler {
         }
 
         return response.getResult();
+    }
+
+    private String fetchInquiryToken(String processInstanceId) {
+        GenerateTempTokenResponse response;
+        try {
+            response = inquiryWebClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/Inquiry/GenerateTempToken")
+                            .queryParam("tempTokenValue", processInstanceId)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(GenerateTempTokenResponse.class)
+                    .block();
+        } catch (Exception ex) {
+            log.error("Failed to generate inquiry token for process {}", processInstanceId, ex);
+            return null;
+        }
+
+        if (response == null) {
+            log.warn("Inquiry service returned empty response for process {} when generating token", processInstanceId);
+            return null;
+        }
+
+        Integer responseCode = response.getResponseCode();
+        if (responseCode != null && responseCode != 0) {
+            String message = response.getResponseMessage();
+            if (response.getException() != null && response.getException().getErrorMessage() != null) {
+                message = response.getException().getErrorMessage();
+            }
+            log.error("Inquiry service reported error code {} for process {} when generating token: {}",
+                    responseCode, processInstanceId, message);
+            return null;
+        }
+
+        String token = response.getResult();
+        if (token == null || token.isBlank()) {
+            log.warn("Inquiry service returned empty token for process {}", processInstanceId);
+            return null;
+        }
+
+        return token;
     }
 
     private ProcessInstance findProcessInstance(String processInstanceId) {

@@ -1,5 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
@@ -24,14 +26,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.codec.HttpMessageWriter;
+import org.springframework.mock.http.client.reactive.MockClientHttpRequest;
+import org.springframework.web.reactive.function.BodyInserter;
+import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFunction;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,6 +61,11 @@ class KycProcessEventHandlerTest {
     private WebClient inquiryWebClient;
     private BiometricStorageClient biometricStorageClient;
     private KycProcessEventHandler handler;
+    private AtomicReference<String> lastTokenRequestProcessId;
+    private AtomicReference<String> lastSelfieToken;
+    private AtomicReference<String> lastVideoToken;
+    private AtomicReference<String> lastSignatureToken;
+    private AtomicBoolean tokenEndpointShouldFail;
 
     @BeforeEach
     void setUp() {
@@ -58,6 +76,12 @@ class KycProcessEventHandlerTest {
         consentRepository = mock(ConsentRepository.class);
         biometricStorageClient = mock(BiometricStorageClient.class);
 
+        lastTokenRequestProcessId = new AtomicReference<>();
+        lastSelfieToken = new AtomicReference<>();
+        lastVideoToken = new AtomicReference<>();
+        lastSignatureToken = new AtomicReference<>();
+        tokenEndpointShouldFail = new AtomicBoolean(false);
+
         ExchangeFunction cardExchangeFunction = request -> Mono.just(
                 ClientResponse.create(HttpStatus.OK)
                         .header("Content-Type", "application/json")
@@ -67,14 +91,36 @@ class KycProcessEventHandlerTest {
         );
         cardWebClient = WebClient.builder().exchangeFunction(cardExchangeFunction).build();
 
+        ExchangeStrategies strategies = ExchangeStrategies.withDefaults();
+        ObjectMapper mapper = new ObjectMapper();
+
         ExchangeFunction inquiryExchangeFunction = request -> {
             String path = request.url().getPath();
             String body;
-            if (path.endsWith("/SendProbImageByToken")) {
+            if (path.endsWith("/GenerateTempToken")) {
+                String processId = UriComponentsBuilder.fromUri(request.url())
+                        .build()
+                        .getQueryParams()
+                        .getFirst("tempTokenValue");
+                lastTokenRequestProcessId.set(processId);
+                if (tokenEndpointShouldFail.get()) {
+                    return Mono.error(new RuntimeException("token failure"));
+                }
+                body = "{\"Result\":\"token-for-" + processId + "\",\"RespnseCode\":0}";
+            } else if (path.endsWith("/SendProbImageByToken")) {
+                lastSelfieToken.set(extractTokenFromMultipart(readBody(request, strategies)));
                 body = "{\"Result\":{\"path\":\"selfie-path\",\"hash\":\"selfie-hash\"},\"RespnseCode\":0}";
             } else if (path.endsWith("/SendProbVideoByToken")) {
+                lastVideoToken.set(extractTokenFromMultipart(readBody(request, strategies)));
                 body = "{\"Result\":{\"path\":\"video-path\",\"hash\":\"video-hash\"},\"RespnseCode\":0}";
             } else if (path.endsWith("/SaveSignature")) {
+                String payload = readBody(request, strategies);
+                try {
+                    JsonNode node = mapper.readTree(payload);
+                    lastSignatureToken.set(node.path("tokenValue").asText(null));
+                } catch (Exception e) {
+                    lastSignatureToken.set(null);
+                }
                 body = "{\"Result\":\"Signature inserted into DB successfully with ID: signature-id\",\"RespnseCode\":0}";
             } else {
                 body = "{}";
@@ -186,6 +232,8 @@ class KycProcessEventHandlerTest {
         assertEquals("minio-selfie-path", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
         verify(biometricStorageClient).upload(event.getDescriptor(), "PHOTO", "proc1");
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertEquals("token-for-proc1", lastSelfieToken.get());
     }
 
     @Test
@@ -208,6 +256,8 @@ class KycProcessEventHandlerTest {
         assertEquals("SIGNATURE", saved.getType());
         assertEquals("signature-id", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertEquals("token-for-proc1", lastSignatureToken.get());
     }
 
     @Test
@@ -236,6 +286,45 @@ class KycProcessEventHandlerTest {
         assertEquals("minio-video-path", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
         verify(biometricStorageClient).upload(event.getDescriptor(), "VIDEO", "proc1");
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertEquals("token-for-proc1", lastVideoToken.get());
+    }
+
+    @Test
+    void onSelfieUploadedEventSkipsWhenTokenGenerationFails() {
+        tokenEndpointShouldFail.set(true);
+
+        SelfieUploadedEvent event = new SelfieUploadedEvent(
+                "proc1",
+                "123",
+                new DocumentPayloadDescriptor("selfie".getBytes(), "selfie-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        verifyNoInteractions(biometricStorageClient);
+        verify(documentRepository, never()).save(any());
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertNull(lastSelfieToken.get());
+    }
+
+    @Test
+    void onSignatureUploadedEventSkipsWhenTokenGenerationFails() {
+        tokenEndpointShouldFail.set(true);
+
+        SignatureUploadedEvent event = new SignatureUploadedEvent(
+                "proc1",
+                "123",
+                new DocumentPayloadDescriptor("signature".getBytes(), "signature-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        verify(documentRepository, never()).save(any());
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertNull(lastSignatureToken.get());
     }
 
     @Test
@@ -277,5 +366,56 @@ class KycProcessEventHandlerTest {
         ProcessInstance result = handler.handle(new FindKycStatusQuery("123"));
         assertNotNull(result);
         assertEquals("UNKNOWN", result.getStatus());
+    }
+
+    private String readBody(ClientRequest request, ExchangeStrategies strategies) {
+        MockClientHttpRequest mockRequest = new MockClientHttpRequest(request.method(), request.url());
+        BodyInserter.Context context = new BodyInserter.Context() {
+            @Override
+            public List<HttpMessageWriter<?>> messageWriters() {
+                return strategies.messageWriters();
+            }
+
+            @Override
+            public Optional<ServerRequest> serverRequest() {
+                return Optional.empty();
+            }
+
+            @Override
+            public Map<String, Object> hints() {
+                return Collections.emptyMap();
+            }
+        };
+        request.body().insert(mockRequest, context);
+        return mockRequest.getBodyAsString().block();
+    }
+
+    private String extractTokenFromMultipart(String body) {
+        if (body == null) {
+            return null;
+        }
+        String marker = "name=\"tokenValue\"";
+        int markerIndex = body.indexOf(marker);
+        if (markerIndex < 0) {
+            return null;
+        }
+        int start = body.indexOf("\r\n\r\n", markerIndex);
+        int offset = 4;
+        if (start < 0) {
+            start = body.indexOf("\n\n", markerIndex);
+            offset = 2;
+        }
+        if (start < 0) {
+            return null;
+        }
+        start += offset;
+        int end = body.indexOf("\r\n", start);
+        if (end < 0) {
+            end = body.indexOf('\n', start);
+        }
+        if (end < 0) {
+            end = body.length();
+        }
+        return body.substring(start, end).trim();
     }
 }
