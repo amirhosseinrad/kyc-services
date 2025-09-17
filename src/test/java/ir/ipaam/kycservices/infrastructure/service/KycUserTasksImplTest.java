@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
+import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.infrastructure.service.impl.KycUserTasksImpl;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -64,5 +65,27 @@ class KycUserTasksImplTest {
         doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
 
         assertThrows(RuntimeException.class, () -> tasks.uploadCardDocuments(front, back, "process-1"));
+    }
+
+    @Test
+    void acceptConsentDispatchesCommand() {
+        tasks.acceptConsent("v1", true, "process-1");
+
+        ArgumentCaptor<AcceptConsentCommand> captor = ArgumentCaptor.forClass(AcceptConsentCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+
+        AcceptConsentCommand command = captor.getValue();
+        assertEquals("process-1", command.getProcessInstanceId());
+        assertEquals("v1", command.getTermsVersion());
+        assertTrue(command.isAccepted());
+    }
+
+    @Test
+    void acceptConsentValidatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> tasks.acceptConsent("", true, "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.acceptConsent("v1", false, "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.acceptConsent("v1", true, " "));
+
+        verify(commandGateway, never()).sendAndWait(any());
     }
 }

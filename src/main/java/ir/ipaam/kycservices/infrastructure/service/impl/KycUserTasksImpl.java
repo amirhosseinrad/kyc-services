@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
+import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
@@ -56,7 +57,24 @@ public class KycUserTasksImpl implements KycUserTasks {
 
     @Override
     public void acceptConsent(String termsVersion, boolean accepted, String processInstanceId) {
-        // TODO: implement integration
+        if (termsVersion == null || termsVersion.isBlank()) {
+            throw new IllegalArgumentException("termsVersion must be provided");
+        }
+        if (!accepted) {
+            throw new IllegalArgumentException("accepted must be true");
+        }
+        if (!StringUtils.hasText(processInstanceId)) {
+            throw new IllegalArgumentException("processInstanceId must be provided");
+        }
+
+        String normalizedProcessId = processInstanceId.trim();
+        String normalizedTermsVersion = termsVersion.trim();
+
+        commandGateway.sendAndWait(new AcceptConsentCommand(
+                normalizedProcessId,
+                normalizedTermsVersion,
+                true
+        ));
     }
 
     @Override
