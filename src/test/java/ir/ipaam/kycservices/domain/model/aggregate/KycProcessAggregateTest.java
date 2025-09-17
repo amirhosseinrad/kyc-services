@@ -3,11 +3,13 @@ package ir.ipaam.kycservices.domain.model.aggregate;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
+import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import org.axonframework.test.aggregate.AggregateTestFixture;
@@ -149,6 +151,25 @@ class KycProcessAggregateTest {
     }
 
     @Test
+    void uploadSignatureEmitsEventAndUpdatesState() {
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{7, 8, 9}, "signature.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadSignatureCommand("proc-1", descriptor))
+                .expectSuccessfulHandlerExecution()
+                .expectEventsMatching(payloadsMatching(exactSequenceOf(messageWithPayload(matches(event -> {
+                    SignatureUploadedEvent payload = (SignatureUploadedEvent) event;
+                    return payload.getProcessInstanceId().equals("proc-1")
+                            && payload.getNationalCode().equals("123")
+                            && payload.getDescriptor() != null
+                            && payload.getDescriptor().filename().equals("signature.png")
+                            && Arrays.equals(payload.getDescriptor().data(), descriptor.data())
+                            && payload.getUploadedAt() != null;
+                })))))
+                .expectState(state -> assertEquals("SIGNATURE_UPLOADED", state.getStatus()));
+    }
+
+    @Test
     void uploadSelfieRequiresStartedProcess() {
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{1}, "selfie.jpg");
 
@@ -170,6 +191,31 @@ class KycProcessAggregateTest {
     void uploadSelfieRequiresDescriptor() {
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
                 .when(new UploadSelfieCommand("proc-1", null))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadSignatureRequiresStartedProcess() {
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{1}, "signature.png");
+
+        fixture.givenNoPriorActivity()
+                .when(new UploadSignatureCommand("proc-1", descriptor))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    void uploadSignatureRequiresMatchingProcessId() {
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{1}, "signature.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadSignatureCommand("proc-2", descriptor))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadSignatureRequiresDescriptor() {
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadSignatureCommand("proc-1", null))
                 .expectException(IllegalArgumentException.class);
     }
 

@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.infrastructure.service.impl;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
@@ -21,6 +22,7 @@ public class KycUserTasksImpl implements KycUserTasks {
     static final String BACK_FILENAME = "back-image";
     static final String SELFIE_FILENAME = "selfie-image";
     static final String VIDEO_FILENAME = "video-file";
+    static final String SIGNATURE_FILENAME = "signature-image";
 
     private final CommandGateway commandGateway;
 
@@ -59,7 +61,15 @@ public class KycUserTasksImpl implements KycUserTasks {
 
     @Override
     public void uploadSignature(byte[] signatureImage, String processInstanceId) {
-        // TODO: implement integration
+        validateDocument(signatureImage, "signatureImage");
+        String normalizedProcessInstanceId = normalizeProcessInstanceId(processInstanceId);
+
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(signatureImage, randomizeFilename(SIGNATURE_FILENAME));
+
+        commandGateway.sendAndWait(new UploadSignatureCommand(
+                normalizedProcessInstanceId,
+                descriptor
+        ));
     }
 
     @Override

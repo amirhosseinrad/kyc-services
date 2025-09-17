@@ -5,6 +5,7 @@ import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
+import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
@@ -73,6 +74,8 @@ class KycProcessEventHandlerTest {
                 body = "{\"Result\":{\"path\":\"selfie-path\",\"hash\":\"selfie-hash\"},\"RespnseCode\":0}";
             } else if (path.endsWith("/SendProbVideoByToken")) {
                 body = "{\"Result\":{\"path\":\"video-path\",\"hash\":\"video-hash\"},\"RespnseCode\":0}";
+            } else if (path.endsWith("/SaveSignature")) {
+                body = "{\"Result\":\"Signature inserted into DB successfully with ID: signature-id\",\"RespnseCode\":0}";
             } else {
                 body = "{}";
             }
@@ -183,6 +186,28 @@ class KycProcessEventHandlerTest {
         assertEquals("minio-selfie-path", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
         verify(biometricStorageClient).upload(event.getDescriptor(), "PHOTO", "proc1");
+    }
+
+    @Test
+    void onSignatureUploadedEventStoresMetadata() {
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        SignatureUploadedEvent event = new SignatureUploadedEvent(
+                "proc1",
+                "123",
+                new DocumentPayloadDescriptor("signature".getBytes(), "signature-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository).save(captor.capture());
+        ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
+        assertEquals("SIGNATURE", saved.getType());
+        assertEquals("signature-id", saved.getStoragePath());
+        assertEquals(processInstance, saved.getProcess());
     }
 
     @Test

@@ -5,6 +5,7 @@ import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
+import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
@@ -20,6 +21,8 @@ import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
+import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureRequest;
+import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.queryhandling.QueryHandler;
@@ -35,6 +38,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Locale;
 
 @Component
@@ -45,6 +49,7 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_BACK = "CARD_BACK";
     private static final String DOCUMENT_TYPE_SELFIE = "PHOTO";
     private static final String DOCUMENT_TYPE_VIDEO = "VIDEO";
+    private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
     private static final String DEFAULT_THRESHOLD = "-1";
     private static final String DEFAULT_RANDOM_TEXT = "";
 
@@ -175,6 +180,51 @@ public class KycProcessEventHandler {
     }
 
     @EventHandler
+    public void on(SignatureUploadedEvent event) {
+        SaveSignatureRequest.FileData fileData = new SaveSignatureRequest.FileData(
+                "FileData",
+                event.getDescriptor().filename(),
+                Base64.getEncoder().encodeToString(event.getDescriptor().data()));
+
+        SaveSignatureRequest request = new SaveSignatureRequest(event.getProcessInstanceId(), fileData);
+
+        SaveSignatureResponse response = inquiryWebClient.post()
+                .uri("/api/Inquiry/SaveSignature")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(SaveSignatureResponse.class)
+                .onErrorResume(throwable -> {
+                    log.error("Failed to upload signature for process {}", event.getProcessInstanceId(), throwable);
+                    return Mono.error(throwable);
+                })
+                .block();
+
+        if (response == null) {
+            log.warn("Inquiry service returned empty response for process {} when uploading signature", event.getProcessInstanceId());
+            return;
+        }
+
+        Integer responseCode = response.getResponseCode();
+        if (responseCode != null && responseCode != 0) {
+            String message = response.getResponseMessage();
+            if (response.getException() != null && response.getException().getErrorMessage() != null) {
+                message = response.getException().getErrorMessage();
+            }
+            log.error("Inquiry service reported error code {} for process {} when uploading signature: {}",
+                    responseCode, event.getProcessInstanceId(), message);
+            return;
+        }
+
+        String signatureId = extractSignatureId(response.getResult());
+
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        DocumentMetadata metadata = new DocumentMetadata();
+        metadata.setPath(signatureId);
+        persistMetadata(metadata, DOCUMENT_TYPE_SIGNATURE, event.getProcessInstanceId(), processInstance);
+    }
+
+    @EventHandler
     public void on(VideoUploadedEvent event) {
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("tokenValue", event.getProcessInstanceId());
@@ -288,6 +338,17 @@ public class KycProcessEventHandler {
         document.setProcess(processInstance);
         documentRepository.save(document);
         log.info("Persisted document metadata for type {} at path {} for process {}", type, metadata.getPath(), processInstanceId);
+    }
+
+    private String extractSignatureId(String resultMessage) {
+        if (resultMessage == null) {
+            return null;
+        }
+        int index = resultMessage.lastIndexOf(':');
+        if (index >= 0 && index < resultMessage.length() - 1) {
+            return resultMessage.substring(index + 1).trim();
+        }
+        return resultMessage.trim();
     }
 
     private ByteArrayResource asResource(byte[] data, String filename) {
