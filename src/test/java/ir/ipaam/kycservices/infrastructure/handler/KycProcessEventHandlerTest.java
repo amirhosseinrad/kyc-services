@@ -17,6 +17,8 @@ import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
+import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
+import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -43,6 +45,7 @@ class KycProcessEventHandlerTest {
     private ConsentRepository consentRepository;
     private WebClient cardWebClient;
     private WebClient inquiryWebClient;
+    private BiometricStorageClient biometricStorageClient;
     private KycProcessEventHandler handler;
 
     @BeforeEach
@@ -52,6 +55,7 @@ class KycProcessEventHandlerTest {
         stepStatusRepository = mock(KycStepStatusRepository.class);
         documentRepository = mock(DocumentRepository.class);
         consentRepository = mock(ConsentRepository.class);
+        biometricStorageClient = mock(BiometricStorageClient.class);
 
         ExchangeFunction cardExchangeFunction = request -> Mono.just(
                 ClientResponse.create(HttpStatus.OK)
@@ -82,7 +86,7 @@ class KycProcessEventHandlerTest {
         inquiryWebClient = WebClient.builder().exchangeFunction(inquiryExchangeFunction).build();
 
         handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository,
-                consentRepository, cardWebClient, inquiryWebClient);
+                consentRepository, cardWebClient, inquiryWebClient, biometricStorageClient);
     }
 
     @Test
@@ -165,14 +169,20 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata storageMetadata = new DocumentMetadata();
+        storageMetadata.setPath("minio-selfie-path");
+        storageMetadata.setHash("minio-selfie-hash");
+        when(biometricStorageClient.upload(any(), any(), any())).thenReturn(storageMetadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
         assertEquals("PHOTO", saved.getType());
-        assertEquals("selfie-path", saved.getStoragePath());
+        assertEquals("minio-selfie-path", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
+        verify(biometricStorageClient).upload(event.getDescriptor(), "PHOTO", "proc1");
     }
 
     @Test
@@ -187,14 +197,20 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata storageMetadata = new DocumentMetadata();
+        storageMetadata.setPath("minio-video-path");
+        storageMetadata.setHash("minio-video-hash");
+        when(biometricStorageClient.upload(any(), any(), any())).thenReturn(storageMetadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
         assertEquals("VIDEO", saved.getType());
-        assertEquals("video-path", saved.getStoragePath());
+        assertEquals("minio-video-path", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
+        verify(biometricStorageClient).upload(event.getDescriptor(), "VIDEO", "proc1");
     }
 
     @Test

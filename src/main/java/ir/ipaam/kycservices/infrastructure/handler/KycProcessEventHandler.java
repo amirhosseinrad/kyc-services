@@ -17,6 +17,7 @@ import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
+import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
@@ -54,6 +55,7 @@ public class KycProcessEventHandler {
     private final ConsentRepository consentRepository;
     private final WebClient documentWebClient;
     private final WebClient inquiryWebClient;
+    private final BiometricStorageClient biometricStorageClient;
 
     public KycProcessEventHandler(
             KycProcessInstanceRepository kycProcessInstanceRepository,
@@ -62,7 +64,8 @@ public class KycProcessEventHandler {
             DocumentRepository documentRepository,
             ConsentRepository consentRepository,
             @Qualifier("cardDocumentWebClient") WebClient documentWebClient,
-            @Qualifier("inquiryWebClient") WebClient inquiryWebClient) {
+            @Qualifier("inquiryWebClient") WebClient inquiryWebClient,
+            BiometricStorageClient biometricStorageClient) {
         this.kycProcessInstanceRepository = kycProcessInstanceRepository;
         this.customerRepository = customerRepository;
         this.kycStepStatusRepository = kycStepStatusRepository;
@@ -70,6 +73,7 @@ public class KycProcessEventHandler {
         this.consentRepository = consentRepository;
         this.documentWebClient = documentWebClient;
         this.inquiryWebClient = inquiryWebClient;
+        this.biometricStorageClient = biometricStorageClient;
     }
 
     @EventHandler
@@ -161,8 +165,13 @@ public class KycProcessEventHandler {
             return;
         }
 
+        DocumentMetadata storageMetadata = biometricStorageClient.upload(
+                event.getDescriptor(),
+                DOCUMENT_TYPE_SELFIE,
+                event.getProcessInstanceId());
+
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-        persistMetadata(metadata, DOCUMENT_TYPE_SELFIE, event.getProcessInstanceId(), processInstance);
+        persistMetadata(storageMetadata, DOCUMENT_TYPE_SELFIE, event.getProcessInstanceId(), processInstance);
     }
 
     @EventHandler
@@ -185,8 +194,13 @@ public class KycProcessEventHandler {
             return;
         }
 
+        DocumentMetadata storageMetadata = biometricStorageClient.upload(
+                event.getDescriptor(),
+                DOCUMENT_TYPE_VIDEO,
+                event.getProcessInstanceId());
+
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-        persistMetadata(metadata, DOCUMENT_TYPE_VIDEO, event.getProcessInstanceId(), processInstance);
+        persistMetadata(storageMetadata, DOCUMENT_TYPE_VIDEO, event.getProcessInstanceId(), processInstance);
     }
 
     @EventHandler
