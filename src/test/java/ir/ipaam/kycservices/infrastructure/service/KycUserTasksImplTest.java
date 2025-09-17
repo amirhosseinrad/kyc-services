@@ -97,10 +97,19 @@ class KycUserTasksImplTest {
     }
 
     @Test
+    void uploadSelfiePropagatesGatewayErrors() {
+        byte[] selfie = "selfie".getBytes(StandardCharsets.UTF_8);
+
+        doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
+
+        assertThrows(RuntimeException.class, () -> tasks.uploadSelfie(selfie, "process-1"));
+    }
+
+    @Test
     void uploadVideoDispatchesCommand() {
         byte[] video = "video".getBytes(StandardCharsets.UTF_8);
 
-        tasks.uploadVideo(video, "process-1");
+        tasks.uploadVideo(video, " process-1 ");
 
         ArgumentCaptor<UploadVideoCommand> captor = ArgumentCaptor.forClass(UploadVideoCommand.class);
         verify(commandGateway).sendAndWait(captor.capture());
@@ -121,6 +130,15 @@ class KycUserTasksImplTest {
         assertThrows(IllegalArgumentException.class, () -> tasks.uploadVideo(video, " "));
 
         verify(commandGateway, never()).sendAndWait(any());
+    }
+
+    @Test
+    void uploadVideoPropagatesGatewayErrors() {
+        byte[] video = "video".getBytes(StandardCharsets.UTF_8);
+
+        doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
+
+        assertThrows(RuntimeException.class, () -> tasks.uploadVideo(video, "process-1"));
     }
 
     @Test
