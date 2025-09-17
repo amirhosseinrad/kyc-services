@@ -4,10 +4,14 @@ import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
+import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
+import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import lombok.NoArgsConstructor;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
@@ -68,6 +72,48 @@ public class KycProcessAggregate {
     }
 
     @CommandHandler
+    public void handle(UploadSelfieCommand command) {
+        if (this.processInstanceId == null) {
+            throw new IllegalStateException("KYC process has not been started");
+        }
+
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
+            throw new IllegalArgumentException("Process instance identifier mismatch");
+        }
+
+        if (command.selfieDescriptor() == null) {
+            throw new IllegalArgumentException("Selfie descriptor must be provided");
+        }
+
+        AggregateLifecycle.apply(new SelfieUploadedEvent(
+                command.processInstanceId(),
+                this.nationalCode,
+                command.selfieDescriptor(),
+                LocalDateTime.now()));
+    }
+
+    @CommandHandler
+    public void handle(UploadVideoCommand command) {
+        if (this.processInstanceId == null) {
+            throw new IllegalStateException("KYC process has not been started");
+        }
+
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
+            throw new IllegalArgumentException("Process instance identifier mismatch");
+        }
+
+        if (command.videoDescriptor() == null) {
+            throw new IllegalArgumentException("Video descriptor must be provided");
+        }
+
+        AggregateLifecycle.apply(new VideoUploadedEvent(
+                command.processInstanceId(),
+                this.nationalCode,
+                command.videoDescriptor(),
+                LocalDateTime.now()));
+    }
+
+    @CommandHandler
     public void handle(AcceptConsentCommand command) {
         if (this.processInstanceId == null) {
             throw new IllegalStateException("KYC process has not been started");
@@ -108,6 +154,16 @@ public class KycProcessAggregate {
     @EventSourcingHandler
     public void on(CardDocumentsUploadedEvent event) {
         this.status = "CARD_DOCUMENTS_UPLOADED";
+    }
+
+    @EventSourcingHandler
+    public void on(SelfieUploadedEvent event) {
+        this.status = "SELFIE_UPLOADED";
+    }
+
+    @EventSourcingHandler
+    public void on(VideoUploadedEvent event) {
+        this.status = "VIDEO_UPLOADED";
     }
 
     @EventSourcingHandler

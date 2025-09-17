@@ -79,10 +79,10 @@ class KycUserTasksImplTest {
         verify(commandGateway).sendAndWait(captor.capture());
 
         UploadSelfieCommand command = captor.getValue();
-        assertEquals("process-1", command.getProcessInstanceId());
-        assertNotNull(command.getSelfieDescriptor());
-        assertTrue(command.getSelfieDescriptor().filename().startsWith(KycUserTasksImpl.SELFIE_FILENAME));
-        assertArrayEquals(selfie, command.getSelfieDescriptor().data());
+        assertEquals("process-1", command.processInstanceId());
+        assertNotNull(command.selfieDescriptor());
+        assertTrue(command.selfieDescriptor().filename().startsWith(KycUserTasksImpl.SELFIE_FILENAME));
+        assertArrayEquals(selfie, command.selfieDescriptor().data());
     }
 
     @Test
@@ -106,10 +106,10 @@ class KycUserTasksImplTest {
         verify(commandGateway).sendAndWait(captor.capture());
 
         UploadVideoCommand command = captor.getValue();
-        assertEquals("process-1", command.getProcessInstanceId());
-        assertNotNull(command.getVideoDescriptor());
-        assertTrue(command.getVideoDescriptor().filename().startsWith(KycUserTasksImpl.VIDEO_FILENAME));
-        assertArrayEquals(video, command.getVideoDescriptor().data());
+        assertEquals("process-1", command.processInstanceId());
+        assertNotNull(command.videoDescriptor());
+        assertTrue(command.videoDescriptor().filename().startsWith(KycUserTasksImpl.VIDEO_FILENAME));
+        assertArrayEquals(video, command.videoDescriptor().data());
     }
 
     @Test
