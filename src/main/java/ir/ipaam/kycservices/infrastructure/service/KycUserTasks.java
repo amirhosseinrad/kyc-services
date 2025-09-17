@@ -17,7 +17,9 @@ public interface KycUserTasks {
     void provideAddress(String address, String zipCode, String processInstanceId);
 
     // 5. Upload selfie & live face video (stored as BLOBs)
-    void uploadSelfieAndVideo(byte[] photo, byte[] video, String processInstanceId);
+    void uploadSelfie(byte[] selfie, String processInstanceId);
+
+    void uploadVideo(byte[] video, String processInstanceId);
 
     // 6. Upload ID pages (1–4) (stored as BLOBs)
     void uploadIdPages(List<byte[]> pages, String processInstanceId);

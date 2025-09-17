@@ -2,6 +2,8 @@ package ir.ipaam.kycservices.infrastructure.service;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.infrastructure.service.impl.KycUserTasksImpl;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +67,60 @@ class KycUserTasksImplTest {
         doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
 
         assertThrows(RuntimeException.class, () -> tasks.uploadCardDocuments(front, back, "process-1"));
+    }
+
+    @Test
+    void uploadSelfieDispatchesCommand() {
+        byte[] selfie = "selfie".getBytes(StandardCharsets.UTF_8);
+
+        tasks.uploadSelfie(selfie, " process-1 ");
+
+        ArgumentCaptor<UploadSelfieCommand> captor = ArgumentCaptor.forClass(UploadSelfieCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+
+        UploadSelfieCommand command = captor.getValue();
+        assertEquals("process-1", command.getProcessInstanceId());
+        assertNotNull(command.getSelfieDescriptor());
+        assertTrue(command.getSelfieDescriptor().filename().startsWith(KycUserTasksImpl.SELFIE_FILENAME));
+        assertArrayEquals(selfie, command.getSelfieDescriptor().data());
+    }
+
+    @Test
+    void uploadSelfieValidatesInput() {
+        byte[] selfie = "selfie".getBytes(StandardCharsets.UTF_8);
+
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadSelfie(null, "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadSelfie(new byte[0], "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadSelfie(selfie, " "));
+
+        verify(commandGateway, never()).sendAndWait(any());
+    }
+
+    @Test
+    void uploadVideoDispatchesCommand() {
+        byte[] video = "video".getBytes(StandardCharsets.UTF_8);
+
+        tasks.uploadVideo(video, "process-1");
+
+        ArgumentCaptor<UploadVideoCommand> captor = ArgumentCaptor.forClass(UploadVideoCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+
+        UploadVideoCommand command = captor.getValue();
+        assertEquals("process-1", command.getProcessInstanceId());
+        assertNotNull(command.getVideoDescriptor());
+        assertTrue(command.getVideoDescriptor().filename().startsWith(KycUserTasksImpl.VIDEO_FILENAME));
+        assertArrayEquals(video, command.getVideoDescriptor().data());
+    }
+
+    @Test
+    void uploadVideoValidatesInput() {
+        byte[] video = "video".getBytes(StandardCharsets.UTF_8);
+
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadVideo(null, "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadVideo(new byte[0], "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadVideo(video, " "));
+
+        verify(commandGateway, never()).sendAndWait(any());
     }
 
     @Test
