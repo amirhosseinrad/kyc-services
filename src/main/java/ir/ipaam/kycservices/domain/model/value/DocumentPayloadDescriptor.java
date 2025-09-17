@@ -20,8 +20,8 @@ public record DocumentPayloadDescriptor(byte[] data, String filename) {
             throw new IllegalArgumentException("filename must not be blank");
         }
 
-        this.data = Arrays.copyOf(data, data.length);
-        this.filename = normalizedFilename;
+        data = Arrays.copyOf(data, data.length);
+        filename = normalizedFilename;
     }
 
     @Override
