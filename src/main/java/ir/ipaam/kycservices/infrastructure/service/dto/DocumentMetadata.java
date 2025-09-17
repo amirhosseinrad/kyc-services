@@ -8,4 +8,5 @@ import lombok.Data;
 public class DocumentMetadata {
     private String path;
     private String hash;
+    private String inquiryDocumentId;
 }
