@@ -4,6 +4,8 @@ import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
+import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
+import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.Document;
@@ -16,6 +18,7 @@ import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceReposito
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
+import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.eventhandling.EventHandler;
@@ -41,6 +44,10 @@ public class KycProcessEventHandler {
     private static final Logger log = LoggerFactory.getLogger(KycProcessEventHandler.class);
     private static final String DOCUMENT_TYPE_FRONT = "CARD_FRONT";
     private static final String DOCUMENT_TYPE_BACK = "CARD_BACK";
+    private static final String DOCUMENT_TYPE_SELFIE = "PHOTO";
+    private static final String DOCUMENT_TYPE_VIDEO = "VIDEO";
+    private static final String DEFAULT_THRESHOLD = "-1";
+    private static final String DEFAULT_RANDOM_TEXT = "";
 
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
@@ -49,6 +56,8 @@ public class KycProcessEventHandler {
     private final ConsentRepository consentRepository;
     @Qualifier("cardDocumentWebClient")
     private final WebClient documentWebClient;
+    @Qualifier("inquiryWebClient")
+    private final WebClient inquiryWebClient;
 
     @EventHandler
     public void on(KycProcessStartedEvent event) {
@@ -115,15 +124,56 @@ public class KycProcessEventHandler {
             return;
         }
 
-        ProcessInstance processInstance = kycProcessInstanceRepository
-                .findByCamundaInstanceId(event.getProcessInstanceId())
-                .orElse(null);
-        if (processInstance == null) {
-            log.warn("No persisted process instance found for Camunda id {}", event.getProcessInstanceId());
-        }
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
 
         persistMetadata(response.getFront(), DOCUMENT_TYPE_FRONT, event.getProcessInstanceId(), processInstance);
         persistMetadata(response.getBack(), DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
+    }
+
+    @EventHandler
+    public void on(SelfieUploadedEvent event) {
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        bodyBuilder.part("tokenValue", event.getProcessInstanceId());
+        bodyBuilder.part("faceThreshold", DEFAULT_THRESHOLD);
+        bodyBuilder.part("fileData", asResource(event.getDescriptor().data(), event.getDescriptor().filename()))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+
+        DocumentMetadata metadata = uploadInquiryDocument(
+                "/api/Inquiry/SendProbImageByToken",
+                bodyBuilder,
+                event.getProcessInstanceId(),
+                "selfie");
+
+        if (metadata == null) {
+            return;
+        }
+
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        persistMetadata(metadata, DOCUMENT_TYPE_SELFIE, event.getProcessInstanceId(), processInstance);
+    }
+
+    @EventHandler
+    public void on(VideoUploadedEvent event) {
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        bodyBuilder.part("tokenValue", event.getProcessInstanceId());
+        bodyBuilder.part("randomText", DEFAULT_RANDOM_TEXT);
+        bodyBuilder.part("faceThreshold", DEFAULT_THRESHOLD);
+        bodyBuilder.part("voiceThreshold", DEFAULT_THRESHOLD);
+        bodyBuilder.part("fileData", asResource(event.getDescriptor().data(), event.getDescriptor().filename()))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+
+        DocumentMetadata metadata = uploadInquiryDocument(
+                "/api/Inquiry/SendProbVideoByToken",
+                bodyBuilder,
+                event.getProcessInstanceId(),
+                "video");
+
+        if (metadata == null) {
+            return;
+        }
+
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        persistMetadata(metadata, DOCUMENT_TYPE_VIDEO, event.getProcessInstanceId(), processInstance);
     }
 
     @EventHandler
@@ -151,6 +201,49 @@ public class KycProcessEventHandler {
                     instance.setStatus("UNKNOWN");
                     return instance;
                 });
+    }
+
+    private DocumentMetadata uploadInquiryDocument(String uri, MultipartBodyBuilder bodyBuilder,
+                                                   String processInstanceId, String logContext) {
+        InquiryUploadResponse response = inquiryWebClient.post()
+                .uri(uri)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                .retrieve()
+                .bodyToMono(InquiryUploadResponse.class)
+                .onErrorResume(throwable -> {
+                    log.error("Failed to upload {} document for process {}", logContext, processInstanceId, throwable);
+                    return Mono.error(throwable);
+                })
+                .block();
+
+        if (response == null) {
+            log.warn("Inquiry service returned empty response for process {} when uploading {}", processInstanceId, logContext);
+            return null;
+        }
+
+        Integer responseCode = response.getResponseCode();
+        if (responseCode != null && responseCode != 0) {
+            String message = response.getResponseMessage();
+            if (response.getException() != null && response.getException().getErrorMessage() != null) {
+                message = response.getException().getErrorMessage();
+            }
+            log.error("Inquiry service reported error code {} for process {} when uploading {}: {}",
+                    responseCode, processInstanceId, logContext, message);
+            return null;
+        }
+
+        return response.getResult();
+    }
+
+    private ProcessInstance findProcessInstance(String processInstanceId) {
+        ProcessInstance processInstance = kycProcessInstanceRepository
+                .findByCamundaInstanceId(processInstanceId)
+                .orElse(null);
+        if (processInstance == null) {
+            log.warn("No persisted process instance found for Camunda id {}", processInstanceId);
+        }
+        return processInstance;
     }
 
     private void persistMetadata(DocumentMetadata metadata, String type, String processInstanceId,

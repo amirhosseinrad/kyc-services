@@ -4,6 +4,8 @@ import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
+import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
+import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -39,7 +41,8 @@ class KycProcessEventHandlerTest {
     private KycStepStatusRepository stepStatusRepository;
     private DocumentRepository documentRepository;
     private ConsentRepository consentRepository;
-    private WebClient webClient;
+    private WebClient cardWebClient;
+    private WebClient inquiryWebClient;
     private KycProcessEventHandler handler;
 
     @BeforeEach
@@ -50,16 +53,36 @@ class KycProcessEventHandlerTest {
         documentRepository = mock(DocumentRepository.class);
         consentRepository = mock(ConsentRepository.class);
 
-        ExchangeFunction exchangeFunction = request -> Mono.just(
+        ExchangeFunction cardExchangeFunction = request -> Mono.just(
                 ClientResponse.create(HttpStatus.OK)
                         .header("Content-Type", "application/json")
                         .body("{\"front\":{\"path\":\"front-path\",\"hash\":\"front-hash\"}," +
                                 "\"back\":{\"path\":\"back-path\",\"hash\":\"back-hash\"}}")
                         .build()
         );
-        webClient = WebClient.builder().exchangeFunction(exchangeFunction).build();
+        cardWebClient = WebClient.builder().exchangeFunction(cardExchangeFunction).build();
 
-        handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository, consentRepository, webClient);
+        ExchangeFunction inquiryExchangeFunction = request -> {
+            String path = request.url().getPath();
+            String body;
+            if (path.endsWith("/SendProbImageByToken")) {
+                body = "{\"Result\":{\"path\":\"selfie-path\",\"hash\":\"selfie-hash\"},\"RespnseCode\":0}";
+            } else if (path.endsWith("/SendProbVideoByToken")) {
+                body = "{\"Result\":{\"path\":\"video-path\",\"hash\":\"video-hash\"},\"RespnseCode\":0}";
+            } else {
+                body = "{}";
+            }
+            return Mono.just(
+                    ClientResponse.create(HttpStatus.OK)
+                            .header("Content-Type", "application/json")
+                            .body(body)
+                            .build()
+            );
+        };
+        inquiryWebClient = WebClient.builder().exchangeFunction(inquiryExchangeFunction).build();
+
+        handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository,
+                consentRepository, cardWebClient, inquiryWebClient);
     }
 
     @Test
@@ -128,6 +151,50 @@ class KycProcessEventHandlerTest {
         assertEquals("CARD_BACK", saved.get(1).getType());
         assertEquals("back-path", saved.get(1).getStoragePath());
         assertEquals(processInstance, saved.get(1).getProcess());
+    }
+
+    @Test
+    void onSelfieUploadedEventStoresMetadata() {
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        SelfieUploadedEvent event = new SelfieUploadedEvent(
+                "proc1",
+                "123",
+                new DocumentPayloadDescriptor("selfie".getBytes(), "selfie-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository).save(captor.capture());
+        ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
+        assertEquals("PHOTO", saved.getType());
+        assertEquals("selfie-path", saved.getStoragePath());
+        assertEquals(processInstance, saved.getProcess());
+    }
+
+    @Test
+    void onVideoUploadedEventStoresMetadata() {
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        VideoUploadedEvent event = new VideoUploadedEvent(
+                "proc1",
+                "123",
+                new DocumentPayloadDescriptor("video".getBytes(), "video-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository).save(captor.capture());
+        ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
+        assertEquals("VIDEO", saved.getType());
+        assertEquals("video-path", saved.getStoragePath());
+        assertEquals(processInstance, saved.getProcess());
     }
 
     @Test

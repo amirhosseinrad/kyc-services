@@ -17,4 +17,13 @@ public class StorageClientConfig {
                 .baseUrl(baseUrl)
                 .build();
     }
+
+    @Bean
+    @Qualifier("inquiryWebClient")
+    public WebClient inquiryWebClient(@Value("${storage.inquiry.base-url}") String baseUrl,
+                                      WebClient.Builder builder) {
+        return builder
+                .baseUrl(baseUrl)
+                .build();
+    }
 }
