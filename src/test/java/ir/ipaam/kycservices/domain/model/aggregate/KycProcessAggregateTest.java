@@ -1,8 +1,10 @@
 package ir.ipaam.kycservices.domain.model.aggregate;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
@@ -68,6 +70,62 @@ class KycProcessAggregateTest {
     void acceptConsentRequiresAcceptance() {
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
                 .when(new AcceptConsentCommand("proc-1", "v1", false))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadCardDocumentsEmitsEventAndUpdatesState() {
+        DocumentPayloadDescriptor front = new DocumentPayloadDescriptor(new byte[]{1, 2}, "front.png");
+        DocumentPayloadDescriptor back = new DocumentPayloadDescriptor(new byte[]{3, 4}, "back.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadCardDocumentsCommand("proc-1", front, back))
+                .expectSuccessfulHandlerExecution()
+                .expectEventsMatching(payloadsMatching(exactSequenceOf(messageWithPayload(matches(event -> {
+                    CardDocumentsUploadedEvent payload = (CardDocumentsUploadedEvent) event;
+                    return payload.getProcessInstanceId().equals("proc-1")
+                            && payload.getNationalCode().equals("123")
+                            && payload.getFrontDescriptor() != null
+                            && payload.getBackDescriptor() != null
+                            && Arrays.equals(payload.getFrontDescriptor().data(), front.data())
+                            && Arrays.equals(payload.getBackDescriptor().data(), back.data())
+                            && payload.getFrontDescriptor().filename().equals("front.png")
+                            && payload.getBackDescriptor().filename().equals("back.png")
+                            && payload.getUploadedAt() != null;
+                })))))
+                .expectState(state -> assertEquals("CARD_DOCUMENTS_UPLOADED", state.getStatus()));
+    }
+
+    @Test
+    void uploadCardDocumentsRequiresStartedProcess() {
+        DocumentPayloadDescriptor front = new DocumentPayloadDescriptor(new byte[]{1}, "front.png");
+        DocumentPayloadDescriptor back = new DocumentPayloadDescriptor(new byte[]{2}, "back.png");
+
+        fixture.givenNoPriorActivity()
+                .when(new UploadCardDocumentsCommand("proc-1", front, back))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    void uploadCardDocumentsRequiresMatchingProcessId() {
+        DocumentPayloadDescriptor front = new DocumentPayloadDescriptor(new byte[]{1}, "front.png");
+        DocumentPayloadDescriptor back = new DocumentPayloadDescriptor(new byte[]{2}, "back.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadCardDocumentsCommand("proc-2", front, back))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadCardDocumentsRequireDescriptors() {
+        DocumentPayloadDescriptor front = new DocumentPayloadDescriptor(new byte[]{1}, "front.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadCardDocumentsCommand("proc-1", front, null))
+                .expectException(IllegalArgumentException.class);
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadCardDocumentsCommand("proc-1", null, front))
                 .expectException(IllegalArgumentException.class);
     }
 
