@@ -20,7 +20,6 @@ import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
-import lombok.RequiredArgsConstructor;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.queryhandling.QueryHandler;
 import org.slf4j.Logger;
@@ -38,7 +37,6 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 
 @Component
-@RequiredArgsConstructor
 public class KycProcessEventHandler {
 
     private static final Logger log = LoggerFactory.getLogger(KycProcessEventHandler.class);
@@ -54,10 +52,25 @@ public class KycProcessEventHandler {
     private final KycStepStatusRepository kycStepStatusRepository;
     private final DocumentRepository documentRepository;
     private final ConsentRepository consentRepository;
-    @Qualifier("cardDocumentWebClient")
     private final WebClient documentWebClient;
-    @Qualifier("inquiryWebClient")
     private final WebClient inquiryWebClient;
+
+    public KycProcessEventHandler(
+            KycProcessInstanceRepository kycProcessInstanceRepository,
+            CustomerRepository customerRepository,
+            KycStepStatusRepository kycStepStatusRepository,
+            DocumentRepository documentRepository,
+            ConsentRepository consentRepository,
+            @Qualifier("cardDocumentWebClient") WebClient documentWebClient,
+            @Qualifier("inquiryWebClient") WebClient inquiryWebClient) {
+        this.kycProcessInstanceRepository = kycProcessInstanceRepository;
+        this.customerRepository = customerRepository;
+        this.kycStepStatusRepository = kycStepStatusRepository;
+        this.documentRepository = documentRepository;
+        this.consentRepository = consentRepository;
+        this.documentWebClient = documentWebClient;
+        this.inquiryWebClient = inquiryWebClient;
+    }
 
     @EventHandler
     public void on(KycProcessStartedEvent event) {
