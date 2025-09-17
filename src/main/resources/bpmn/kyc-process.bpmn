@@ -22,10 +22,13 @@
       <bpmn:outgoing>Flow_0dmbp43</bpmn:outgoing>
     </bpmn:serviceTask>
 
-    <bpmn:task id="Activity_1lbjv3o" name="upload front and back of  card with back number">
+    <bpmn:serviceTask id="Activity_1lbjv3o" name="upload front and back of  card with back number">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="upload-card-documents" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_0ayjnrf</bpmn:incoming>
       <bpmn:outgoing>Flow_1gyum9g</bpmn:outgoing>
-    </bpmn:task>
+    </bpmn:serviceTask>
     <bpmn:task id="Activity_0c3vph7" name="OCR extraction of text">
       <bpmn:incoming>Flow_04ijzlb</bpmn:incoming>
       <bpmn:incoming>Flow_197j0mu</bpmn:incoming>
