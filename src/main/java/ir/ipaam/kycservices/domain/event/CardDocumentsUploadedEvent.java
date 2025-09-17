@@ -1,16 +1,17 @@
-package ir.ipaam.kycservices.domain.command;
+package ir.ipaam.kycservices.domain.event;
 
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.axonframework.modelling.command.TargetAggregateIdentifier;
+
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
-public class UploadCardDocumentsCommand {
-
-    @TargetAggregateIdentifier
+public class CardDocumentsUploadedEvent {
     private final String processInstanceId;
+    private final String nationalCode;
     private final DocumentPayloadDescriptor frontDescriptor;
     private final DocumentPayloadDescriptor backDescriptor;
+    private final LocalDateTime uploadedAt;
 }
