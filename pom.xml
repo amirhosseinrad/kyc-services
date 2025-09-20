@@ -99,6 +99,11 @@
             <artifactId>zeebe-bpmn-model</artifactId>
             <version>${camunda.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.9</version>
+        </dependency>
     </dependencies>
 
     <build>
