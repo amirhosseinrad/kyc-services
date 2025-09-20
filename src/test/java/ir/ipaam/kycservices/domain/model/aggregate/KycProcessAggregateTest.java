@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.domain.model.aggregate;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
@@ -8,6 +9,7 @@ import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
 import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
@@ -75,6 +77,57 @@ class KycProcessAggregateTest {
     void acceptConsentRequiresAcceptance() {
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
                 .when(new AcceptConsentCommand("proc-1", "v1", false))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void provideEnglishPersonalInfoEmitsEventAndUpdatesState() {
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new ProvideEnglishPersonalInfoCommand("proc-1", " John ", " Doe ", " john.doe@example.com ", " 09120000000 "))
+                .expectSuccessfulHandlerExecution()
+                .expectEventsMatching(payloadsMatching(exactSequenceOf(messageWithPayload(matches(event -> {
+                    EnglishPersonalInfoProvidedEvent payload = (EnglishPersonalInfoProvidedEvent) event;
+                    return payload.processInstanceId().equals("proc-1")
+                            && payload.nationalCode().equals("123")
+                            && payload.firstNameEn().equals("John")
+                            && payload.lastNameEn().equals("Doe")
+                            && payload.email().equals("john.doe@example.com")
+                            && payload.telephone().equals("09120000000")
+                            && payload.providedAt() != null;
+                })))))
+                .expectState(state -> assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", state.getStatus()));
+    }
+
+    @Test
+    void provideEnglishPersonalInfoRequiresStartedProcess() {
+        fixture.givenNoPriorActivity()
+                .when(new ProvideEnglishPersonalInfoCommand("proc-1", "John", "Doe", "john.doe@example.com", "0912"))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    void provideEnglishPersonalInfoRequiresMatchingProcessId() {
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new ProvideEnglishPersonalInfoCommand("proc-2", "John", "Doe", "john.doe@example.com", "0912"))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void provideEnglishPersonalInfoValidatesPayload() {
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new ProvideEnglishPersonalInfoCommand("proc-1", "", "Doe", "john.doe@example.com", "0912"))
+                .expectException(IllegalArgumentException.class);
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new ProvideEnglishPersonalInfoCommand("proc-1", "John", " ", "john.doe@example.com", "0912"))
+                .expectException(IllegalArgumentException.class);
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new ProvideEnglishPersonalInfoCommand("proc-1", "John", "Doe", "not-an-email", "0912"))
+                .expectException(IllegalArgumentException.class);
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new ProvideEnglishPersonalInfoCommand("proc-1", "John", "Doe", "john.doe@example.com", " "))
                 .expectException(IllegalArgumentException.class);
     }
 

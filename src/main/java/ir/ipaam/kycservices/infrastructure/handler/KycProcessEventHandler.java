@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.handler;
 
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
 import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
@@ -49,6 +50,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 @Component
 public class KycProcessEventHandler {
@@ -193,6 +195,42 @@ public class KycProcessEventHandler {
             backMetadata.setInquiryDocumentId(backInquiryId);
         }
         persistMetadata(backMetadata, DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
+    }
+
+    @EventHandler
+    public void on(EnglishPersonalInfoProvidedEvent event) {
+        Optional<ProcessInstance> processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(event.processInstanceId());
+
+        if (processInstance.isPresent() && processInstance.get().getCustomer() != null) {
+            Customer customer = processInstance.get().getCustomer();
+            updateCustomerInfo(customer, event);
+            customerRepository.save(customer);
+            return;
+        }
+
+        Customer customer = customerRepository.findByNationalCode(event.nationalCode())
+                .orElseGet(() -> {
+                    Customer c = new Customer();
+                    c.setNationalCode(event.nationalCode());
+                    return c;
+                });
+
+        updateCustomerInfo(customer, event);
+        customerRepository.save(customer);
+
+        processInstance.ifPresent(instance -> {
+            if (instance.getCustomer() == null) {
+                instance.setCustomer(customer);
+                kycProcessInstanceRepository.save(instance);
+            }
+        });
+    }
+
+    private void updateCustomerInfo(Customer customer, EnglishPersonalInfoProvidedEvent event) {
+        customer.setFirstName(event.firstNameEn());
+        customer.setLastName(event.lastNameEn());
+        customer.setEmail(event.email());
+        customer.setMobile(event.telephone());
     }
 
     @EventHandler

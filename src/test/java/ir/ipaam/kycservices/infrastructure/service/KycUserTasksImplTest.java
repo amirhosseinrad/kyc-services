@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
@@ -250,5 +251,36 @@ class KycUserTasksImplTest {
         assertThrows(IllegalArgumentException.class, () -> tasks.acceptConsent("v1", true, " "));
 
         verify(commandGateway, never()).sendAndWait(any());
+    }
+
+    @Test
+    void provideEnglishPersonalInfoDispatchesCommand() {
+        tasks.provideEnglishPersonalInfo(" John ", " Doe ", " john.doe@example.com ", " 0912 ", " process-1 ");
+
+        ArgumentCaptor<ProvideEnglishPersonalInfoCommand> captor = ArgumentCaptor.forClass(ProvideEnglishPersonalInfoCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+
+        ProvideEnglishPersonalInfoCommand command = captor.getValue();
+        assertEquals("process-1", command.processInstanceId());
+        assertEquals("John", command.firstNameEn());
+        assertEquals("Doe", command.lastNameEn());
+        assertEquals("john.doe@example.com", command.email());
+        assertEquals("0912", command.telephone());
+    }
+
+    @Test
+    void provideEnglishPersonalInfoValidatesInput() {
+        assertThrows(IllegalArgumentException.class, () ->
+                tasks.provideEnglishPersonalInfo("", "Doe", "john.doe@example.com", "0912", "process-1"));
+        assertThrows(IllegalArgumentException.class, () ->
+                tasks.provideEnglishPersonalInfo("John", " ", "john.doe@example.com", "0912", "process-1"));
+        assertThrows(IllegalArgumentException.class, () ->
+                tasks.provideEnglishPersonalInfo("John", "Doe", "invalid", "0912", "process-1"));
+        assertThrows(IllegalArgumentException.class, () ->
+                tasks.provideEnglishPersonalInfo("John", "Doe", "john.doe@example.com", " ", "process-1"));
+        assertThrows(IllegalArgumentException.class, () ->
+                tasks.provideEnglishPersonalInfo("John", "Doe", "john.doe@example.com", "0912", " "));
+
+        verify(commandGateway, never()).sendAndWait(any(ProvideEnglishPersonalInfoCommand.class));
     }
 }

@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
@@ -16,6 +17,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,8 @@ public class KycUserTasksImpl implements KycUserTasks {
     static final String ID_PAGE_FILENAME = "id-page";
 
     private final CommandGateway commandGateway;
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
 
     @Override
     public void uploadCardDocuments(byte[] frontImage, byte[] backImage, String processInstanceId) {
@@ -57,6 +61,21 @@ public class KycUserTasksImpl implements KycUserTasks {
             throw new IllegalArgumentException("processInstanceId must be provided");
         }
         return processInstanceId.trim();
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException(fieldName + " must be provided");
+        }
+        return value.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        String normalized = normalizeRequiredText(email, "email");
+        if (!EMAIL_PATTERN.matcher(normalized).matches()) {
+            throw new IllegalArgumentException("email must be a valid email address");
+        }
+        return normalized;
     }
 
     private String randomizeFilename(String baseName) {
@@ -161,6 +180,18 @@ public class KycUserTasksImpl implements KycUserTasks {
 
     @Override
     public void provideEnglishPersonalInfo(String firstNameEn, String lastNameEn, String email, String telephone, String processInstanceId) {
-        // TODO: implement integration
+        String normalizedProcessInstanceId = normalizeProcessInstanceId(processInstanceId);
+        String normalizedFirstName = normalizeRequiredText(firstNameEn, "firstNameEn");
+        String normalizedLastName = normalizeRequiredText(lastNameEn, "lastNameEn");
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedTelephone = normalizeRequiredText(telephone, "telephone");
+
+        commandGateway.sendAndWait(new ProvideEnglishPersonalInfoCommand(
+                normalizedProcessInstanceId,
+                normalizedFirstName,
+                normalizedLastName,
+                normalizedEmail,
+                normalizedTelephone
+        ));
     }
 }
