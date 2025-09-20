@@ -56,7 +56,7 @@ public class AxonPersistenceConfig {
                 .getIfAvailable(NoTransactionManager::instance);
 
         TokenSchema tokenSchema = TokenSchema.builder()
-                .setTokenTableName("kyc_token_entry")
+                .setTokenEntryTableName("kyc_token_entry")
                 .build();
 
         return JdbcTokenStore.builder()
