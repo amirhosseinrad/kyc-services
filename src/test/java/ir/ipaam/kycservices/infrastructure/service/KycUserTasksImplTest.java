@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.service;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -176,6 +179,55 @@ class KycUserTasksImplTest {
         doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
 
         assertThrows(RuntimeException.class, () -> tasks.uploadVideo(video, "process-1"));
+    }
+
+    @Test
+    void uploadIdPagesDispatchesCommand() {
+        List<byte[]> pages = List.of(
+                "page1".getBytes(StandardCharsets.UTF_8),
+                "page2".getBytes(StandardCharsets.UTF_8)
+        );
+
+        tasks.uploadIdPages(pages, " process-1 ");
+
+        ArgumentCaptor<UploadIdPagesCommand> captor = ArgumentCaptor.forClass(UploadIdPagesCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+
+        UploadIdPagesCommand command = captor.getValue();
+        assertEquals("process-1", command.processInstanceId());
+        assertEquals(2, command.pageDescriptors().size());
+        assertArrayEquals(pages.get(0), command.pageDescriptors().get(0).data());
+        assertArrayEquals(pages.get(1), command.pageDescriptors().get(1).data());
+        assertTrue(command.pageDescriptors().get(0).filename()
+                .startsWith(KycUserTasksImpl.ID_PAGE_FILENAME + "-1-"));
+        assertTrue(command.pageDescriptors().get(1).filename()
+                .startsWith(KycUserTasksImpl.ID_PAGE_FILENAME + "-2-"));
+    }
+
+    @Test
+    void uploadIdPagesValidatesInput() {
+        List<byte[]> validPages = List.of("page".getBytes(StandardCharsets.UTF_8));
+
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadIdPages(null, "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadIdPages(List.of(), "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadIdPages(List.of(new byte[0]), "process-1"));
+        List<byte[]> pagesWithNull = new ArrayList<>();
+        pagesWithNull.add(null);
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadIdPages(pagesWithNull, "process-1"));
+        assertThrows(IllegalArgumentException.class, () ->
+                tasks.uploadIdPages(List.of(new byte[1], new byte[1], new byte[1], new byte[1], new byte[1]), "process-1"));
+        assertThrows(IllegalArgumentException.class, () -> tasks.uploadIdPages(validPages, " "));
+
+        verify(commandGateway, never()).sendAndWait(any());
+    }
+
+    @Test
+    void uploadIdPagesPropagatesGatewayErrors() {
+        List<byte[]> pages = List.of("page".getBytes(StandardCharsets.UTF_8));
+
+        doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
+
+        assertThrows(RuntimeException.class, () -> tasks.uploadIdPages(pages, "process-1"));
     }
 
     @Test

@@ -54,6 +54,14 @@ Designed for integration with OCR, fraud detection, and customer information ser
 |-------|---------------------|-----------------------------------|
 | POST | `/kyc/process`       | Start a new KYC process instance |
 | POST | `/kyc/status`        | Get current KYC process status   |
+| POST | `/kyc/documents/id`  | Upload 1–4 ID document pages     |
 | POST | `/bpmn/deploy`       | Deploy a BPMN file (multipart upload) |
+
+### ID Page Upload
+
+`POST /kyc/documents/id` accepts up to **four multipart files** named `pages` plus a `processInstanceId` field. Each file must con
+tain the binary payload for a booklet page (≤2 MB). The endpoint validates the request, verifies that the KYC process exists, and
+dispatches a command to persist the pages in the event-sourced aggregate. A successful request returns HTTP 202 with the page co
+unt, byte sizes, and a `ID_PAGES_RECEIVED` status marker.
 
 ---

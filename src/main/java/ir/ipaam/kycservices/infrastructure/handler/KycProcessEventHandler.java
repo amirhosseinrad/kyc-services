@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.handler;
 
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
@@ -28,6 +29,7 @@ import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentRespons
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureRequest;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
+import ir.ipaam.kycservices.infrastructure.service.dto.UploadIdPagesResponse;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.queryhandling.QueryHandler;
 import org.slf4j.Logger;
@@ -42,7 +44,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 @Component
@@ -54,11 +59,13 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_SELFIE = "PHOTO";
     private static final String DOCUMENT_TYPE_VIDEO = "VIDEO";
     private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
+    private static final String DOCUMENT_TYPE_ID_PAGE_PREFIX = "ID_PAGE_";
     private static final String DEFAULT_THRESHOLD = "-1";
     private static final String DEFAULT_RANDOM_TEXT = "";
     private static final int INQUIRY_DOCUMENT_TYPE_FRONT = 101;
     private static final int INQUIRY_DOCUMENT_TYPE_BACK = 102;
     private static final String FILE_DATA_PART_NAME = "FileData";
+    private static final int INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE = 201;
 
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
@@ -186,6 +193,72 @@ public class KycProcessEventHandler {
             backMetadata.setInquiryDocumentId(backInquiryId);
         }
         persistMetadata(backMetadata, DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
+    }
+
+    @EventHandler
+    public void on(IdPagesUploadedEvent event) {
+        List<DocumentPayloadDescriptor> descriptors = event.pageDescriptors();
+        if (descriptors == null || descriptors.isEmpty()) {
+            log.warn("Received ID pages event without descriptors for process {}", event.processInstanceId());
+            return;
+        }
+
+        String token = fetchInquiryToken(event.processInstanceId());
+        List<String> inquiryIds = new ArrayList<>(Collections.nCopies(descriptors.size(), null));
+        if (token == null) {
+            log.warn("Skipping inquiry ID page upload for process {} because inquiry token could not be generated",
+                    event.processInstanceId());
+        } else {
+            for (int i = 0; i < descriptors.size(); i++) {
+                int documentType = INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE + i;
+                String inquiryId = uploadInquiryCardDocument(
+                        token,
+                        descriptors.get(i),
+                        documentType,
+                        event.processInstanceId(),
+                        "ID page " + (i + 1));
+                inquiryIds.set(i, inquiryId);
+            }
+        }
+
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        for (DocumentPayloadDescriptor descriptor : descriptors) {
+            bodyBuilder.part("pages", asResource(descriptor.data(), descriptor.filename()))
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        }
+        bodyBuilder.part("processInstanceId", event.processInstanceId());
+
+        UploadIdPagesResponse response = documentWebClient.post()
+                .uri("/documents/id")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                .retrieve()
+                .bodyToMono(UploadIdPagesResponse.class)
+                .onErrorResume(throwable -> {
+                    log.error("Failed to upload ID pages for process {}", event.processInstanceId(), throwable);
+                    return Mono.error(throwable);
+                })
+                .block();
+
+        if (response == null || response.getPages() == null) {
+            log.warn("Document storage service returned empty response for ID pages of process {}",
+                    event.processInstanceId());
+            return;
+        }
+
+        ProcessInstance processInstance = findProcessInstance(event.processInstanceId());
+        List<DocumentMetadata> metadataList = response.getPages();
+        for (int i = 0; i < descriptors.size(); i++) {
+            DocumentMetadata metadata = i < metadataList.size() ? metadataList.get(i) : null;
+            if (metadata != null) {
+                metadata.setInquiryDocumentId(inquiryIds.get(i));
+            }
+            persistMetadata(
+                    metadata,
+                    DOCUMENT_TYPE_ID_PAGE_PREFIX + (i + 1),
+                    event.processInstanceId(),
+                    processInstance);
+        }
     }
 
     @EventHandler

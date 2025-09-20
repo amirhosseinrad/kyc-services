@@ -2,11 +2,13 @@ package ir.ipaam.kycservices.domain.model.aggregate;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
 import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.axonframework.test.matchers.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -128,6 +131,64 @@ class KycProcessAggregateTest {
 
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
                 .when(new UploadCardDocumentsCommand("proc-1", null, front))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadIdPagesEmitsEventAndUpdatesState() {
+        DocumentPayloadDescriptor page1 = new DocumentPayloadDescriptor(new byte[]{5, 6}, "page1.png");
+        DocumentPayloadDescriptor page2 = new DocumentPayloadDescriptor(new byte[]{7, 8}, "page2.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadIdPagesCommand("proc-1", List.of(page1, page2)))
+                .expectSuccessfulHandlerExecution()
+                .expectEventsMatching(payloadsMatching(exactSequenceOf(messageWithPayload(matches(event -> {
+                    IdPagesUploadedEvent payload = (IdPagesUploadedEvent) event;
+                    return payload.processInstanceId().equals("proc-1")
+                            && payload.nationalCode().equals("123")
+                            && payload.pageDescriptors().size() == 2
+                            && Arrays.equals(payload.pageDescriptors().get(0).data(), page1.data())
+                            && Arrays.equals(payload.pageDescriptors().get(1).data(), page2.data())
+                            && payload.uploadedAt() != null;
+                })))))
+                .expectState(state -> assertEquals("ID_PAGES_UPLOADED", state.getStatus()));
+    }
+
+    @Test
+    void uploadIdPagesRequiresStartedProcess() {
+        DocumentPayloadDescriptor page1 = new DocumentPayloadDescriptor(new byte[]{1}, "page1.png");
+        fixture.givenNoPriorActivity()
+                .when(new UploadIdPagesCommand("proc-1", List.of(page1)))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    void uploadIdPagesRequiresMatchingProcessId() {
+        DocumentPayloadDescriptor page1 = new DocumentPayloadDescriptor(new byte[]{1}, "page1.png");
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadIdPagesCommand("proc-2", List.of(page1)))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadIdPagesRequiresBetweenOneAndFourDescriptors() {
+        DocumentPayloadDescriptor page1 = new DocumentPayloadDescriptor(new byte[]{1}, "page1.png");
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadIdPagesCommand("proc-1", List.of()))
+                .expectException(IllegalArgumentException.class);
+
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadIdPagesCommand("proc-1", List.of(page1, page1, page1, page1, page1)))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    void uploadIdPagesRejectsNullDescriptors() {
+        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
+                .when(new UploadIdPagesCommand("proc-1", Arrays.asList(
+                        new DocumentPayloadDescriptor(new byte[]{1}, "page1.png"),
+                        null)))
                 .expectException(IllegalArgumentException.class);
     }
 

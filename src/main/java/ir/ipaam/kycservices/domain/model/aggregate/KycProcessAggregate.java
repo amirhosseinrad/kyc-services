@@ -4,11 +4,14 @@ import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
@@ -22,6 +25,8 @@ import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 
 @Aggregate
 @NoArgsConstructor
@@ -70,6 +75,34 @@ public class KycProcessAggregate {
                 this.nationalCode,
                 command.frontDescriptor(),
                 command.backDescriptor(),
+                LocalDateTime.now()));
+    }
+
+    @CommandHandler
+    public void handle(UploadIdPagesCommand command) {
+        if (this.processInstanceId == null) {
+            throw new IllegalStateException("KYC process has not been started");
+        }
+
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
+            throw new IllegalArgumentException("Process instance identifier mismatch");
+        }
+
+        List<DocumentPayloadDescriptor> descriptors = command.pageDescriptors();
+        if (descriptors == null || descriptors.isEmpty()) {
+            throw new IllegalArgumentException("At least one ID page descriptor must be provided");
+        }
+        if (descriptors.size() > 4) {
+            throw new IllegalArgumentException("No more than four ID page descriptors are allowed");
+        }
+        if (descriptors.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("ID page descriptors must not be null");
+        }
+
+        AggregateLifecycle.apply(new IdPagesUploadedEvent(
+                command.processInstanceId(),
+                this.nationalCode,
+                List.copyOf(descriptors),
                 LocalDateTime.now()));
     }
 
@@ -177,6 +210,11 @@ public class KycProcessAggregate {
     @EventSourcingHandler
     public void on(CardDocumentsUploadedEvent event) {
         this.status = "CARD_DOCUMENTS_UPLOADED";
+    }
+
+    @EventSourcingHandler
+    public void on(IdPagesUploadedEvent event) {
+        this.status = "ID_PAGES_UPLOADED";
     }
 
     @EventSourcingHandler
