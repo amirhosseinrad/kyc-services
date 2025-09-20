@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.SelfieController;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -93,7 +94,8 @@ class SelfieControllerTest {
                         .file(selfie)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("processInstanceId must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
     }
@@ -117,7 +119,8 @@ class SelfieControllerTest {
                         .file(selfie)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("selfie must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("selfie must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
     }
@@ -146,7 +149,8 @@ class SelfieControllerTest {
                         .file(selfie)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("invalid"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("invalid"));
     }
 
     @Test
@@ -173,7 +177,8 @@ class SelfieControllerTest {
                         .file(selfie)
                         .file(process))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to process selfie"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("boom"));
     }
 
     @Test
@@ -198,7 +203,8 @@ class SelfieControllerTest {
                         .file(selfie)
                         .file(process))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Process instance not found"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
+                .andExpect(jsonPath("$.message").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
     }

@@ -1,11 +1,11 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
+import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,49 +31,30 @@ public class ConsentController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> acceptConsent(@Valid @RequestBody ConsentRequest request) {
-        try {
-            String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
-            String termsVersion = normalizeTermsVersion(request.termsVersion());
-            if (!request.accepted()) {
-                throw new IllegalArgumentException("accepted must be true");
-            }
-
-            if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
-                log.warn("Process instance with id {} not found", processInstanceId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Process instance not found"));
-            }
-
-            AcceptConsentCommand command = new AcceptConsentCommand(
-                    processInstanceId,
-                    termsVersion,
-                    true
-            );
-
-            commandGateway.sendAndWait(command);
-
-            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
-                    "processInstanceId", processInstanceId,
-                    "termsVersion", termsVersion,
-                    "status", "CONSENT_ACCEPTED"
-            ));
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid consent request: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        } catch (CommandExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof IllegalArgumentException illegalArgumentException) {
-                log.warn("Command execution rejected: {}", illegalArgumentException.getMessage());
-                return ResponseEntity.badRequest().body(Map.of("error", illegalArgumentException.getMessage()));
-            }
-            log.error("Command execution failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to accept consent"));
-        } catch (Exception e) {
-            log.error("Unexpected error while accepting consent", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to accept consent"));
+        String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
+        String termsVersion = normalizeTermsVersion(request.termsVersion());
+        if (!request.accepted()) {
+            throw new IllegalArgumentException("accepted must be true");
         }
+
+        if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
+            log.warn("Process instance with id {} not found", processInstanceId);
+            throw new ResourceNotFoundException("Process instance not found");
+        }
+
+        AcceptConsentCommand command = new AcceptConsentCommand(
+                processInstanceId,
+                termsVersion,
+                true
+        );
+
+        commandGateway.sendAndWait(command);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
+                "processInstanceId", processInstanceId,
+                "termsVersion", termsVersion,
+                "status", "CONSENT_ACCEPTED"
+        ));
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {

@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.IdDocumentController;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -104,7 +105,8 @@ class IdDocumentControllerTest {
                         .file(page)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("processInstanceId must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }
@@ -129,7 +131,8 @@ class IdDocumentControllerTest {
                         .file(page)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("pages[0] exceeds maximum size of "
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("pages[0] exceeds maximum size of "
                         + IdDocumentController.MAX_PAGE_SIZE_BYTES + " bytes"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
@@ -157,7 +160,8 @@ class IdDocumentControllerTest {
                         .file(page)
                         .file(process))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Process instance not found"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
+                .andExpect(jsonPath("$.message").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }
@@ -186,7 +190,8 @@ class IdDocumentControllerTest {
                         .file(page)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("bad input"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("bad input"));
     }
 
     @Test
@@ -213,7 +218,8 @@ class IdDocumentControllerTest {
                         .file(page)
                         .file(process))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to process ID pages"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("gateway failure"));
     }
 
     @Test
@@ -228,7 +234,8 @@ class IdDocumentControllerTest {
         mockMvc.perform(multipart("/kyc/documents/id")
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("At least one page must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("At least one page must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }

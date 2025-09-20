@@ -61,6 +61,36 @@ Designed for integration with OCR, fraud detection, and customer information ser
 | POST  | `/kyc/documents/card` | Upload front/back images of the national card    |
 | POST  | `/bpmn/deploy`        | Deploy a BPMN file (multipart upload)            |
 
+## Error contract
+
+Every error emitted by the HTTP API follows a shared JSON contract:
+
+```json
+{
+  "code": "KYC-001",
+  "message": "Validation failed",
+  "details": {
+    "fieldErrors": {
+      "nationalCode": ["nationalCode is required"]
+    }
+  }
+}
+```
+
+- `code` – machine-readable error identifier. The value is stable and designed for client-side branching.
+- `message` – human readable description of the failure. When possible it echoes the specific validation or domain message.
+- `details` – optional object that provides additional context (e.g. field level validation messages).
+
+| Error code | HTTP status | Scenario | Notes |
+|------------|-------------|----------|-------|
+| `KYC-001`  | `400 Bad Request` | Validation failure (`IllegalArgumentException`, bean validation, constraint violations) | `details.fieldErrors` and/or `details.violations` list offending fields. |
+| `KYC-002`  | `404 Not Found` | Referenced resource is missing | Used when a `processInstanceId` cannot be resolved. |
+| `KYC-003`  | `409 Conflict` | Command rejected without a recognised cause | Returned when Axon reports a command failure that is neither a validation error nor a missing resource. |
+| `KYC-004`  | `400 Bad Request` | File processing failure | Indicates uploaded multipart content could not be read. |
+| `KYC-999`  | `500 Internal Server Error` | Unexpected server error | Reserved for uncaught exceptions. |
+
+Controllers no longer craft ad-hoc error bodies. They throw meaningful exceptions (`IllegalArgumentException`, `ResourceNotFoundException`, `FileProcessingException`, etc.) and the [`GlobalExceptionHandler`](src/main/java/ir/ipaam/kycservices/application/api/error/GlobalExceptionHandler.java) formats the response using the mapping above. Existing clients should update their error handling logic to inspect the new `code`/`message` fields instead of the legacy `error` property.
+
 ### Consent Acceptance
 
 `POST /kyc/consent` expects an `application/json` payload:

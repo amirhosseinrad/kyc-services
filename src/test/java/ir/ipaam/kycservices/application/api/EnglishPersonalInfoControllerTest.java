@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.application.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.ipaam.kycservices.application.api.controller.EnglishPersonalInfoController;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -90,7 +91,8 @@ class EnglishPersonalInfoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Process instance not found"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
+                .andExpect(jsonPath("$.message").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(ProvideEnglishPersonalInfoCommand.class));
     }
@@ -113,7 +115,8 @@ class EnglishPersonalInfoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("invalid"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("invalid"));
     }
 
     @Test
@@ -134,7 +137,8 @@ class EnglishPersonalInfoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to provide english personal info"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("boom"));
     }
 
     @Test
@@ -152,7 +156,9 @@ class EnglishPersonalInfoControllerTest {
         mockMvc.perform(post("/kyc/english-info")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("email must be a valid email address"));
 
         verify(commandGateway, never()).sendAndWait(any(ProvideEnglishPersonalInfoCommand.class));
     }

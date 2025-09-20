@@ -1,11 +1,11 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
+import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,54 +34,35 @@ public class EnglishPersonalInfoController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> provideEnglishPersonalInfo(@Valid @RequestBody EnglishPersonalInfoRequest request) {
-        try {
-            String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
-            if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
-                log.warn("Process instance with id {} not found", processInstanceId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Process instance not found"));
-            }
-
-            String firstNameEn = normalizeRequiredText(request.firstNameEn(), "firstNameEn");
-            String lastNameEn = normalizeRequiredText(request.lastNameEn(), "lastNameEn");
-            String email = normalizeEmail(request.email());
-            String telephone = normalizeRequiredText(request.telephone(), "telephone");
-
-            ProvideEnglishPersonalInfoCommand command = new ProvideEnglishPersonalInfoCommand(
-                    processInstanceId,
-                    firstNameEn,
-                    lastNameEn,
-                    email,
-                    telephone
-            );
-
-            commandGateway.sendAndWait(command);
-
-            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
-                    "processInstanceId", processInstanceId,
-                    "firstNameEn", firstNameEn,
-                    "lastNameEn", lastNameEn,
-                    "email", email,
-                    "telephone", telephone,
-                    "status", "ENGLISH_PERSONAL_INFO_PROVIDED"
-            ));
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid english personal info request: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        } catch (CommandExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof IllegalArgumentException illegalArgumentException) {
-                log.warn("Command execution rejected: {}", illegalArgumentException.getMessage());
-                return ResponseEntity.badRequest().body(Map.of("error", illegalArgumentException.getMessage()));
-            }
-            log.error("Command execution failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to provide english personal info"));
-        } catch (Exception e) {
-            log.error("Unexpected error while providing english personal info", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to provide english personal info"));
+        String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
+        if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
+            log.warn("Process instance with id {} not found", processInstanceId);
+            throw new ResourceNotFoundException("Process instance not found");
         }
+
+        String firstNameEn = normalizeRequiredText(request.firstNameEn(), "firstNameEn");
+        String lastNameEn = normalizeRequiredText(request.lastNameEn(), "lastNameEn");
+        String email = normalizeEmail(request.email());
+        String telephone = normalizeRequiredText(request.telephone(), "telephone");
+
+        ProvideEnglishPersonalInfoCommand command = new ProvideEnglishPersonalInfoCommand(
+                processInstanceId,
+                firstNameEn,
+                lastNameEn,
+                email,
+                telephone
+        );
+
+        commandGateway.sendAndWait(command);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
+                "processInstanceId", processInstanceId,
+                "firstNameEn", firstNameEn,
+                "lastNameEn", lastNameEn,
+                "email", email,
+                "telephone", telephone,
+                "status", "ENGLISH_PERSONAL_INFO_PROVIDED"
+        ));
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {
