@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
 import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
@@ -215,6 +216,69 @@ class KycProcessEventHandlerTest {
         assertEquals(timestamp, savedStatus.getTimestamp());
         assertEquals(instance, savedStatus.getProcess());
         assertTrue(instance.getStatuses().contains(savedStatus));
+    }
+
+    @Test
+    void onEnglishPersonalInfoEventUpdatesExistingCustomer() {
+        Customer customer = new Customer();
+        customer.setNationalCode("123");
+        ProcessInstance instance = new ProcessInstance();
+        instance.setCustomer(customer);
+
+        when(instanceRepository.findByCamundaInstanceId("proc-1")).thenReturn(Optional.of(instance));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EnglishPersonalInfoProvidedEvent event = new EnglishPersonalInfoProvidedEvent(
+                "proc-1",
+                "123",
+                "John",
+                "Doe",
+                "john.doe@example.com",
+                "0912",
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        assertEquals("John", customer.getFirstName());
+        assertEquals("Doe", customer.getLastName());
+        assertEquals("john.doe@example.com", customer.getEmail());
+        assertEquals("0912", customer.getMobile());
+        verify(customerRepository).save(customer);
+        verify(instanceRepository, never()).save(instance);
+    }
+
+    @Test
+    void onEnglishPersonalInfoEventCreatesCustomerWhenMissing() {
+        ProcessInstance instance = new ProcessInstance();
+
+        when(instanceRepository.findByCamundaInstanceId("proc-2")).thenReturn(Optional.of(instance));
+        when(customerRepository.findByNationalCode("456")).thenReturn(Optional.empty());
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(instanceRepository.save(any(ProcessInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EnglishPersonalInfoProvidedEvent event = new EnglishPersonalInfoProvidedEvent(
+                "proc-2",
+                "456",
+                "Alice",
+                "Smith",
+                "alice.smith@example.com",
+                "0987",
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
+        verify(customerRepository, atLeastOnce()).save(customerCaptor.capture());
+        Customer savedCustomer = customerCaptor.getValue();
+        assertEquals("456", savedCustomer.getNationalCode());
+        assertEquals("Alice", savedCustomer.getFirstName());
+        assertEquals("Smith", savedCustomer.getLastName());
+        assertEquals("alice.smith@example.com", savedCustomer.getEmail());
+        assertEquals("0987", savedCustomer.getMobile());
+        assertEquals(savedCustomer, instance.getCustomer());
+        verify(instanceRepository).save(instance);
     }
 
     @Test

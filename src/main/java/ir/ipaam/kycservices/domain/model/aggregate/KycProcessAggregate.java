@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.domain.model.aggregate;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
@@ -11,6 +12,7 @@ import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
 import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
@@ -27,6 +29,7 @@ import org.axonframework.eventsourcing.EventSourcingHandler;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 @Aggregate
 @NoArgsConstructor
@@ -36,6 +39,12 @@ public class KycProcessAggregate {
     private String processInstanceId;
     private String nationalCode;
     private String status;
+    private String firstNameEn;
+    private String lastNameEn;
+    private String email;
+    private String telephone;
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
 
     @CommandHandler
     public KycProcessAggregate(StartKycProcessCommand command) {
@@ -195,6 +204,50 @@ public class KycProcessAggregate {
                 LocalDateTime.now()));
     }
 
+    @CommandHandler
+    public void handle(ProvideEnglishPersonalInfoCommand command) {
+        if (this.processInstanceId == null) {
+            throw new IllegalStateException("KYC process has not been started");
+        }
+
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
+            throw new IllegalArgumentException("Process instance identifier mismatch");
+        }
+
+        String firstName = normalizeRequiredText(command.firstNameEn(), "firstNameEn");
+        String lastName = normalizeRequiredText(command.lastNameEn(), "lastNameEn");
+        String email = normalizeEmail(command.email());
+        String telephone = normalizeRequiredText(command.telephone(), "telephone");
+
+        AggregateLifecycle.apply(new EnglishPersonalInfoProvidedEvent(
+                this.processInstanceId,
+                this.nationalCode,
+                firstName,
+                lastName,
+                email,
+                telephone,
+                LocalDateTime.now()));
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " must be provided");
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " must be provided");
+        }
+        return trimmed;
+    }
+
+    private String normalizeEmail(String value) {
+        String trimmed = normalizeRequiredText(value, "email");
+        if (!EMAIL_PATTERN.matcher(trimmed).matches()) {
+            throw new IllegalArgumentException("email must be a valid email address");
+        }
+        return trimmed;
+    }
+
     @EventSourcingHandler
     public void on(KycProcessStartedEvent event) {
         this.processInstanceId = event.getProcessInstanceId();
@@ -235,5 +288,14 @@ public class KycProcessAggregate {
     @EventSourcingHandler
     public void on(ConsentAcceptedEvent event) {
         this.status = "CONSENT_ACCEPTED";
+    }
+
+    @EventSourcingHandler
+    public void on(EnglishPersonalInfoProvidedEvent event) {
+        this.firstNameEn = event.firstNameEn();
+        this.lastNameEn = event.lastNameEn();
+        this.email = event.email();
+        this.telephone = event.telephone();
+        this.status = "ENGLISH_PERSONAL_INFO_PROVIDED";
     }
 }
