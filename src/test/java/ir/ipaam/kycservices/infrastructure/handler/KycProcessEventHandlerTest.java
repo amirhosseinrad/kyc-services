@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
+import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
 import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
 import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
@@ -45,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -68,6 +70,7 @@ class KycProcessEventHandlerTest {
     private AtomicReference<String> lastSignatureToken;
     private AtomicBoolean tokenEndpointShouldFail;
     private List<CardDocumentRequest> inquiryCardRequests;
+    private AtomicInteger idPageRequestCount;
 
     @BeforeEach
     void setUp() {
@@ -84,14 +87,29 @@ class KycProcessEventHandlerTest {
         lastSignatureToken = new AtomicReference<>();
         tokenEndpointShouldFail = new AtomicBoolean(false);
         inquiryCardRequests = new ArrayList<>();
+        idPageRequestCount = new AtomicInteger();
 
-        ExchangeFunction cardExchangeFunction = request -> Mono.just(
-                ClientResponse.create(HttpStatus.OK)
-                        .header("Content-Type", "application/json")
-                        .body("{\"front\":{\"path\":\"front-path\",\"hash\":\"front-hash\"}," +
-                                "\"back\":{\"path\":\"back-path\",\"hash\":\"back-hash\"}}")
-                        .build()
-        );
+        ExchangeFunction cardExchangeFunction = request -> {
+            String path = request.url().getPath();
+            String body;
+            if (path.endsWith("/documents/card")) {
+                body = "{\"front\":{\"path\":\"front-path\",\"hash\":\"front-hash\"}," +
+                        "\"back\":{\"path\":\"back-path\",\"hash\":\"back-hash\"}}";
+            } else if (path.endsWith("/documents/id")) {
+                idPageRequestCount.incrementAndGet();
+                body = "{\"pages\":[" +
+                        "{\"path\":\"id-page-path-1\",\"hash\":\"id-page-hash-1\"}," +
+                        "{\"path\":\"id-page-path-2\",\"hash\":\"id-page-hash-2\"}]}";
+            } else {
+                body = "{}";
+            }
+            return Mono.just(
+                    ClientResponse.create(HttpStatus.OK)
+                            .header("Content-Type", "application/json")
+                            .body(body)
+                            .build()
+            );
+        };
         cardWebClient = WebClient.builder().exchangeFunction(cardExchangeFunction).build();
 
         ExchangeStrategies strategies = ExchangeStrategies.withDefaults();
@@ -264,6 +282,67 @@ class KycProcessEventHandlerTest {
         assertEquals("front-path", saved.get(0).getStoragePath());
         assertEquals("back-path", saved.get(1).getStoragePath());
         assertTrue(inquiryCardRequests.isEmpty());
+        assertEquals("proc1", lastTokenRequestProcessId.get());
+    }
+
+    @Test
+    void onIdPagesUploadedEventStoresMetadata() {
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        IdPagesUploadedEvent event = new IdPagesUploadedEvent(
+                "proc1",
+                "123",
+                List.of(
+                        new DocumentPayloadDescriptor("page1".getBytes(), "page1-file"),
+                        new DocumentPayloadDescriptor("page2".getBytes(), "page2-file")
+                ),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository, times(2)).save(captor.capture());
+        List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
+        assertEquals("ID_PAGE_1", saved.get(0).getType());
+        assertEquals("id-page-path-1", saved.get(0).getStoragePath());
+        assertEquals("ID_PAGE_2", saved.get(1).getType());
+        assertEquals("id-page-path-2", saved.get(1).getStoragePath());
+        assertEquals(processInstance, saved.get(0).getProcess());
+        assertEquals(processInstance, saved.get(1).getProcess());
+        assertEquals(2, inquiryCardRequests.size());
+        assertEquals(201, inquiryCardRequests.get(0).documentType());
+        assertEquals(202, inquiryCardRequests.get(1).documentType());
+        assertEquals(1, idPageRequestCount.get());
+    }
+
+    @Test
+    void onIdPagesUploadedEventSkipsInquiryWhenTokenGenerationFails() {
+        tokenEndpointShouldFail.set(true);
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        IdPagesUploadedEvent event = new IdPagesUploadedEvent(
+                "proc1",
+                "123",
+                List.of(
+                        new DocumentPayloadDescriptor("page1".getBytes(), "page1-file"),
+                        new DocumentPayloadDescriptor("page2".getBytes(), "page2-file")
+                ),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository, times(2)).save(captor.capture());
+        List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
+        assertEquals("id-page-path-1", saved.get(0).getStoragePath());
+        assertEquals("id-page-path-2", saved.get(1).getStoragePath());
+        assertTrue(inquiryCardRequests.isEmpty());
+        assertEquals(1, idPageRequestCount.get());
         assertEquals("proc1", lastTokenRequestProcessId.get());
     }
 

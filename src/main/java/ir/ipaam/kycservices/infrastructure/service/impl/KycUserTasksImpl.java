@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
+import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
@@ -12,6 +13,8 @@ import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,6 +26,7 @@ public class KycUserTasksImpl implements KycUserTasks {
     static final String SELFIE_FILENAME = "selfie-image";
     static final String VIDEO_FILENAME = "video-file";
     static final String SIGNATURE_FILENAME = "signature-image";
+    static final String ID_PAGE_FILENAME = "id-page";
 
     private final CommandGateway commandGateway;
 
@@ -127,7 +131,27 @@ public class KycUserTasksImpl implements KycUserTasks {
 
     @Override
     public void uploadIdPages(java.util.List<byte[]> pages, String processInstanceId) {
-        // TODO: implement integration
+        if (pages == null || pages.isEmpty()) {
+            throw new IllegalArgumentException("pages must be provided");
+        }
+        if (pages.size() > 4) {
+            throw new IllegalArgumentException("No more than four pages may be provided");
+        }
+
+        String normalizedProcessInstanceId = normalizeProcessInstanceId(processInstanceId);
+
+        List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
+        int index = 1;
+        for (byte[] page : pages) {
+            validateDocument(page, "pages[" + (index - 1) + "]");
+            descriptors.add(new DocumentPayloadDescriptor(page, randomizeFilename(ID_PAGE_FILENAME + "-" + index)));
+            index++;
+        }
+
+        commandGateway.sendAndWait(new UploadIdPagesCommand(
+                normalizedProcessInstanceId,
+                List.copyOf(descriptors)
+        ));
     }
 
     @Override
