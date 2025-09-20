@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.api.error;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -12,19 +13,28 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import org.springframework.context.annotation.Import;
+import ir.ipaam.kycservices.config.ErrorMessageConfig;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.*;
+
 @Slf4j
 @RestControllerAdvice
+@Import({LocalizedErrorMessageService.class, ErrorMessageConfig.class})
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final LocalizedErrorMessageService localizedErrorMessageService;
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, ex.getMessage(), VALIDATION_FAILED);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -47,7 +57,7 @@ public class GlobalExceptionHandler {
         }
 
         return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
-                "Validation failed", details.isEmpty() ? null : details);
+                VALIDATION_FAILED, VALIDATION_FAILED, details.isEmpty() ? null : details);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -58,17 +68,17 @@ public class GlobalExceptionHandler {
                         Collectors.mapping(ConstraintViolation::getMessage, Collectors.toList())));
         Map<String, Object> details = violations.isEmpty() ? null : Map.of("violations", violations);
         return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
-                "Validation failed", details);
+                VALIDATION_FAILED, VALIDATION_FAILED, details);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        return buildResponse(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, ex.getMessage(), PROCESS_NOT_FOUND);
     }
 
     @ExceptionHandler(FileProcessingException.class)
     public ResponseEntity<ErrorResponse> handleFileProcessingException(FileProcessingException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.FILE_PROCESSING_FAILED, ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.FILE_PROCESSING_FAILED, ex.getMessage(), FILE_READ_FAILURE);
     }
 
     @ExceptionHandler(CommandExecutionException.class)
@@ -86,20 +96,21 @@ public class GlobalExceptionHandler {
         if (rootCause instanceof FileProcessingException fileProcessingException) {
             return handleFileProcessingException(fileProcessingException);
         }
-        String message = Optional.ofNullable(rootCause)
+        String messageKey = Optional.ofNullable(rootCause)
                 .map(Throwable::getMessage)
                 .filter(m -> !m.isBlank())
                 .or(() -> Optional.ofNullable(ex.getMessage()).filter(m -> !m.isBlank()))
-                .orElse("Command execution failed");
-        log.warn("Command execution rejected", ex);
-        return buildResponse(HttpStatus.CONFLICT, ErrorCode.COMMAND_REJECTED, message);
+                .orElse(null);
+        log.warn("Command execution rejected: {}", messageKey, ex);
+        return buildResponse(HttpStatus.CONFLICT, ErrorCode.COMMAND_REJECTED, messageKey, COMMAND_EXECUTION_FAILED);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
+        String messageKey = Optional.ofNullable(ex.getMessage()).filter(m -> !m.isBlank()).orElse(null);
         log.error("Unexpected error", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.UNEXPECTED_ERROR,
-                Optional.ofNullable(ex.getMessage()).filter(m -> !m.isBlank()).orElse("Unexpected error"));
+                messageKey, UNEXPECTED_ERROR);
     }
 
     private Throwable resolveRootCause(Throwable throwable) {
@@ -110,11 +121,14 @@ public class GlobalExceptionHandler {
         return cause == null ? throwable : cause;
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, ErrorCode code, String message) {
-        return buildResponse(status, code, message, null);
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, ErrorCode code, String messageKey, String fallbackKey) {
+        return buildResponse(status, code, messageKey, fallbackKey, null);
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, ErrorCode code, String message, Map<String, ?> details) {
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, ErrorCode code,
+                                                        String messageKey, String fallbackKey,
+                                                        Map<String, ?> details) {
+        LocalizedMessage message = localizedErrorMessageService.resolve(messageKey, fallbackKey);
         return ResponseEntity.status(status).body(ErrorResponse.of(code, message, details));
     }
 }

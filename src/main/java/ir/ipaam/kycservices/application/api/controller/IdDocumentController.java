@@ -23,6 +23,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGE_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGE_TOO_LARGE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGES_LIMIT;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGES_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -40,24 +48,24 @@ public class IdDocumentController {
             @RequestPart("processInstanceId") String processInstanceId) {
         List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
         if (normalizedPages.isEmpty()) {
-            throw new IllegalArgumentException("At least one page must be provided");
+            throw new IllegalArgumentException(ID_PAGES_REQUIRED);
         }
         if (normalizedPages.size() > 4) {
-            throw new IllegalArgumentException("No more than four pages may be provided");
+            throw new IllegalArgumentException(ID_PAGES_LIMIT);
         }
 
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
             log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException("Process instance not found");
+            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
         List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
         List<Integer> sizes = new ArrayList<>();
         for (int i = 0; i < normalizedPages.size(); i++) {
             MultipartFile page = normalizedPages.get(i);
-            validateFile(page, "pages[" + i + "]");
+            validateFile(page, ID_PAGE_REQUIRED, ID_PAGE_TOO_LARGE, MAX_PAGE_SIZE_BYTES);
             byte[] pageBytes = readFile(page);
             sizes.add(pageBytes.length);
             String filename = resolveFilename(page, i);
@@ -76,12 +84,12 @@ public class IdDocumentController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
-    private void validateFile(MultipartFile file, String fieldName) {
+    private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(requiredKey);
         }
-        if (file.getSize() > MAX_PAGE_SIZE_BYTES) {
-            throw new IllegalArgumentException(fieldName + " exceeds maximum size of " + MAX_PAGE_SIZE_BYTES + " bytes");
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(sizeKey);
         }
     }
 
@@ -95,7 +103,7 @@ public class IdDocumentController {
 
     private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
-            throw new IllegalArgumentException("processInstanceId must be provided");
+            throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
     }
@@ -104,7 +112,7 @@ public class IdDocumentController {
         try {
             return file.getBytes();
         } catch (IOException e) {
-            throw new FileProcessingException("Unable to read uploaded files", e);
+            throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
     }
 }

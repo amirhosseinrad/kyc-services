@@ -73,7 +73,7 @@ class KycProcessControllerTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.message.en").value("Validation failed"))
                 .andExpect(jsonPath("$.details.fieldErrors.nationalCode[0]").value("nationalCode is required"));
     }
 
@@ -87,7 +87,7 @@ class KycProcessControllerTest {
                         .content("{\"nationalCode\":\"bad\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("bad code"));
+                .andExpect(jsonPath("$.message.en").value("bad code"));
     }
 
     @Test
@@ -100,7 +100,7 @@ class KycProcessControllerTest {
                         .content("{\"nationalCode\":\"0024683416\"}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
-                .andExpect(jsonPath("$.message").value("failure"));
+                .andExpect(jsonPath("$.message.en").value("failure"));
     }
 
 }

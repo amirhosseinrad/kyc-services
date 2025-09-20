@@ -106,7 +106,7 @@ class IdDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("processInstanceId must be provided"));
+                .andExpect(jsonPath("$.message.en").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }
@@ -132,8 +132,7 @@ class IdDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("pages[0] exceeds maximum size of "
-                        + IdDocumentController.MAX_PAGE_SIZE_BYTES + " bytes"));
+                .andExpect(jsonPath("$.message.en").value("ID page exceeds maximum size"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }
@@ -161,7 +160,7 @@ class IdDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
-                .andExpect(jsonPath("$.message").value("Process instance not found"));
+                .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }
@@ -191,7 +190,7 @@ class IdDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("bad input"));
+                .andExpect(jsonPath("$.message.en").value("bad input"));
     }
 
     @Test
@@ -219,7 +218,7 @@ class IdDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
-                .andExpect(jsonPath("$.message").value("gateway failure"));
+                .andExpect(jsonPath("$.message.en").value("gateway failure"));
     }
 
     @Test
@@ -235,7 +234,7 @@ class IdDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("At least one page must be provided"));
+                .andExpect(jsonPath("$.message.en").value("At least one ID page must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
     }

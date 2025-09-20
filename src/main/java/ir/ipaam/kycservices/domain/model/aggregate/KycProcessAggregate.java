@@ -31,6 +31,23 @@ import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_DESCRIPTORS_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CONSENT_NOT_ACCEPTED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_INVALID;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_FIRST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTOR_LIMIT;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTOR_NULL;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTORS_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_NOT_STARTED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_IDENTIFIER_MISMATCH;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_DESCRIPTOR_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.SIGNATURE_DESCRIPTOR_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.TELEPHONE_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.TERMS_VERSION_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_DESCRIPTOR_REQUIRED;
+
 @Aggregate
 @NoArgsConstructor
 public class KycProcessAggregate {
@@ -68,15 +85,15 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(UploadCardDocumentsCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
         if (command.frontDescriptor() == null || command.backDescriptor() == null) {
-            throw new IllegalArgumentException("Document descriptors must be provided");
+            throw new IllegalArgumentException(CARD_DESCRIPTORS_REQUIRED);
         }
 
         AggregateLifecycle.apply(new CardDocumentsUploadedEvent(
@@ -90,22 +107,22 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(UploadIdPagesCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
         List<DocumentPayloadDescriptor> descriptors = command.pageDescriptors();
         if (descriptors == null || descriptors.isEmpty()) {
-            throw new IllegalArgumentException("At least one ID page descriptor must be provided");
+            throw new IllegalArgumentException(ID_DESCRIPTORS_REQUIRED);
         }
         if (descriptors.size() > 4) {
-            throw new IllegalArgumentException("No more than four ID page descriptors are allowed");
+            throw new IllegalArgumentException(ID_DESCRIPTOR_LIMIT);
         }
         if (descriptors.stream().anyMatch(Objects::isNull)) {
-            throw new IllegalArgumentException("ID page descriptors must not be null");
+            throw new IllegalArgumentException(ID_DESCRIPTOR_NULL);
         }
 
         AggregateLifecycle.apply(new IdPagesUploadedEvent(
@@ -118,15 +135,15 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(UploadSelfieCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
         if (command.selfieDescriptor() == null) {
-            throw new IllegalArgumentException("Selfie descriptor must be provided");
+            throw new IllegalArgumentException(SELFIE_DESCRIPTOR_REQUIRED);
         }
 
         AggregateLifecycle.apply(new SelfieUploadedEvent(
@@ -139,15 +156,15 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(UploadSignatureCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
         if (command.signatureDescriptor() == null) {
-            throw new IllegalArgumentException("Signature descriptor must be provided");
+            throw new IllegalArgumentException(SIGNATURE_DESCRIPTOR_REQUIRED);
         }
 
         AggregateLifecycle.apply(new SignatureUploadedEvent(
@@ -160,15 +177,15 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(UploadVideoCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
         if (command.videoDescriptor() == null) {
-            throw new IllegalArgumentException("Video descriptor must be provided");
+            throw new IllegalArgumentException(VIDEO_DESCRIPTOR_REQUIRED);
         }
 
         AggregateLifecycle.apply(new VideoUploadedEvent(
@@ -181,19 +198,19 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(AcceptConsentCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
         if (command.termsVersion() == null || command.termsVersion().isBlank()) {
-            throw new IllegalArgumentException("termsVersion must be provided");
+            throw new IllegalArgumentException(TERMS_VERSION_REQUIRED);
         }
 
         if (!command.accepted()) {
-            throw new IllegalArgumentException("Consent must be accepted");
+            throw new IllegalArgumentException(CONSENT_NOT_ACCEPTED);
         }
 
         AggregateLifecycle.apply(new ConsentAcceptedEvent(
@@ -207,17 +224,17 @@ public class KycProcessAggregate {
     @CommandHandler
     public void handle(ProvideEnglishPersonalInfoCommand command) {
         if (this.processInstanceId == null) {
-            throw new IllegalStateException("KYC process has not been started");
+            throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
         if (!command.processInstanceId().equals(this.processInstanceId)) {
-            throw new IllegalArgumentException("Process instance identifier mismatch");
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
-        String firstName = normalizeRequiredText(command.firstNameEn(), "firstNameEn");
-        String lastName = normalizeRequiredText(command.lastNameEn(), "lastNameEn");
+        String firstName = normalizeRequiredText(command.firstNameEn(), ENGLISH_FIRST_NAME_REQUIRED);
+        String lastName = normalizeRequiredText(command.lastNameEn(), ENGLISH_LAST_NAME_REQUIRED);
         String email = normalizeEmail(command.email());
-        String telephone = normalizeRequiredText(command.telephone(), "telephone");
+        String telephone = normalizeRequiredText(command.telephone(), TELEPHONE_REQUIRED);
 
         AggregateLifecycle.apply(new EnglishPersonalInfoProvidedEvent(
                 this.processInstanceId,
@@ -229,21 +246,21 @@ public class KycProcessAggregate {
                 LocalDateTime.now()));
     }
 
-    private String normalizeRequiredText(String value, String fieldName) {
+    private String normalizeRequiredText(String value, String messageKey) {
         if (value == null) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(messageKey);
         }
         String trimmed = value.trim();
         if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(messageKey);
         }
         return trimmed;
     }
 
     private String normalizeEmail(String value) {
-        String trimmed = normalizeRequiredText(value, "email");
+        String trimmed = normalizeRequiredText(value, EMAIL_REQUIRED);
         if (!EMAIL_PATTERN.matcher(trimmed).matches()) {
-            throw new IllegalArgumentException("email must be a valid email address");
+            throw new IllegalArgumentException(EMAIL_INVALID);
         }
         return trimmed;
     }

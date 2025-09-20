@@ -1,0 +1,146 @@
+{
+  "error.validation.failed": {
+    "en": "Validation failed",
+    "fa": "اعتبارسنجی ناموفق بود"
+  },
+  "error.command.execution": {
+    "en": "Command execution failed",
+    "fa": "اجرای فرمان ناموفق بود"
+  },
+  "error.unexpected": {
+    "en": "Unexpected error",
+    "fa": "خطای غیرمنتظره"
+  },
+  "error.process.notFound": {
+    "en": "Process instance not found",
+    "fa": "فرآیند مورد نظر یافت نشد"
+  },
+  "error.processInstanceId.required": {
+    "en": "processInstanceId must be provided",
+    "fa": "شناسه فرایند باید وارد شود"
+  },
+  "error.process.idMismatch": {
+    "en": "Process instance identifier mismatch",
+    "fa": "شناسه فرایند با مقدار مورد انتظار مطابقت ندارد"
+  },
+  "error.termsVersion.required": {
+    "en": "termsVersion must be provided",
+    "fa": "نسخه شرایط باید مشخص شود"
+  },
+  "error.consent.accepted": {
+    "en": "accepted must be true",
+    "fa": "باید مقدار پذیرش برابر با true باشد"
+  },
+  "error.bpmn.noFile": {
+    "en": "No file uploaded",
+    "fa": "هیچ فایلی بارگذاری نشده است"
+  },
+  "error.file.read": {
+    "en": "Unable to read uploaded file",
+    "fa": "امکان خواندن فایل بارگذاری‌شده وجود ندارد"
+  },
+  "error.card.front.required": {
+    "en": "frontImage must be provided",
+    "fa": "تصویر جلو باید بارگذاری شود"
+  },
+  "error.card.front.size": {
+    "en": "frontImage exceeds maximum size",
+    "fa": "حجم تصویر جلو بیشتر از حد مجاز است"
+  },
+  "error.card.back.required": {
+    "en": "backImage must be provided",
+    "fa": "تصویر پشت باید بارگذاری شود"
+  },
+  "error.card.back.size": {
+    "en": "backImage exceeds maximum size",
+    "fa": "حجم تصویر پشت بیشتر از حد مجاز است"
+  },
+  "error.selfie.required": {
+    "en": "selfie must be provided",
+    "fa": "تصویر سلفی باید بارگذاری شود"
+  },
+  "error.selfie.size": {
+    "en": "selfie exceeds maximum size",
+    "fa": "حجم تصویر سلفی بیشتر از حد مجاز است"
+  },
+  "error.video.required": {
+    "en": "video must be provided",
+    "fa": "ویدئو باید بارگذاری شود"
+  },
+  "error.video.size": {
+    "en": "video exceeds maximum size",
+    "fa": "حجم ویدئو بیشتر از حد مجاز است"
+  },
+  "error.id.pages.required": {
+    "en": "At least one ID page must be provided",
+    "fa": "حداقل یک صفحه شناسنامه باید بارگذاری شود"
+  },
+  "error.id.pages.limit": {
+    "en": "No more than four ID pages may be provided",
+    "fa": "بیش از چهار صفحه شناسنامه قابل قبول نیست"
+  },
+  "error.id.page.required": {
+    "en": "ID page file must be provided",
+    "fa": "فایل صفحه شناسنامه باید بارگذاری شود"
+  },
+  "error.id.page.size": {
+    "en": "ID page exceeds maximum size",
+    "fa": "حجم صفحه شناسنامه بیشتر از حد مجاز است"
+  },
+  "error.email.required": {
+    "en": "email must be provided",
+    "fa": "ایمیل باید وارد شود"
+  },
+  "error.email.invalid": {
+    "en": "email must be a valid email address",
+    "fa": "ایمیل باید معتبر باشد"
+  },
+  "error.englishInfo.firstName.required": {
+    "en": "firstNameEn must be provided",
+    "fa": "نام انگلیسی باید وارد شود"
+  },
+  "error.englishInfo.lastName.required": {
+    "en": "lastNameEn must be provided",
+    "fa": "نام خانوادگی انگلیسی باید وارد شود"
+  },
+  "error.englishInfo.telephone.required": {
+    "en": "telephone must be provided",
+    "fa": "شماره تماس باید وارد شود"
+  },
+  "error.kyc.notStarted": {
+    "en": "KYC process has not been started",
+    "fa": "فرآیند احراز هویت آغاز نشده است"
+  },
+  "error.kyc.card.descriptorsRequired": {
+    "en": "Document descriptors must be provided",
+    "fa": "توصیف‌گرهای اسناد کارت باید ارائه شود"
+  },
+  "error.kyc.id.descriptorsRequired": {
+    "en": "At least one ID page descriptor must be provided",
+    "fa": "حداقل یک توصیف‌گر صفحه شناسنامه لازم است"
+  },
+  "error.kyc.id.descriptorLimit": {
+    "en": "No more than four ID page descriptors are allowed",
+    "fa": "بیش از چهار توصیف‌گر صفحه شناسنامه مجاز نیست"
+  },
+  "error.kyc.id.descriptorNull": {
+    "en": "ID page descriptors must not be null",
+    "fa": "توصیف‌گرهای صفحه شناسنامه نباید تهی باشند"
+  },
+  "error.kyc.selfie.descriptorRequired": {
+    "en": "Selfie descriptor must be provided",
+    "fa": "توصیف‌گر سلفی باید ارائه شود"
+  },
+  "error.kyc.signature.descriptorRequired": {
+    "en": "Signature descriptor must be provided",
+    "fa": "توصیف‌گر امضا باید ارائه شود"
+  },
+  "error.kyc.video.descriptorRequired": {
+    "en": "Video descriptor must be provided",
+    "fa": "توصیف‌گر ویدئو باید ارائه شود"
+  },
+  "error.kyc.consent.notAccepted": {
+    "en": "Consent must be accepted",
+    "fa": "باید با شرایط موافقت شود"
+  }
+}
