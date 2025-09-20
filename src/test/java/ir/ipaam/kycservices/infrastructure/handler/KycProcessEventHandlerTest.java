@@ -22,7 +22,7 @@ import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
-import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,9 +60,8 @@ class KycProcessEventHandlerTest {
     private KycStepStatusRepository stepStatusRepository;
     private DocumentRepository documentRepository;
     private ConsentRepository consentRepository;
-    private WebClient cardWebClient;
     private WebClient inquiryWebClient;
-    private BiometricStorageClient biometricStorageClient;
+    private MinioStorageService storageService;
     private KycProcessEventHandler handler;
     private AtomicReference<String> lastTokenRequestProcessId;
     private AtomicReference<String> lastSelfieToken;
@@ -71,7 +69,6 @@ class KycProcessEventHandlerTest {
     private AtomicReference<String> lastSignatureToken;
     private AtomicBoolean tokenEndpointShouldFail;
     private List<CardDocumentRequest> inquiryCardRequests;
-    private AtomicInteger idPageRequestCount;
 
     @BeforeEach
     void setUp() {
@@ -80,7 +77,7 @@ class KycProcessEventHandlerTest {
         stepStatusRepository = mock(KycStepStatusRepository.class);
         documentRepository = mock(DocumentRepository.class);
         consentRepository = mock(ConsentRepository.class);
-        biometricStorageClient = mock(BiometricStorageClient.class);
+        storageService = mock(MinioStorageService.class);
 
         lastTokenRequestProcessId = new AtomicReference<>();
         lastSelfieToken = new AtomicReference<>();
@@ -88,30 +85,6 @@ class KycProcessEventHandlerTest {
         lastSignatureToken = new AtomicReference<>();
         tokenEndpointShouldFail = new AtomicBoolean(false);
         inquiryCardRequests = new ArrayList<>();
-        idPageRequestCount = new AtomicInteger();
-
-        ExchangeFunction cardExchangeFunction = request -> {
-            String path = request.url().getPath();
-            String body;
-            if (path.endsWith("/documents/card")) {
-                body = "{\"front\":{\"path\":\"front-path\",\"hash\":\"front-hash\"}," +
-                        "\"back\":{\"path\":\"back-path\",\"hash\":\"back-hash\"}}";
-            } else if (path.endsWith("/documents/id")) {
-                idPageRequestCount.incrementAndGet();
-                body = "{\"pages\":[" +
-                        "{\"path\":\"id-page-path-1\",\"hash\":\"id-page-hash-1\"}," +
-                        "{\"path\":\"id-page-path-2\",\"hash\":\"id-page-hash-2\"}]}";
-            } else {
-                body = "{}";
-            }
-            return Mono.just(
-                    ClientResponse.create(HttpStatus.OK)
-                            .header("Content-Type", "application/json")
-                            .body(body)
-                            .build()
-            );
-        };
-        cardWebClient = WebClient.builder().exchangeFunction(cardExchangeFunction).build();
 
         ExchangeStrategies strategies = ExchangeStrategies.withDefaults();
         ObjectMapper mapper = new ObjectMapper();
@@ -173,7 +146,7 @@ class KycProcessEventHandlerTest {
         inquiryWebClient = WebClient.builder().exchangeFunction(inquiryExchangeFunction).build();
 
         handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository,
-                consentRepository, cardWebClient, inquiryWebClient, biometricStorageClient);
+                consentRepository, inquiryWebClient, storageService);
     }
 
     @Test
@@ -294,21 +267,33 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata frontMetadata = new DocumentMetadata();
+        frontMetadata.setPath("kyc-card-documents/proc1/card-front/front-file");
+        frontMetadata.setHash("front-hash");
+        DocumentMetadata backMetadata = new DocumentMetadata();
+        backMetadata.setPath("kyc-card-documents/proc1/card-back/back-file");
+        backMetadata.setHash("back-hash");
+
+        when(storageService.upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1")).thenReturn(frontMetadata);
+        when(storageService.upload(event.getBackDescriptor(), "CARD_BACK", "proc1")).thenReturn(backMetadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository, times(2)).save(captor.capture());
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
         assertEquals("CARD_FRONT", saved.get(0).getType());
-        assertEquals("front-path", saved.get(0).getStoragePath());
+        assertEquals("kyc-card-documents/proc1/card-front/front-file", saved.get(0).getStoragePath());
         assertEquals("front-hash", saved.get(0).getHash());
         assertEquals("inquiry-front-id", saved.get(0).getInquiryDocumentId());
         assertEquals(processInstance, saved.get(0).getProcess());
         assertEquals("CARD_BACK", saved.get(1).getType());
-        assertEquals("back-path", saved.get(1).getStoragePath());
+        assertEquals("kyc-card-documents/proc1/card-back/back-file", saved.get(1).getStoragePath());
         assertEquals("back-hash", saved.get(1).getHash());
         assertEquals("inquiry-back-id", saved.get(1).getInquiryDocumentId());
         assertEquals(processInstance, saved.get(1).getProcess());
+        verify(storageService).upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1");
+        verify(storageService).upload(event.getBackDescriptor(), "CARD_BACK", "proc1");
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertEquals(2, inquiryCardRequests.size());
         CardDocumentRequest frontRequest = inquiryCardRequests.get(0);
@@ -338,13 +323,23 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata frontMetadata = new DocumentMetadata();
+        frontMetadata.setPath("kyc-card-documents/proc1/card-front/front-file");
+        DocumentMetadata backMetadata = new DocumentMetadata();
+        backMetadata.setPath("kyc-card-documents/proc1/card-back/back-file");
+
+        when(storageService.upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1")).thenReturn(frontMetadata);
+        when(storageService.upload(event.getBackDescriptor(), "CARD_BACK", "proc1")).thenReturn(backMetadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository, times(2)).save(captor.capture());
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
-        assertEquals("front-path", saved.get(0).getStoragePath());
-        assertEquals("back-path", saved.get(1).getStoragePath());
+        assertEquals("kyc-card-documents/proc1/card-front/front-file", saved.get(0).getStoragePath());
+        assertEquals("kyc-card-documents/proc1/card-back/back-file", saved.get(1).getStoragePath());
+        verify(storageService).upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1");
+        verify(storageService).upload(event.getBackDescriptor(), "CARD_BACK", "proc1");
         assertTrue(inquiryCardRequests.isEmpty());
         assertEquals("proc1", lastTokenRequestProcessId.get());
     }
@@ -364,21 +359,34 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata page1Metadata = new DocumentMetadata();
+        page1Metadata.setPath("kyc-id-documents/proc1/id-page-1/page1-file");
+        page1Metadata.setHash("id-page-hash-1");
+        DocumentMetadata page2Metadata = new DocumentMetadata();
+        page2Metadata.setPath("kyc-id-documents/proc1/id-page-2/page2-file");
+        page2Metadata.setHash("id-page-hash-2");
+
+        when(storageService.upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1")).thenReturn(page1Metadata);
+        when(storageService.upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1")).thenReturn(page2Metadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository, times(2)).save(captor.capture());
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
         assertEquals("ID_PAGE_1", saved.get(0).getType());
-        assertEquals("id-page-path-1", saved.get(0).getStoragePath());
+        assertEquals("kyc-id-documents/proc1/id-page-1/page1-file", saved.get(0).getStoragePath());
+        assertEquals("id-page-hash-1", saved.get(0).getHash());
         assertEquals("ID_PAGE_2", saved.get(1).getType());
-        assertEquals("id-page-path-2", saved.get(1).getStoragePath());
+        assertEquals("kyc-id-documents/proc1/id-page-2/page2-file", saved.get(1).getStoragePath());
+        assertEquals("id-page-hash-2", saved.get(1).getHash());
         assertEquals(processInstance, saved.get(0).getProcess());
         assertEquals(processInstance, saved.get(1).getProcess());
         assertEquals(2, inquiryCardRequests.size());
         assertEquals(201, inquiryCardRequests.get(0).documentType());
         assertEquals(202, inquiryCardRequests.get(1).documentType());
-        assertEquals(1, idPageRequestCount.get());
+        verify(storageService).upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1");
+        verify(storageService).upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1");
     }
 
     @Test
@@ -398,16 +406,25 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata page1Metadata = new DocumentMetadata();
+        page1Metadata.setPath("kyc-id-documents/proc1/id-page-1/page1-file");
+        DocumentMetadata page2Metadata = new DocumentMetadata();
+        page2Metadata.setPath("kyc-id-documents/proc1/id-page-2/page2-file");
+
+        when(storageService.upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1")).thenReturn(page1Metadata);
+        when(storageService.upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1")).thenReturn(page2Metadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository, times(2)).save(captor.capture());
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
-        assertEquals("id-page-path-1", saved.get(0).getStoragePath());
-        assertEquals("id-page-path-2", saved.get(1).getStoragePath());
+        assertEquals("kyc-id-documents/proc1/id-page-1/page1-file", saved.get(0).getStoragePath());
+        assertEquals("kyc-id-documents/proc1/id-page-2/page2-file", saved.get(1).getStoragePath());
         assertTrue(inquiryCardRequests.isEmpty());
-        assertEquals(1, idPageRequestCount.get());
         assertEquals("proc1", lastTokenRequestProcessId.get());
+        verify(storageService).upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1");
+        verify(storageService).upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1");
     }
 
     @Test
@@ -423,9 +440,9 @@ class KycProcessEventHandlerTest {
         );
 
         DocumentMetadata storageMetadata = new DocumentMetadata();
-        storageMetadata.setPath("minio-selfie-path");
+        storageMetadata.setPath("kyc-biometric/proc1/photo/selfie-file");
         storageMetadata.setHash("minio-selfie-hash");
-        when(biometricStorageClient.upload(any(), any(), any())).thenReturn(storageMetadata);
+        when(storageService.upload(event.getDescriptor(), "PHOTO", "proc1")).thenReturn(storageMetadata);
 
         handler.on(event);
 
@@ -433,9 +450,9 @@ class KycProcessEventHandlerTest {
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
         assertEquals("PHOTO", saved.getType());
-        assertEquals("minio-selfie-path", saved.getStoragePath());
+        assertEquals("kyc-biometric/proc1/photo/selfie-file", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
-        verify(biometricStorageClient).upload(event.getDescriptor(), "PHOTO", "proc1");
+        verify(storageService).upload(event.getDescriptor(), "PHOTO", "proc1");
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertEquals("token-for-proc1", lastSelfieToken.get());
     }
@@ -477,9 +494,9 @@ class KycProcessEventHandlerTest {
         );
 
         DocumentMetadata storageMetadata = new DocumentMetadata();
-        storageMetadata.setPath("minio-video-path");
+        storageMetadata.setPath("kyc-biometric/proc1/video/video-file");
         storageMetadata.setHash("minio-video-hash");
-        when(biometricStorageClient.upload(any(), any(), any())).thenReturn(storageMetadata);
+        when(storageService.upload(event.getDescriptor(), "VIDEO", "proc1")).thenReturn(storageMetadata);
 
         handler.on(event);
 
@@ -487,9 +504,9 @@ class KycProcessEventHandlerTest {
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
         assertEquals("VIDEO", saved.getType());
-        assertEquals("minio-video-path", saved.getStoragePath());
+        assertEquals("kyc-biometric/proc1/video/video-file", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
-        verify(biometricStorageClient).upload(event.getDescriptor(), "VIDEO", "proc1");
+        verify(storageService).upload(event.getDescriptor(), "VIDEO", "proc1");
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertEquals("token-for-proc1", lastVideoToken.get());
     }
@@ -507,7 +524,7 @@ class KycProcessEventHandlerTest {
 
         handler.on(event);
 
-        verifyNoInteractions(biometricStorageClient);
+        verifyNoInteractions(storageService);
         verify(documentRepository, never()).save(any());
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertNull(lastSelfieToken.get());

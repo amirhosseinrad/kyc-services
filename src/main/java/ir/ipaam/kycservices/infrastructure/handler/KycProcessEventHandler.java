@@ -21,7 +21,7 @@ import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
-import ir.ipaam.kycservices.infrastructure.service.BiometricStorageClient;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import ir.ipaam.kycservices.infrastructure.service.dto.GenerateTempTokenResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
@@ -29,8 +29,6 @@ import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentRequest
 import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureRequest;
 import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureResponse;
-import ir.ipaam.kycservices.infrastructure.service.dto.UploadCardDocumentsResponse;
-import ir.ipaam.kycservices.infrastructure.service.dto.UploadIdPagesResponse;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.queryhandling.QueryHandler;
 import org.slf4j.Logger;
@@ -74,9 +72,8 @@ public class KycProcessEventHandler {
     private final KycStepStatusRepository kycStepStatusRepository;
     private final DocumentRepository documentRepository;
     private final ConsentRepository consentRepository;
-    private final WebClient documentWebClient;
     private final WebClient inquiryWebClient;
-    private final BiometricStorageClient biometricStorageClient;
+    private final MinioStorageService storageService;
 
     public KycProcessEventHandler(
             KycProcessInstanceRepository kycProcessInstanceRepository,
@@ -84,17 +81,15 @@ public class KycProcessEventHandler {
             KycStepStatusRepository kycStepStatusRepository,
             DocumentRepository documentRepository,
             ConsentRepository consentRepository,
-            @Qualifier("cardDocumentWebClient") WebClient documentWebClient,
             @Qualifier("inquiryWebClient") WebClient inquiryWebClient,
-            BiometricStorageClient biometricStorageClient) {
+            MinioStorageService storageService) {
         this.kycProcessInstanceRepository = kycProcessInstanceRepository;
         this.customerRepository = customerRepository;
         this.kycStepStatusRepository = kycStepStatusRepository;
         this.documentRepository = documentRepository;
         this.consentRepository = consentRepository;
-        this.documentWebClient = documentWebClient;
         this.inquiryWebClient = inquiryWebClient;
-        this.biometricStorageClient = biometricStorageClient;
+        this.storageService = storageService;
     }
 
     @EventHandler
@@ -158,39 +153,20 @@ public class KycProcessEventHandler {
                     "back card");
         }
 
-        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("frontImage", asResource(event.getFrontDescriptor().data(), event.getFrontDescriptor().filename()))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
-        bodyBuilder.part("backImage", asResource(event.getBackDescriptor().data(), event.getBackDescriptor().filename()))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
-        bodyBuilder.part("processInstanceId", event.getProcessInstanceId());
-
-        UploadCardDocumentsResponse response = documentWebClient.post()
-                .uri("/documents/card")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                .retrieve()
-                .bodyToMono(UploadCardDocumentsResponse.class)
-                .onErrorResume(throwable -> {
-                    log.error("Failed to upload card documents for process {}", event.getProcessInstanceId(), throwable);
-                    return Mono.error(throwable);
-                })
-                .block();
-
-        if (response == null) {
-            log.warn("Document storage service returned empty response for process {}", event.getProcessInstanceId());
-            return;
-        }
-
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-
-        DocumentMetadata frontMetadata = response.getFront();
+        DocumentMetadata frontMetadata = storageService.upload(
+                event.getFrontDescriptor(),
+                DOCUMENT_TYPE_FRONT,
+                event.getProcessInstanceId());
         if (frontMetadata != null) {
             frontMetadata.setInquiryDocumentId(frontInquiryId);
         }
         persistMetadata(frontMetadata, DOCUMENT_TYPE_FRONT, event.getProcessInstanceId(), processInstance);
 
-        DocumentMetadata backMetadata = response.getBack();
+        DocumentMetadata backMetadata = storageService.upload(
+                event.getBackDescriptor(),
+                DOCUMENT_TYPE_BACK,
+                event.getProcessInstanceId());
         if (backMetadata != null) {
             backMetadata.setInquiryDocumentId(backInquiryId);
         }
@@ -259,33 +235,15 @@ public class KycProcessEventHandler {
             }
         }
 
-        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        for (DocumentPayloadDescriptor descriptor : descriptors) {
-            bodyBuilder.part("pages", asResource(descriptor.data(), descriptor.filename()))
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM);
-        }
-        bodyBuilder.part("processInstanceId", event.processInstanceId());
-
-        UploadIdPagesResponse response = documentWebClient.post()
-                .uri("/documents/id")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                .retrieve()
-                .bodyToMono(UploadIdPagesResponse.class)
-                .onErrorResume(throwable -> {
-                    log.error("Failed to upload ID pages for process {}", event.processInstanceId(), throwable);
-                    return Mono.error(throwable);
-                })
-                .block();
-
-        if (response == null || response.getPages() == null) {
-            log.warn("Document storage service returned empty response for ID pages of process {}",
-                    event.processInstanceId());
-            return;
-        }
-
         ProcessInstance processInstance = findProcessInstance(event.processInstanceId());
-        List<DocumentMetadata> metadataList = response.getPages();
+        List<DocumentMetadata> metadataList = new ArrayList<>(descriptors.size());
+        for (int i = 0; i < descriptors.size(); i++) {
+            DocumentMetadata metadata = storageService.upload(
+                    descriptors.get(i),
+                    DOCUMENT_TYPE_ID_PAGE_PREFIX + (i + 1),
+                    event.processInstanceId());
+            metadataList.add(metadata);
+        }
         for (int i = 0; i < descriptors.size(); i++) {
             DocumentMetadata metadata = i < metadataList.size() ? metadataList.get(i) : null;
             if (metadata != null) {
@@ -323,7 +281,7 @@ public class KycProcessEventHandler {
             return;
         }
 
-        DocumentMetadata storageMetadata = biometricStorageClient.upload(
+        DocumentMetadata storageMetadata = storageService.upload(
                 event.getDescriptor(),
                 DOCUMENT_TYPE_SELFIE,
                 event.getProcessInstanceId());
@@ -409,7 +367,7 @@ public class KycProcessEventHandler {
             return;
         }
 
-        DocumentMetadata storageMetadata = biometricStorageClient.upload(
+        DocumentMetadata storageMetadata = storageService.upload(
                 event.getDescriptor(),
                 DOCUMENT_TYPE_VIDEO,
                 event.getProcessInstanceId());
