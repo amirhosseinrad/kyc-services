@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.CardDocumentController;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -112,7 +113,8 @@ class CardDocumentControllerTest {
                         .file(back)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("processInstanceId must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
     }
@@ -144,7 +146,8 @@ class CardDocumentControllerTest {
                         .file(back)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("frontImage exceeds maximum size of "
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("frontImage exceeds maximum size of "
                         + CardDocumentController.MAX_IMAGE_SIZE_BYTES + " bytes"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
@@ -181,7 +184,8 @@ class CardDocumentControllerTest {
                         .file(back)
                         .file(process))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to process card documents"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("gateway failure"));
     }
 
     @Test
@@ -213,7 +217,8 @@ class CardDocumentControllerTest {
                         .file(back)
                         .file(process))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Process instance not found"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
+                .andExpect(jsonPath("$.message").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
     }

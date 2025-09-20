@@ -1,8 +1,6 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
@@ -31,40 +29,24 @@ public class KycProcessController {
     private final ZeebeClient zeebeClient;
 
     @Operation(summary = "Start a new KYC process")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Process started"),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
-    })
     @PostMapping("/process")
     public ResponseEntity<Map<String, String>> startProcess(@Valid @RequestBody StartKycRequest request) {
-        try {
-            long key = zeebeClient.newCreateInstanceCommand()
-                    .bpmnProcessId("kyc-process")
-                    .latestVersion()
-                    .variables(Map.of("nationalCode", request.nationalCode()))
-                    .send()
-                    .join()
-                    .getProcessInstanceKey();
-            String processInstanceKey = Long.toString(key);
-            commandGateway.send(new StartKycProcessCommand(processInstanceKey, request.nationalCode()));
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("processInstanceKey", processInstanceKey));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        long key = zeebeClient.newCreateInstanceCommand()
+                .bpmnProcessId("kyc-process")
+                .latestVersion()
+                .variables(Map.of("nationalCode", request.nationalCode()))
+                .send()
+                .join()
+                .getProcessInstanceKey();
+        String processInstanceKey = Long.toString(key);
+        commandGateway.send(new StartKycProcessCommand(processInstanceKey, request.nationalCode()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("processInstanceKey", processInstanceKey));
     }
     @Operation(summary = "Get KYC process state")
     @PostMapping("/status")
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
-        try {
-            ProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
-            return ResponseEntity.ok(KycStatusResponse.success(instance));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(KycStatusResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(KycStatusResponse.error(e.getMessage()));
-        }
+        ProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
+        return ResponseEntity.ok(KycStatusResponse.success(instance));
     }
 }

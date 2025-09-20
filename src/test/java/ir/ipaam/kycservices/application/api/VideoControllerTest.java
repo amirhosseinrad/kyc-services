@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.VideoController;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -93,7 +94,8 @@ class VideoControllerTest {
                         .file(video)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("processInstanceId must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
     }
@@ -117,7 +119,8 @@ class VideoControllerTest {
                         .file(video)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("video must be provided"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("video must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
     }
@@ -142,7 +145,8 @@ class VideoControllerTest {
                         .file(video)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("video exceeds maximum size of "
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("video exceeds maximum size of "
                         + VideoController.MAX_VIDEO_SIZE_BYTES + " bytes"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
@@ -172,7 +176,8 @@ class VideoControllerTest {
                         .file(video)
                         .file(process))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("invalid"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("invalid"));
     }
 
     @Test
@@ -199,7 +204,8 @@ class VideoControllerTest {
                         .file(video)
                         .file(process))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to process video"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("boom"));
     }
 
     @Test
@@ -224,7 +230,8 @@ class VideoControllerTest {
                         .file(video)
                         .file(process))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Process instance not found"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
+                .andExpect(jsonPath("$.message").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
     }

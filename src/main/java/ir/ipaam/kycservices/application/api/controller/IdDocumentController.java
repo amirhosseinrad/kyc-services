@@ -1,11 +1,12 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import ir.ipaam.kycservices.application.api.error.FileProcessingException;
+import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,65 +38,42 @@ public class IdDocumentController {
     public ResponseEntity<Map<String, Object>> uploadIdPages(
             @RequestPart("pages") List<MultipartFile> pages,
             @RequestPart("processInstanceId") String processInstanceId) {
-        try {
-            List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
-            if (normalizedPages.isEmpty()) {
-                throw new IllegalArgumentException("At least one page must be provided");
-            }
-            if (normalizedPages.size() > 4) {
-                throw new IllegalArgumentException("No more than four pages may be provided");
-            }
-
-            String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
-
-            if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
-                log.warn("Process instance with id {} not found", normalizedProcessId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Process instance not found"));
-            }
-
-            List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
-            List<Integer> sizes = new ArrayList<>();
-            for (int i = 0; i < normalizedPages.size(); i++) {
-                MultipartFile page = normalizedPages.get(i);
-                validateFile(page, "pages[" + i + "]");
-                byte[] pageBytes = page.getBytes();
-                sizes.add(pageBytes.length);
-                String filename = resolveFilename(page, i);
-                descriptors.add(new DocumentPayloadDescriptor(pageBytes, filename));
-            }
-
-            UploadIdPagesCommand command = new UploadIdPagesCommand(normalizedProcessId, List.copyOf(descriptors));
-            commandGateway.sendAndWait(command);
-
-            Map<String, Object> body = Map.of(
-                    "processInstanceId", normalizedProcessId,
-                    "pageCount", descriptors.size(),
-                    "pageSizes", List.copyOf(sizes),
-                    "status", "ID_PAGES_RECEIVED"
-            );
-            return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid ID pages upload request: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        } catch (IOException e) {
-            log.error("Failed to read uploaded ID pages", e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Unable to read uploaded files"));
-        } catch (CommandExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof IllegalArgumentException illegalArgumentException) {
-                log.warn("Command execution rejected: {}", illegalArgumentException.getMessage());
-                return ResponseEntity.badRequest().body(Map.of("error", illegalArgumentException.getMessage()));
-            }
-            log.error("Command execution failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to process ID pages"));
-        } catch (Exception e) {
-            log.error("Unexpected error while processing ID pages upload", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to process ID pages"));
+        List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
+        if (normalizedPages.isEmpty()) {
+            throw new IllegalArgumentException("At least one page must be provided");
         }
+        if (normalizedPages.size() > 4) {
+            throw new IllegalArgumentException("No more than four pages may be provided");
+        }
+
+        String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
+
+        if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
+            log.warn("Process instance with id {} not found", normalizedProcessId);
+            throw new ResourceNotFoundException("Process instance not found");
+        }
+
+        List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
+        List<Integer> sizes = new ArrayList<>();
+        for (int i = 0; i < normalizedPages.size(); i++) {
+            MultipartFile page = normalizedPages.get(i);
+            validateFile(page, "pages[" + i + "]");
+            byte[] pageBytes = readFile(page);
+            sizes.add(pageBytes.length);
+            String filename = resolveFilename(page, i);
+            descriptors.add(new DocumentPayloadDescriptor(pageBytes, filename));
+        }
+
+        UploadIdPagesCommand command = new UploadIdPagesCommand(normalizedProcessId, List.copyOf(descriptors));
+        commandGateway.sendAndWait(command);
+
+        Map<String, Object> body = Map.of(
+                "processInstanceId", normalizedProcessId,
+                "pageCount", descriptors.size(),
+                "pageSizes", List.copyOf(sizes),
+                "status", "ID_PAGES_RECEIVED"
+        );
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
     private void validateFile(MultipartFile file, String fieldName) {
@@ -120,5 +98,13 @@ public class IdDocumentController {
             throw new IllegalArgumentException("processInstanceId must be provided");
         }
         return processInstanceId.trim();
+    }
+
+    private byte[] readFile(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            throw new FileProcessingException("Unable to read uploaded files", e);
+        }
     }
 }

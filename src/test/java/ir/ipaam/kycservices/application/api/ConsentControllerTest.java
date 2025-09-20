@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.application.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.ipaam.kycservices.application.api.controller.ConsentController;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -71,9 +72,27 @@ class ConsentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("accepted must be true"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("accepted must be true"));
 
         verify(commandGateway, never()).sendAndWait(any(AcceptConsentCommand.class));
+    }
+
+    @Test
+    void missingProcessInstanceIdReturnsValidationError() throws Exception {
+        String payload = "{" +
+                "\"termsVersion\":\"v1\"," +
+                "\"accepted\":true" +
+                "}";
+
+        mockMvc.perform(post("/kyc/consent")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details.fieldErrors.processInstanceId[0]")
+                        .value("processInstanceId is required"));
     }
 
     @Test
@@ -88,7 +107,24 @@ class ConsentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("invalid"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("invalid"));
+    }
+
+    @Test
+    void commandWithoutCauseReturnsConflict() throws Exception {
+        ConsentRequest request = new ConsentRequest("process-123", "v1", true);
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(new ProcessInstance()));
+        when(commandGateway.sendAndWait(any(AcceptConsentCommand.class)))
+                .thenThrow(new CommandExecutionException("rejected", null));
+
+        mockMvc.perform(post("/kyc/consent")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ErrorCode.COMMAND_REJECTED.getValue()))
+                .andExpect(jsonPath("$.message").value("rejected"));
     }
 
     @Test
@@ -103,7 +139,8 @@ class ConsentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to accept consent"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("boom"));
     }
 
     @Test
@@ -116,7 +153,8 @@ class ConsentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Process instance not found"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
+                .andExpect(jsonPath("$.message").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(AcceptConsentCommand.class));
     }

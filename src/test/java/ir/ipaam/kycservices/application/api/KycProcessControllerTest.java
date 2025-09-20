@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.KycProcessController;
+import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
@@ -70,7 +71,10 @@ class KycProcessControllerTest {
         mockMvc.perform(post("/kyc/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.details.fieldErrors.nationalCode[0]").value("nationalCode is required"));
     }
 
     @Test
@@ -82,7 +86,8 @@ class KycProcessControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nationalCode\":\"bad\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("bad code"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
+                .andExpect(jsonPath("$.message").value("bad code"));
     }
 
     @Test
@@ -94,7 +99,8 @@ class KycProcessControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nationalCode\":\"0024683416\"}"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("failure"));
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
+                .andExpect(jsonPath("$.message").value("failure"));
     }
 
 }
