@@ -20,6 +20,14 @@ import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_INVALID;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_FIRST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.TELEPHONE_REQUIRED;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -37,13 +45,13 @@ public class EnglishPersonalInfoController {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
         if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
             log.warn("Process instance with id {} not found", processInstanceId);
-            throw new ResourceNotFoundException("Process instance not found");
+            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
-        String firstNameEn = normalizeRequiredText(request.firstNameEn(), "firstNameEn");
-        String lastNameEn = normalizeRequiredText(request.lastNameEn(), "lastNameEn");
+        String firstNameEn = normalizeRequiredText(request.firstNameEn(), ENGLISH_FIRST_NAME_REQUIRED);
+        String lastNameEn = normalizeRequiredText(request.lastNameEn(), ENGLISH_LAST_NAME_REQUIRED);
         String email = normalizeEmail(request.email());
-        String telephone = normalizeRequiredText(request.telephone(), "telephone");
+        String telephone = normalizeRequiredText(request.telephone(), TELEPHONE_REQUIRED);
 
         ProvideEnglishPersonalInfoCommand command = new ProvideEnglishPersonalInfoCommand(
                 processInstanceId,
@@ -67,22 +75,22 @@ public class EnglishPersonalInfoController {
 
     private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
-            throw new IllegalArgumentException("processInstanceId must be provided");
+            throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
     }
 
-    private String normalizeRequiredText(String value, String fieldName) {
+    private String normalizeRequiredText(String value, String messageKey) {
         if (!StringUtils.hasText(value)) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(messageKey);
         }
         return value.trim();
     }
 
     private String normalizeEmail(String email) {
-        String normalized = normalizeRequiredText(email, "email");
+        String normalized = normalizeRequiredText(email, EMAIL_REQUIRED);
         if (!EMAIL_PATTERN.matcher(normalized).matches()) {
-            throw new IllegalArgumentException("email must be a valid email address");
+            throw new IllegalArgumentException(EMAIL_INVALID);
         }
         return normalized;
     }

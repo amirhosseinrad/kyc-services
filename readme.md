@@ -170,3 +170,27 @@ Controllers no longer craft ad-hoc error bodies. They throw meaningful exception
 - Errors follow the same pattern: `400` for validation or command rejections, `404` for unknown process instances, and `500` for unexpected failures.
 
 ---
+
+## Localized error messages
+
+The API returns bilingual error payloads. Message templates are loaded from the
+resource configured by `error.messages.location` (see
+`src/main/resources/application.properties`). The default value points to the
+bundled `classpath:error-messages.json`. To override the catalogue, provide an
+external resource using any Spring resource URI, for example:
+
+```
+error.messages.location=file:/etc/kyc/error-messages.json
+```
+
+Each entry in the JSON file must expose both English (`en`) and Persian (`fa`)
+strings:
+
+```json
+{
+  "error.some.key": { "en": "English text", "fa": "متن فارسی" }
+}
+```
+
+Operators can add new keys or override existing ones by editing the external
+file and reloading the application.

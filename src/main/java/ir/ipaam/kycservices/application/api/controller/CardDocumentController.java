@@ -21,6 +21,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_BACK_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_BACK_TOO_LARGE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_FRONT_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_FRONT_TOO_LARGE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -37,13 +45,13 @@ public class CardDocumentController {
             @RequestPart("frontImage") MultipartFile frontImage,
             @RequestPart("backImage") MultipartFile backImage,
             @RequestPart("processInstanceId") String processInstanceId) {
-        validateFile(frontImage, "frontImage");
-        validateFile(backImage, "backImage");
+        validateFile(frontImage, CARD_FRONT_REQUIRED, CARD_FRONT_TOO_LARGE, MAX_IMAGE_SIZE_BYTES);
+        validateFile(backImage, CARD_BACK_REQUIRED, CARD_BACK_TOO_LARGE, MAX_IMAGE_SIZE_BYTES);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
             log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException("Process instance not found");
+            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
         byte[] frontBytes = readFile(frontImage);
@@ -66,18 +74,18 @@ public class CardDocumentController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
-    private void validateFile(MultipartFile file, String fieldName) {
+    private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(requiredKey);
         }
-        if (file.getSize() > MAX_IMAGE_SIZE_BYTES) {
-            throw new IllegalArgumentException(fieldName + " exceeds maximum size of " + MAX_IMAGE_SIZE_BYTES + " bytes");
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(sizeKey);
         }
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
-            throw new IllegalArgumentException("processInstanceId must be provided");
+            throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
     }
@@ -86,7 +94,7 @@ public class CardDocumentController {
         try {
             return file.getBytes();
         } catch (IOException e) {
-            throw new FileProcessingException("Unable to read uploaded files", e);
+            throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
     }
 }

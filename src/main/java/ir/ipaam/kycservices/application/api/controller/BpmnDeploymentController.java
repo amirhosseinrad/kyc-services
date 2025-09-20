@@ -16,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.BPMN_FILE_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+
 @RestController
 @RequestMapping("/bpmn")
 @RequiredArgsConstructor
@@ -27,13 +30,13 @@ public class BpmnDeploymentController {
     @PostMapping(value = "/deploy", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProcessDeployment> deploy(@RequestPart("file") MultipartFile file) {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("No file uploaded");
+            throw new IllegalArgumentException(BPMN_FILE_REQUIRED);
         }
         try (InputStream is = file.getInputStream()) {
             ProcessDeployment deployment = service.deployIfChanged(is);
             return ResponseEntity.ok(deployment);
         } catch (IOException e) {
-            throw new FileProcessingException("Unable to read uploaded file", e);
+            throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
     }
 }

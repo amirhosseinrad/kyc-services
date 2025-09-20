@@ -114,7 +114,7 @@ class CardDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("processInstanceId must be provided"));
+                .andExpect(jsonPath("$.message.en").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
     }
@@ -147,8 +147,7 @@ class CardDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("frontImage exceeds maximum size of "
-                        + CardDocumentController.MAX_IMAGE_SIZE_BYTES + " bytes"));
+                .andExpect(jsonPath("$.message.en").value("frontImage exceeds maximum size"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
     }
@@ -185,7 +184,7 @@ class CardDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
-                .andExpect(jsonPath("$.message").value("gateway failure"));
+                .andExpect(jsonPath("$.message.en").value("gateway failure"));
     }
 
     @Test
@@ -218,7 +217,7 @@ class CardDocumentControllerTest {
                         .file(process))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
-                .andExpect(jsonPath("$.message").value("Process instance not found"));
+                .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
     }

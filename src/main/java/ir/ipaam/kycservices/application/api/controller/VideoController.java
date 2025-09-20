@@ -21,6 +21,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_TOO_LARGE;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -36,12 +42,12 @@ public class VideoController {
     public ResponseEntity<Map<String, Object>> uploadVideo(
             @RequestPart("video") MultipartFile video,
             @RequestPart("processInstanceId") String processInstanceId) {
-        validateFile(video, "video");
+        validateFile(video, VIDEO_REQUIRED, VIDEO_TOO_LARGE, MAX_VIDEO_SIZE_BYTES);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
             log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException("Process instance not found");
+            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
         byte[] videoBytes = readFile(video);
@@ -59,19 +65,18 @@ public class VideoController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
-    private void validateFile(MultipartFile file, String fieldName) {
+    private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(requiredKey);
         }
-        if (file.getSize() > MAX_VIDEO_SIZE_BYTES) {
-            throw new IllegalArgumentException(
-                    fieldName + " exceeds maximum size of " + MAX_VIDEO_SIZE_BYTES + " bytes");
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(sizeKey);
         }
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
-            throw new IllegalArgumentException("processInstanceId must be provided");
+            throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
     }
@@ -80,7 +85,7 @@ public class VideoController {
         try {
             return file.getBytes();
         } catch (IOException e) {
-            throw new FileProcessingException("Unable to read uploaded file", e);
+            throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
     }
 }

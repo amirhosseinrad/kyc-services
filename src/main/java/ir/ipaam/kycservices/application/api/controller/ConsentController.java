@@ -19,6 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.CONSENT_MUST_BE_TRUE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.TERMS_VERSION_REQUIRED;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -34,12 +39,12 @@ public class ConsentController {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
         String termsVersion = normalizeTermsVersion(request.termsVersion());
         if (!request.accepted()) {
-            throw new IllegalArgumentException("accepted must be true");
+            throw new IllegalArgumentException(CONSENT_MUST_BE_TRUE);
         }
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
             log.warn("Process instance with id {} not found", processInstanceId);
-            throw new ResourceNotFoundException("Process instance not found");
+            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
         AcceptConsentCommand command = new AcceptConsentCommand(
@@ -59,14 +64,14 @@ public class ConsentController {
 
     private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
-            throw new IllegalArgumentException("processInstanceId must be provided");
+            throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
     }
 
     private String normalizeTermsVersion(String termsVersion) {
         if (!StringUtils.hasText(termsVersion)) {
-            throw new IllegalArgumentException("termsVersion must be provided");
+            throw new IllegalArgumentException(TERMS_VERSION_REQUIRED);
         }
         return termsVersion.trim();
     }

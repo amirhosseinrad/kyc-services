@@ -73,7 +73,7 @@ class ConsentControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("accepted must be true"));
+                .andExpect(jsonPath("$.message.en").value("accepted must be true"));
 
         verify(commandGateway, never()).sendAndWait(any(AcceptConsentCommand.class));
     }
@@ -90,7 +90,7 @@ class ConsentControllerTest {
                         .content(payload))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.message.en").value("Validation failed"))
                 .andExpect(jsonPath("$.details.fieldErrors.processInstanceId[0]")
                         .value("processInstanceId is required"));
     }
@@ -108,7 +108,7 @@ class ConsentControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message").value("invalid"));
+                .andExpect(jsonPath("$.message.en").value("invalid"));
     }
 
     @Test
@@ -124,7 +124,7 @@ class ConsentControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(ErrorCode.COMMAND_REJECTED.getValue()))
-                .andExpect(jsonPath("$.message").value("rejected"));
+                .andExpect(jsonPath("$.message.en").value("rejected"));
     }
 
     @Test
@@ -140,7 +140,7 @@ class ConsentControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
-                .andExpect(jsonPath("$.message").value("boom"));
+                .andExpect(jsonPath("$.message.en").value("boom"));
     }
 
     @Test
@@ -154,7 +154,7 @@ class ConsentControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
-                .andExpect(jsonPath("$.message").value("Process instance not found"));
+                .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(AcceptConsentCommand.class));
     }

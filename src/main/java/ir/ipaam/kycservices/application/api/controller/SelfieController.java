@@ -21,6 +21,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_REQUIRED;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_TOO_LARGE;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -36,12 +42,12 @@ public class SelfieController {
     public ResponseEntity<Map<String, Object>> uploadSelfie(
             @RequestPart("selfie") MultipartFile selfie,
             @RequestPart("processInstanceId") String processInstanceId) {
-        validateFile(selfie, "selfie");
+        validateFile(selfie, SELFIE_REQUIRED, SELFIE_TOO_LARGE, MAX_SELFIE_SIZE_BYTES);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
             log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException("Process instance not found");
+            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
         byte[] selfieBytes = readFile(selfie);
@@ -59,19 +65,18 @@ public class SelfieController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
-    private void validateFile(MultipartFile file, String fieldName) {
+    private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must be provided");
+            throw new IllegalArgumentException(requiredKey);
         }
-        if (file.getSize() > MAX_SELFIE_SIZE_BYTES) {
-            throw new IllegalArgumentException(
-                    fieldName + " exceeds maximum size of " + MAX_SELFIE_SIZE_BYTES + " bytes");
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(sizeKey);
         }
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
-            throw new IllegalArgumentException("processInstanceId must be provided");
+            throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
     }
@@ -80,7 +85,7 @@ public class SelfieController {
         try {
             return file.getBytes();
         } catch (IOException e) {
-            throw new FileProcessingException("Unable to read uploaded file", e);
+            throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
     }
 }
