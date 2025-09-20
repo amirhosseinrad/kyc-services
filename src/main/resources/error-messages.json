@@ -25,11 +25,11 @@
   },
   "error.termsVersion.required": {
     "en": "termsVersion must be provided",
-    "fa": "نسخه شرایط باید مشخص شود"
+    "fa": "نسخه شرایط و قوانین بهره برداری از سیستم باید مشخص شود"
   },
   "error.consent.accepted": {
     "en": "accepted must be true",
-    "fa": "باید مقدار پذیرش برابر با true باشد"
+    "fa": " شرایط و قوانین بهره برداری از سیستم باید تایید گردد"
   },
   "error.bpmn.noFile": {
     "en": "No file uploaded",
@@ -41,19 +41,19 @@
   },
   "error.card.front.required": {
     "en": "frontImage must be provided",
-    "fa": "تصویر جلو باید بارگذاری شود"
+    "fa": "تصویر روی کارت ملی باید بارگذاری شود"
   },
   "error.card.front.size": {
     "en": "frontImage exceeds maximum size",
-    "fa": "حجم تصویر جلو بیشتر از حد مجاز است"
+    "fa": "حجم تصویر روی کارت ملی بیشتر از حد مجاز است"
   },
   "error.card.back.required": {
     "en": "backImage must be provided",
-    "fa": "تصویر پشت باید بارگذاری شود"
+    "fa": "تصویر پشت کارت ملی باید بارگذاری شود"
   },
   "error.card.back.size": {
     "en": "backImage exceeds maximum size",
-    "fa": "حجم تصویر پشت بیشتر از حد مجاز است"
+    "fa": "حجم تصویر پشت کارت ملی بیشتر از حد مجاز است"
   },
   "error.selfie.required": {
     "en": "selfie must be provided",
