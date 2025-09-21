@@ -285,27 +285,17 @@ class KycProcessEventHandlerTest {
         assertEquals("CARD_FRONT", saved.get(0).getType());
         assertEquals("kyc-card-documents/proc1/card-front/front-file", saved.get(0).getStoragePath());
         assertEquals("front-hash", saved.get(0).getHash());
-        assertEquals("inquiry-front-id", saved.get(0).getInquiryDocumentId());
+        assertNull(saved.get(0).getInquiryDocumentId());
         assertEquals(processInstance, saved.get(0).getProcess());
         assertEquals("CARD_BACK", saved.get(1).getType());
         assertEquals("kyc-card-documents/proc1/card-back/back-file", saved.get(1).getStoragePath());
         assertEquals("back-hash", saved.get(1).getHash());
-        assertEquals("inquiry-back-id", saved.get(1).getInquiryDocumentId());
+        assertNull(saved.get(1).getInquiryDocumentId());
         assertEquals(processInstance, saved.get(1).getProcess());
         verify(storageService).upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1");
         verify(storageService).upload(event.getBackDescriptor(), "CARD_BACK", "proc1");
-        assertEquals("proc1", lastTokenRequestProcessId.get());
-        assertEquals(2, inquiryCardRequests.size());
-        CardDocumentRequest frontRequest = inquiryCardRequests.get(0);
-        assertEquals("token-for-proc1", frontRequest.token());
-        assertEquals(101, frontRequest.documentType());
-        assertEquals("front-file", frontRequest.fileName());
-        assertEquals("ZnJvbnQ=", frontRequest.content());
-        CardDocumentRequest backRequest = inquiryCardRequests.get(1);
-        assertEquals("token-for-proc1", backRequest.token());
-        assertEquals(102, backRequest.documentType());
-        assertEquals("back-file", backRequest.fileName());
-        assertEquals("YmFjaw==", backRequest.content());
+        assertNull(lastTokenRequestProcessId.get());
+        assertTrue(inquiryCardRequests.isEmpty());
     }
 
     @Test
@@ -338,10 +328,12 @@ class KycProcessEventHandlerTest {
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
         assertEquals("kyc-card-documents/proc1/card-front/front-file", saved.get(0).getStoragePath());
         assertEquals("kyc-card-documents/proc1/card-back/back-file", saved.get(1).getStoragePath());
+        assertNull(saved.get(0).getInquiryDocumentId());
+        assertNull(saved.get(1).getInquiryDocumentId());
         verify(storageService).upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1");
         verify(storageService).upload(event.getBackDescriptor(), "CARD_BACK", "proc1");
         assertTrue(inquiryCardRequests.isEmpty());
-        assertEquals("proc1", lastTokenRequestProcessId.get());
+        assertNull(lastTokenRequestProcessId.get());
     }
 
     @Test
