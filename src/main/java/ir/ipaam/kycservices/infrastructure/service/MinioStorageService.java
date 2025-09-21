@@ -34,17 +34,20 @@ public class MinioStorageService {
     private final String cardBucket;
     private final String idBucket;
     private final String biometricBucket;
+    private final String signatureBucket;
     private final Set<String> ensuredBuckets = ConcurrentHashMap.newKeySet();
 
     public MinioStorageService(
             MinioClient minioClient,
             @Value("${storage.minio.bucket.card}") String cardBucket,
             @Value("${storage.minio.bucket.id}") String idBucket,
-            @Value("${storage.minio.bucket.biometric}") String biometricBucket) {
+            @Value("${storage.minio.bucket.biometric}") String biometricBucket,
+            @Value("${storage.minio.bucket.signature}") String signatureBucket) {
         this.minioClient = minioClient;
         this.cardBucket = cardBucket;
         this.idBucket = idBucket;
         this.biometricBucket = biometricBucket;
+        this.signatureBucket = signatureBucket;
     }
 
     public DocumentMetadata upload(DocumentPayloadDescriptor descriptor, String documentType, String processInstanceId) {
@@ -114,8 +117,11 @@ public class MinioStorageService {
     }
 
     private String determineBucket(String documentType) {
-        if (documentType.startsWith("CARD_") || "SIGNATURE".equals(documentType)) {
+        if (documentType.startsWith("CARD_")) {
             return cardBucket;
+        }
+        if ("SIGNATURE".equals(documentType)) {
+            return signatureBucket;
         }
         if (documentType.startsWith("ID_PAGE_")) {
             return idBucket;
