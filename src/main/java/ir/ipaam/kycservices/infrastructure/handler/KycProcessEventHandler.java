@@ -27,8 +27,6 @@ import ir.ipaam.kycservices.infrastructure.service.dto.GenerateTempTokenResponse
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentRequest;
 import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentResponse;
-import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureRequest;
-import ir.ipaam.kycservices.infrastructure.service.dto.SaveSignatureResponse;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.queryhandling.QueryHandler;
 import org.slf4j.Logger;
@@ -270,52 +268,15 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SignatureUploadedEvent event) {
-        String token = fetchInquiryToken(event.getProcessInstanceId());
-        if (token == null) {
-            log.warn("Skipping signature upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
-            return;
+        DocumentMetadata metadata = storageService.upload(
+                event.getDescriptor(),
+                DOCUMENT_TYPE_SIGNATURE,
+                event.getProcessInstanceId());
+        if (metadata != null) {
+            metadata.setInquiryDocumentId(null);
         }
-
-        SaveSignatureRequest.FileData fileData = new SaveSignatureRequest.FileData(
-                "FileData",
-                event.getDescriptor().filename(),
-                Base64.getEncoder().encodeToString(event.getDescriptor().data()));
-
-        SaveSignatureRequest request = new SaveSignatureRequest(token, fileData);
-
-        SaveSignatureResponse response = inquiryWebClient.post()
-                .uri("/api/Inquiry/SaveSignature")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(SaveSignatureResponse.class)
-                .onErrorResume(throwable -> {
-                    log.error("Failed to upload signature for process {}", event.getProcessInstanceId(), throwable);
-                    return Mono.error(throwable);
-                })
-                .block();
-
-        if (response == null) {
-            log.warn("Inquiry service returned empty response for process {} when uploading signature", event.getProcessInstanceId());
-            return;
-        }
-
-        Integer responseCode = response.getResponseCode();
-        if (responseCode != null && responseCode != 0) {
-            String message = response.getResponseMessage();
-            if (response.getException() != null && response.getException().getErrorMessage() != null) {
-                message = response.getException().getErrorMessage();
-            }
-            log.error("Inquiry service reported error code {} for process {} when uploading signature: {}",
-                    responseCode, event.getProcessInstanceId(), message);
-            return;
-        }
-
-        String signatureId = extractResultId(response.getResult());
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-        DocumentMetadata metadata = new DocumentMetadata();
-        metadata.setPath(signatureId);
         persistMetadata(metadata, DOCUMENT_TYPE_SIGNATURE, event.getProcessInstanceId(), processInstance);
     }
 

@@ -80,7 +80,7 @@ public class MinioStorageService {
     }
 
     private String determineBucket(String documentType) {
-        if (documentType.startsWith("CARD_")) {
+        if (documentType.startsWith("CARD_") || "SIGNATURE".equals(documentType)) {
             return cardBucket;
         }
         if (documentType.startsWith("ID_PAGE_")) {
