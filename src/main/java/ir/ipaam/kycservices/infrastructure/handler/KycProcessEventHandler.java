@@ -153,19 +153,14 @@ public class KycProcessEventHandler {
     public void on(EnglishPersonalInfoProvidedEvent event) {
         Optional<ProcessInstance> processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(event.processInstanceId());
 
-        if (processInstance.isPresent() && processInstance.get().getCustomer() != null) {
-            Customer customer = processInstance.get().getCustomer();
-            updateCustomerInfo(customer, event);
-            customerRepository.save(customer);
-            return;
-        }
-
-        Customer customer = customerRepository.findByNationalCode(event.nationalCode())
-                .orElseGet(() -> {
-                    Customer c = new Customer();
-                    c.setNationalCode(event.nationalCode());
-                    return c;
-                });
+        Customer customer = processInstance
+                .map(ProcessInstance::getCustomer)
+                .orElseGet(() -> customerRepository.findByNationalCode(event.nationalCode())
+                        .orElseGet(() -> {
+                            Customer c = new Customer();
+                            c.setNationalCode(event.nationalCode());
+                            return c;
+                        }));
 
         updateCustomerInfo(customer, event);
         customerRepository.save(customer);
@@ -173,8 +168,10 @@ public class KycProcessEventHandler {
         processInstance.ifPresent(instance -> {
             if (instance.getCustomer() == null) {
                 instance.setCustomer(customer);
-                kycProcessInstanceRepository.save(instance);
             }
+            instance.setStatus("ENGLISH_PERSONAL_INFO_PROVIDED");
+            instance.setCompletedAt(event.providedAt());
+            kycProcessInstanceRepository.save(instance);
         });
     }
 
