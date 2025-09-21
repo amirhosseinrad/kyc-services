@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.handler;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
@@ -196,11 +197,13 @@ class KycProcessEventHandlerTest {
         Customer customer = new Customer();
         customer.setNationalCode("123");
         ProcessInstance instance = new ProcessInstance();
+        instance.setStatus("STARTED");
         instance.setCustomer(customer);
 
         when(instanceRepository.findByCamundaInstanceId("proc-1")).thenReturn(Optional.of(instance));
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+        LocalDateTime providedAt = LocalDateTime.of(2024, 1, 2, 10, 0);
         EnglishPersonalInfoProvidedEvent event = new EnglishPersonalInfoProvidedEvent(
                 "proc-1",
                 "123",
@@ -208,7 +211,7 @@ class KycProcessEventHandlerTest {
                 "Doe",
                 "john.doe@example.com",
                 "0912",
-                LocalDateTime.now()
+                providedAt
         );
 
         handler.on(event);
@@ -218,7 +221,10 @@ class KycProcessEventHandlerTest {
         assertEquals("john.doe@example.com", customer.getEmail());
         assertEquals("0912", customer.getMobile());
         verify(customerRepository).save(customer);
-        verify(instanceRepository, never()).save(instance);
+        verify(instanceRepository).save(instance);
+        assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", instance.getStatus());
+        assertEquals(providedAt, instance.getCompletedAt());
+        assertEquals(customer, instance.getCustomer());
     }
 
     @Test
@@ -230,6 +236,7 @@ class KycProcessEventHandlerTest {
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(instanceRepository.save(any(ProcessInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+        LocalDateTime providedAt = LocalDateTime.of(2024, 1, 3, 9, 30);
         EnglishPersonalInfoProvidedEvent event = new EnglishPersonalInfoProvidedEvent(
                 "proc-2",
                 "456",
@@ -237,7 +244,7 @@ class KycProcessEventHandlerTest {
                 "Smith",
                 "alice.smith@example.com",
                 "0987",
-                LocalDateTime.now()
+                providedAt
         );
 
         handler.on(event);
@@ -252,6 +259,51 @@ class KycProcessEventHandlerTest {
         assertEquals("0987", savedCustomer.getMobile());
         assertEquals(savedCustomer, instance.getCustomer());
         verify(instanceRepository).save(instance);
+        assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", instance.getStatus());
+        assertEquals(providedAt, instance.getCompletedAt());
+    }
+
+    @Test
+    void englishPersonalInfoEventPersistsStatusVisibleViaQueryAndResponse() {
+        Customer customer = new Customer();
+        customer.setNationalCode("123");
+        ProcessInstance instance = new ProcessInstance();
+        instance.setCamundaInstanceId("proc-3");
+        instance.setStartedAt(LocalDateTime.of(2024, 1, 1, 8, 0));
+        instance.setStatus("STARTED");
+        instance.setCustomer(customer);
+
+        when(instanceRepository.findByCamundaInstanceId("proc-3")).thenReturn(Optional.of(instance));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocalDateTime providedAt = LocalDateTime.of(2024, 1, 4, 14, 45);
+        EnglishPersonalInfoProvidedEvent event = new EnglishPersonalInfoProvidedEvent(
+                "proc-3",
+                "123",
+                "Jane",
+                "Doe",
+                "jane.doe@example.com",
+                "0999",
+                providedAt
+        );
+
+        handler.on(event);
+
+        verify(customerRepository).save(customer);
+        verify(instanceRepository).save(instance);
+        when(instanceRepository.findTopByCustomer_NationalCodeOrderByStartedAtDesc("123"))
+                .thenReturn(Optional.of(instance));
+
+        ProcessInstance result = handler.handle(new FindKycStatusQuery("123"));
+        assertSame(instance, result);
+        assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", result.getStatus());
+        assertEquals(providedAt, result.getCompletedAt());
+
+        KycStatusResponse response = KycStatusResponse.success(result);
+        assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", response.status());
+        assertEquals(providedAt, response.completedAt());
+        assertEquals("proc-3", response.camundaInstanceId());
+        assertNull(response.error());
     }
 
     @Test
