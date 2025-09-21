@@ -15,9 +15,14 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-
 import java.util.Optional;
+import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -78,13 +83,11 @@ class CardDocumentControllerTest {
         ArgumentCaptor<UploadCardDocumentsCommand> captor = ArgumentCaptor.forClass(UploadCardDocumentsCommand.class);
         verify(commandGateway).sendAndWait(captor.capture());
         UploadCardDocumentsCommand command = captor.getValue();
-        assertThat(command.getProcessInstanceId()).isEqualTo("process-123");
-        assertThat(command.getFrontImageName()).isEqualTo("front.png");
-        assertThat(command.getBackImageName()).isEqualTo("back.png");
-        assertThat(command.getFrontImageContentType()).isEqualTo(MediaType.IMAGE_PNG_VALUE);
-        assertThat(command.getBackImageContentType()).isEqualTo(MediaType.IMAGE_PNG_VALUE);
-        assertThat(command.getFrontImage()).isEqualTo(front.getBytes());
-        assertThat(command.getBackImage()).isEqualTo(back.getBytes());
+        assertThat(command.processInstanceId()).isEqualTo("process-123");
+        assertThat(command.frontDescriptor().filename()).isEqualTo("frontImage_process-123");
+        assertThat(command.backDescriptor().filename()).isEqualTo("backImage_process-123");
+        assertThat(command.frontDescriptor().data()).isEqualTo(front.getBytes());
+        assertThat(command.backDescriptor().data()).isEqualTo(back.getBytes());
     }
 
     @Test
@@ -150,6 +153,51 @@ class CardDocumentControllerTest {
                 .andExpect(jsonPath("$.message.en").value("frontImage exceeds maximum size"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
+    }
+
+    @Test
+    void oversizedImagesAreCompressedBeforeDispatch() throws Exception {
+        byte[] large = createNoisyPng(1800, 1800);
+        MockMultipartFile front = new MockMultipartFile(
+                "frontImage",
+                "front.png",
+                MediaType.IMAGE_PNG_VALUE,
+                large
+        );
+        MockMultipartFile back = new MockMultipartFile(
+                "backImage",
+                "back.png",
+                MediaType.IMAGE_PNG_VALUE,
+                large
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(new ProcessInstance()));
+        when(commandGateway.sendAndWait(any(UploadCardDocumentsCommand.class))).thenReturn(null);
+
+        mockMvc.perform(multipart("/kyc/documents/card")
+                        .file(front)
+                        .file(back)
+                        .file(process))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.frontImageSize").value(org.hamcrest.Matchers.lessThanOrEqualTo((int) CardDocumentController.MAX_IMAGE_SIZE_BYTES)))
+                .andExpect(jsonPath("$.backImageSize").value(org.hamcrest.Matchers.lessThanOrEqualTo((int) CardDocumentController.MAX_IMAGE_SIZE_BYTES)));
+
+        ArgumentCaptor<UploadCardDocumentsCommand> captor = ArgumentCaptor.forClass(UploadCardDocumentsCommand.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+        UploadCardDocumentsCommand command = captor.getValue();
+        assertThat(command.frontDescriptor().data().length)
+                .isLessThanOrEqualTo(CardDocumentController.MAX_IMAGE_SIZE_BYTES)
+                .isLessThan(large.length);
+        assertThat(command.backDescriptor().data().length)
+                .isLessThanOrEqualTo(CardDocumentController.MAX_IMAGE_SIZE_BYTES)
+                .isLessThan(large.length);
     }
 
     @Test
@@ -220,5 +268,21 @@ class CardDocumentControllerTest {
                 .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadCardDocumentsCommand.class));
+}
+
+    private byte[] createNoisyPng(int width, int height) throws IOException {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Random random = new Random(321);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgb = new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256)).getRGB();
+                image.setRGB(x, y, rgb);
+            }
+        }
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "png", outputStream);
+            return outputStream.toByteArray();
+        }
     }
 }
