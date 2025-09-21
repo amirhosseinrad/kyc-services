@@ -1,9 +1,12 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
+import io.minio.GetObjectResponse;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.errors.ErrorResponseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -77,6 +81,36 @@ public class MinioStorageService {
         metadata.setPath(bucket + "/" + objectName);
         metadata.setHash(hash(data));
         return metadata;
+    }
+
+    public byte[] download(String storagePath) {
+        if (storagePath == null || storagePath.isBlank()) {
+            throw new IllegalArgumentException("storagePath must not be blank");
+        }
+
+        int separator = storagePath.indexOf('/');
+        if (separator <= 0 || separator >= storagePath.length() - 1) {
+            throw new IllegalArgumentException("storagePath must contain bucket and object");
+        }
+
+        String bucket = storagePath.substring(0, separator);
+        String objectName = storagePath.substring(separator + 1);
+
+        try (GetObjectResponse response = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(objectName)
+                        .build())) {
+            return response.readAllBytes();
+        } catch (ErrorResponseException ex) {
+            String code = ex.errorResponse() != null ? ex.errorResponse().code() : null;
+            if ("NoSuchKey".equals(code) || "NoSuchBucket".equals(code)) {
+                throw new NoSuchElementException("Object not found in storage");
+            }
+            throw new IllegalStateException("Failed to download object from storage", ex);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to download object from storage", ex);
+        }
     }
 
     private String determineBucket(String documentType) {

@@ -53,4 +53,6 @@ public final class ErrorMessageKeys {
     public static final String SIGNATURE_DESCRIPTOR_REQUIRED = "error.kyc.signature.descriptorRequired";
     public static final String VIDEO_DESCRIPTOR_REQUIRED = "error.kyc.video.descriptorRequired";
     public static final String CONSENT_NOT_ACCEPTED = "error.kyc.consent.notAccepted";
+
+    public static final String DOCUMENT_NOT_FOUND = "error.document.notFound";
 }
