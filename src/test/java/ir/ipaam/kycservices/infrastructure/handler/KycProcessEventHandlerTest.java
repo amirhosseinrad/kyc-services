@@ -461,16 +461,26 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata storageMetadata = new DocumentMetadata();
+        storageMetadata.setPath("kyc-card-documents/proc1/signature/signature-file");
+        storageMetadata.setHash("signature-hash");
+        storageMetadata.setInquiryDocumentId("inquiry-signature-id");
+
+        when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
+
         handler.on(event);
 
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
         assertEquals("SIGNATURE", saved.getType());
-        assertEquals("signature-id", saved.getStoragePath());
+        assertEquals("kyc-card-documents/proc1/signature/signature-file", saved.getStoragePath());
+        assertEquals("signature-hash", saved.getHash());
+        assertNull(saved.getInquiryDocumentId());
         assertEquals(processInstance, saved.getProcess());
-        assertEquals("proc1", lastTokenRequestProcessId.get());
-        assertEquals("token-for-proc1", lastSignatureToken.get());
+        verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
+        assertNull(lastTokenRequestProcessId.get());
+        assertNull(lastSignatureToken.get());
     }
 
     @Test
@@ -523,8 +533,11 @@ class KycProcessEventHandlerTest {
     }
 
     @Test
-    void onSignatureUploadedEventSkipsWhenTokenGenerationFails() {
+    void onSignatureUploadedEventDoesNotCallInquiryServices() {
         tokenEndpointShouldFail.set(true);
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
 
         SignatureUploadedEvent event = new SignatureUploadedEvent(
                 "proc1",
@@ -533,10 +546,22 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
+        DocumentMetadata storageMetadata = new DocumentMetadata();
+        storageMetadata.setPath("kyc-card-documents/proc1/signature/signature-file");
+        storageMetadata.setHash("signature-hash");
+
+        when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
+
         handler.on(event);
 
-        verify(documentRepository, never()).save(any());
-        assertEquals("proc1", lastTokenRequestProcessId.get());
+        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
+        verify(documentRepository).save(captor.capture());
+        ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
+        assertEquals("kyc-card-documents/proc1/signature/signature-file", saved.getStoragePath());
+        assertEquals(processInstance, saved.getProcess());
+        assertNull(saved.getInquiryDocumentId());
+        verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
+        assertNull(lastTokenRequestProcessId.get());
         assertNull(lastSignatureToken.get());
     }
 
