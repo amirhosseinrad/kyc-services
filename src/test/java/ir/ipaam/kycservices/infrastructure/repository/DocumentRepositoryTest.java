@@ -31,25 +31,34 @@ class DocumentRepositoryTest {
         process.setCustomer(customer);
         entityManager.persist(process);
 
-        Document older = new Document();
-        older.setType("PHOTO");
-        older.setStoragePath("bucket/older");
-        older.setProcess(process);
-        entityManager.persist(older);
+        Document verifiedOld = new Document();
+        verifiedOld.setType("PHOTO");
+        verifiedOld.setStoragePath("bucket/verified-old");
+        verifiedOld.setProcess(process);
+        verifiedOld.setVerified(true);
+        entityManager.persist(verifiedOld);
 
-        Document newer = new Document();
-        newer.setType("PHOTO");
-        newer.setStoragePath("bucket/newer");
-        newer.setProcess(process);
-        entityManager.persist(newer);
+        Document unverified = new Document();
+        unverified.setType("PHOTO");
+        unverified.setStoragePath("bucket/unverified");
+        unverified.setProcess(process);
+        unverified.setVerified(false);
+        entityManager.persist(unverified);
+
+        Document verifiedNew = new Document();
+        verifiedNew.setType("PHOTO");
+        verifiedNew.setStoragePath("bucket/verified-new");
+        verifiedNew.setProcess(process);
+        verifiedNew.setVerified(true);
+        entityManager.persist(verifiedNew);
 
         entityManager.flush();
         entityManager.clear();
 
         Optional<Document> result = documentRepository
-                .findTopByTypeAndProcess_Customer_NationalCodeOrderByIdDesc("PHOTO", "0012345678");
+                .findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678");
 
         assertThat(result).isPresent();
-        assertThat(result.get().getStoragePath()).isEqualTo("bucket/newer");
+        assertThat(result.get().getStoragePath()).isEqualTo("bucket/verified-new");
     }
 }

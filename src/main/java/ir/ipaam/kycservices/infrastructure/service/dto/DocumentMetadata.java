@@ -9,4 +9,5 @@ public class DocumentMetadata {
     private String path;
     private String hash;
     private String inquiryDocumentId;
+    private boolean branded;
 }

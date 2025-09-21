@@ -17,8 +17,12 @@ public class DocumentRetrievalService {
 
     public RetrievedDocument retrieveLatestDocument(String nationalCode, String documentType) {
         Document document = documentRepository
-                .findTopByTypeAndProcess_Customer_NationalCodeOrderByIdDesc(documentType, nationalCode)
+                .findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc(documentType, nationalCode)
                 .orElseThrow(() -> new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND));
+
+        if (!document.isVerified()) {
+            throw new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND);
+        }
 
         String storagePath = document.getStoragePath();
         if (storagePath == null || storagePath.isBlank()) {

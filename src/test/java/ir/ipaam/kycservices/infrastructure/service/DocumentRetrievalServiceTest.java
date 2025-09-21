@@ -40,7 +40,9 @@ class DocumentRetrievalServiceTest {
         document.setType("PHOTO");
         document.setStoragePath("bucket/object");
 
-        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeOrderByIdDesc("PHOTO", "0012345678"))
+        document.setVerified(true);
+
+        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.of(document));
         when(minioStorageService.download("bucket/object")).thenReturn(new byte[]{1, 2, 3});
 
@@ -57,7 +59,7 @@ class DocumentRetrievalServiceTest {
 
     @Test
     void retrieveLatestDocumentThrowsWhenMetadataMissing() {
-        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeOrderByIdDesc("PHOTO", "0012345678"))
+        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
@@ -72,12 +74,30 @@ class DocumentRetrievalServiceTest {
         document.setType("PHOTO");
         document.setStoragePath("bucket/object");
 
-        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeOrderByIdDesc("PHOTO", "0012345678"))
+        document.setVerified(true);
+
+        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.of(document));
         when(minioStorageService.download("bucket/object"))
                 .thenThrow(new NoSuchElementException("missing"));
 
         assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
                 .isInstanceOf(DocumentNotFoundException.class);
+    }
+
+    @Test
+    void retrieveLatestDocumentRejectsUnverifiedDocument() {
+        Document document = new Document();
+        document.setType("PHOTO");
+        document.setStoragePath("bucket/object");
+        document.setVerified(false);
+
+        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
+                .thenReturn(Optional.of(document));
+
+        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
+                .isInstanceOf(DocumentNotFoundException.class);
+
+        verifyNoInteractions(minioStorageService);
     }
 }

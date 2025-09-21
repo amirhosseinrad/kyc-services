@@ -322,9 +322,11 @@ class KycProcessEventHandlerTest {
         DocumentMetadata frontMetadata = new DocumentMetadata();
         frontMetadata.setPath("kyc-card-documents/proc1/card-front/front-file");
         frontMetadata.setHash("front-hash");
+        frontMetadata.setBranded(true);
         DocumentMetadata backMetadata = new DocumentMetadata();
         backMetadata.setPath("kyc-card-documents/proc1/card-back/back-file");
         backMetadata.setHash("back-hash");
+        backMetadata.setBranded(true);
 
         when(storageService.upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1")).thenReturn(frontMetadata);
         when(storageService.upload(event.getBackDescriptor(), "CARD_BACK", "proc1")).thenReturn(backMetadata);
@@ -338,11 +340,13 @@ class KycProcessEventHandlerTest {
         assertEquals("kyc-card-documents/proc1/card-front/front-file", saved.get(0).getStoragePath());
         assertEquals("front-hash", saved.get(0).getHash());
         assertNull(saved.get(0).getInquiryDocumentId());
+        assertTrue(saved.get(0).isVerified());
         assertEquals(processInstance, saved.get(0).getProcess());
         assertEquals("CARD_BACK", saved.get(1).getType());
         assertEquals("kyc-card-documents/proc1/card-back/back-file", saved.get(1).getStoragePath());
         assertEquals("back-hash", saved.get(1).getHash());
         assertNull(saved.get(1).getInquiryDocumentId());
+        assertTrue(saved.get(1).isVerified());
         assertEquals(processInstance, saved.get(1).getProcess());
         verify(storageService).upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1");
         verify(storageService).upload(event.getBackDescriptor(), "CARD_BACK", "proc1");
@@ -367,8 +371,10 @@ class KycProcessEventHandlerTest {
 
         DocumentMetadata frontMetadata = new DocumentMetadata();
         frontMetadata.setPath("kyc-card-documents/proc1/card-front/front-file");
+        frontMetadata.setBranded(true);
         DocumentMetadata backMetadata = new DocumentMetadata();
         backMetadata.setPath("kyc-card-documents/proc1/card-back/back-file");
+        backMetadata.setBranded(true);
 
         when(storageService.upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1")).thenReturn(frontMetadata);
         when(storageService.upload(event.getBackDescriptor(), "CARD_BACK", "proc1")).thenReturn(backMetadata);
@@ -382,6 +388,8 @@ class KycProcessEventHandlerTest {
         assertEquals("kyc-card-documents/proc1/card-back/back-file", saved.get(1).getStoragePath());
         assertNull(saved.get(0).getInquiryDocumentId());
         assertNull(saved.get(1).getInquiryDocumentId());
+        assertTrue(saved.get(0).isVerified());
+        assertTrue(saved.get(1).isVerified());
         verify(storageService).upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1");
         verify(storageService).upload(event.getBackDescriptor(), "CARD_BACK", "proc1");
         assertTrue(inquiryCardRequests.isEmpty());
@@ -406,9 +414,11 @@ class KycProcessEventHandlerTest {
         DocumentMetadata page1Metadata = new DocumentMetadata();
         page1Metadata.setPath("kyc-id-documents/proc1/id-page-1/page1-file");
         page1Metadata.setHash("id-page-hash-1");
+        page1Metadata.setBranded(true);
         DocumentMetadata page2Metadata = new DocumentMetadata();
         page2Metadata.setPath("kyc-id-documents/proc1/id-page-2/page2-file");
         page2Metadata.setHash("id-page-hash-2");
+        page2Metadata.setBranded(true);
 
         when(storageService.upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1")).thenReturn(page1Metadata);
         when(storageService.upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1")).thenReturn(page2Metadata);
@@ -426,6 +436,8 @@ class KycProcessEventHandlerTest {
         assertEquals("id-page-hash-2", saved.get(1).getHash());
         assertEquals(processInstance, saved.get(0).getProcess());
         assertEquals(processInstance, saved.get(1).getProcess());
+        assertTrue(saved.get(0).isVerified());
+        assertTrue(saved.get(1).isVerified());
         assertEquals(2, inquiryCardRequests.size());
         assertEquals(201, inquiryCardRequests.get(0).documentType());
         assertEquals(202, inquiryCardRequests.get(1).documentType());
@@ -452,8 +464,10 @@ class KycProcessEventHandlerTest {
 
         DocumentMetadata page1Metadata = new DocumentMetadata();
         page1Metadata.setPath("kyc-id-documents/proc1/id-page-1/page1-file");
+        page1Metadata.setBranded(true);
         DocumentMetadata page2Metadata = new DocumentMetadata();
         page2Metadata.setPath("kyc-id-documents/proc1/id-page-2/page2-file");
+        page2Metadata.setBranded(true);
 
         when(storageService.upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1")).thenReturn(page1Metadata);
         when(storageService.upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1")).thenReturn(page2Metadata);
@@ -465,6 +479,8 @@ class KycProcessEventHandlerTest {
         List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
         assertEquals("kyc-id-documents/proc1/id-page-1/page1-file", saved.get(0).getStoragePath());
         assertEquals("kyc-id-documents/proc1/id-page-2/page2-file", saved.get(1).getStoragePath());
+        assertTrue(saved.get(0).isVerified());
+        assertTrue(saved.get(1).isVerified());
         assertTrue(inquiryCardRequests.isEmpty());
         assertEquals("proc1", lastTokenRequestProcessId.get());
         verify(storageService).upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1");
@@ -486,6 +502,7 @@ class KycProcessEventHandlerTest {
         DocumentMetadata storageMetadata = new DocumentMetadata();
         storageMetadata.setPath("kyc-biometric/proc1/photo/selfie-file");
         storageMetadata.setHash("minio-selfie-hash");
+        storageMetadata.setBranded(true);
         when(storageService.upload(event.getDescriptor(), "PHOTO", "proc1")).thenReturn(storageMetadata);
 
         handler.on(event);
@@ -496,6 +513,7 @@ class KycProcessEventHandlerTest {
         assertEquals("PHOTO", saved.getType());
         assertEquals("kyc-biometric/proc1/photo/selfie-file", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
+        assertTrue(saved.isVerified());
         verify(storageService).upload(event.getDescriptor(), "PHOTO", "proc1");
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertEquals("token-for-proc1", lastSelfieToken.get());
@@ -517,6 +535,7 @@ class KycProcessEventHandlerTest {
         storageMetadata.setPath("kyc-signature-documents/proc1/signature/signature-file");
         storageMetadata.setHash("signature-hash");
         storageMetadata.setInquiryDocumentId("inquiry-signature-id");
+        storageMetadata.setBranded(true);
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
 
@@ -530,6 +549,7 @@ class KycProcessEventHandlerTest {
         assertEquals("signature-hash", saved.getHash());
         assertNull(saved.getInquiryDocumentId());
         assertEquals(processInstance, saved.getProcess());
+        assertTrue(saved.isVerified());
         verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
         assertNull(lastTokenRequestProcessId.get());
         assertNull(lastSignatureToken.get());
@@ -550,6 +570,7 @@ class KycProcessEventHandlerTest {
         DocumentMetadata storageMetadata = new DocumentMetadata();
         storageMetadata.setPath("kyc-biometric/proc1/video/video-file");
         storageMetadata.setHash("minio-video-hash");
+        storageMetadata.setBranded(false);
         when(storageService.upload(event.getDescriptor(), "VIDEO", "proc1")).thenReturn(storageMetadata);
 
         handler.on(event);
@@ -560,6 +581,7 @@ class KycProcessEventHandlerTest {
         assertEquals("VIDEO", saved.getType());
         assertEquals("kyc-biometric/proc1/video/video-file", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
+        assertFalse(saved.isVerified());
         verify(storageService).upload(event.getDescriptor(), "VIDEO", "proc1");
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertEquals("token-for-proc1", lastVideoToken.get());
@@ -601,6 +623,7 @@ class KycProcessEventHandlerTest {
         DocumentMetadata storageMetadata = new DocumentMetadata();
         storageMetadata.setPath("kyc-signature-documents/proc1/signature/signature-file");
         storageMetadata.setHash("signature-hash");
+        storageMetadata.setBranded(true);
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
 
@@ -612,6 +635,7 @@ class KycProcessEventHandlerTest {
         assertEquals("kyc-signature-documents/proc1/signature/signature-file", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
         assertNull(saved.getInquiryDocumentId());
+        assertTrue(saved.isVerified());
         verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
         assertNull(lastTokenRequestProcessId.get());
         assertNull(lastSignatureToken.get());
