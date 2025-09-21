@@ -62,8 +62,6 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_ID_PAGE_PREFIX = "ID_PAGE_";
     private static final String DEFAULT_THRESHOLD = "-1";
     private static final String DEFAULT_RANDOM_TEXT = "";
-    private static final int INQUIRY_DOCUMENT_TYPE_FRONT = 101;
-    private static final int INQUIRY_DOCUMENT_TYPE_BACK = 102;
     private static final String FILE_DATA_PART_NAME = "FileData";
     private static final int INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE = 201;
 
@@ -133,33 +131,13 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(CardDocumentsUploadedEvent event) {
-        String token = fetchInquiryToken(event.getProcessInstanceId());
-        String frontInquiryId = null;
-        String backInquiryId = null;
-        if (token == null) {
-            log.warn("Skipping inquiry card upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
-        } else {
-            frontInquiryId = uploadInquiryCardDocument(
-                    token,
-                    event.getFrontDescriptor(),
-                    INQUIRY_DOCUMENT_TYPE_FRONT,
-                    event.getProcessInstanceId(),
-                    "front card");
-            backInquiryId = uploadInquiryCardDocument(
-                    token,
-                    event.getBackDescriptor(),
-                    INQUIRY_DOCUMENT_TYPE_BACK,
-                    event.getProcessInstanceId(),
-                    "back card");
-        }
-
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         DocumentMetadata frontMetadata = storageService.upload(
                 event.getFrontDescriptor(),
                 DOCUMENT_TYPE_FRONT,
                 event.getProcessInstanceId());
         if (frontMetadata != null) {
-            frontMetadata.setInquiryDocumentId(frontInquiryId);
+            frontMetadata.setInquiryDocumentId(null);
         }
         persistMetadata(frontMetadata, DOCUMENT_TYPE_FRONT, event.getProcessInstanceId(), processInstance);
 
@@ -168,7 +146,7 @@ public class KycProcessEventHandler {
                 DOCUMENT_TYPE_BACK,
                 event.getProcessInstanceId());
         if (backMetadata != null) {
-            backMetadata.setInquiryDocumentId(backInquiryId);
+            backMetadata.setInquiryDocumentId(null);
         }
         persistMetadata(backMetadata, DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
     }
