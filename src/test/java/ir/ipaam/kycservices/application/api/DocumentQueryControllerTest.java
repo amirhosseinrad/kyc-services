@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -37,9 +37,9 @@ class DocumentQueryControllerTest {
         when(documentRetrievalService.retrieveLatestDocument("0012345678", "PHOTO"))
                 .thenReturn(retrievedDocument);
 
-        mockMvc.perform(get("/kyc/documents/latest")
-                        .param("nationalCode", "0012345678")
-                        .param("documentType", "PHOTO"))
+        mockMvc.perform(post("/kyc/documents/latest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nationalCode\":\"0012345678\",\"documentType\":\"PHOTO\"}"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM))
                 .andExpect(content().bytes(payload));
@@ -50,9 +50,9 @@ class DocumentQueryControllerTest {
         when(documentRetrievalService.retrieveLatestDocument(eq("0012345678"), eq("PHOTO")))
                 .thenThrow(new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND));
 
-        mockMvc.perform(get("/kyc/documents/latest")
-                        .param("nationalCode", "0012345678")
-                        .param("documentType", "PHOTO"))
+        mockMvc.perform(post("/kyc/documents/latest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nationalCode\":\"0012345678\",\"documentType\":\"PHOTO\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
                 .andExpect(jsonPath("$.message.en").value("Document not found"));
