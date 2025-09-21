@@ -56,6 +56,7 @@ Designed for integration with OCR, fraud detection, and customer information ser
 | POST  | `/kyc/status`         | Get current KYC process status                   |
 | POST  | `/kyc/consent`        | Record the customer's consent for the KYC terms |
 | POST  | `/kyc/selfie`         | Upload a selfie image for biometric checks       |
+| POST  | `/kyc/signature`      | Upload a handwritten signature image             |
 | POST  | `/kyc/video`          | Upload a recorded customer video                 |
 | POST  | `/kyc/documents/id`   | Upload 1–4 ID document pages                     |
 | POST  | `/kyc/documents/card` | Upload front/back images of the national card    |
@@ -116,7 +117,7 @@ Controllers no longer craft ad-hoc error bodies. They throw meaningful exception
 
 ### ID Page Upload
 
-> **Prerequisite for uploads:** All document-upload endpoints (`/kyc/documents/id`, `/kyc/documents/card`, `/kyc/selfie`, `/kyc/video`) require the referenced `processInstanceId` to exist. Requests referencing an unknown instance return `404 Not Found`.
+> **Prerequisite for uploads:** All document-upload endpoints (`/kyc/documents/id`, `/kyc/documents/card`, `/kyc/selfie`, `/kyc/signature`, `/kyc/video`) require the referenced `processInstanceId` to exist. Requests referencing an unknown instance return `404 Not Found`.
 
 `POST /kyc/documents/id` accepts up to **four multipart files** named `pages` plus a `processInstanceId` field. Each file must contain the binary payload for a booklet page (≤2 MB).
 
@@ -156,6 +157,18 @@ Controllers no longer craft ad-hoc error bodies. They throw meaningful exception
   - `selfieSize`
   - `status` – `SELFIE_RECEIVED`
 - Errors: `400` for validation issues or command rejections, `404` for missing process instances, and `500` for unexpected processing failures.
+
+### Signature Upload
+
+`POST /kyc/signature` consumes `multipart/form-data` with a `signature` image (≤2 MB) and a `processInstanceId` string part.
+
+- The signature file must be provided and within the size limit; otherwise the controller returns `400 Bad Request`.
+- The process instance is validated before dispatching `UploadSignatureCommand`; unknown IDs receive `404 Not Found`.
+- Successful requests (`202 Accepted`) respond with:
+  - `processInstanceId`
+  - `signatureSize`
+  - `status` – `SIGNATURE_RECEIVED`
+- Errors follow the standard pattern: `400` for validation problems or command rejections, `404` when the process instance is missing, and `500` for unexpected failures.
 
 ### Video Upload
 

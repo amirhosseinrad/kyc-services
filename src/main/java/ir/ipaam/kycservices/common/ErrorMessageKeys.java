@@ -26,6 +26,9 @@ public final class ErrorMessageKeys {
     public static final String SELFIE_REQUIRED = "error.selfie.required";
     public static final String SELFIE_TOO_LARGE = "error.selfie.size";
 
+    public static final String SIGNATURE_REQUIRED = "error.signature.required";
+    public static final String SIGNATURE_TOO_LARGE = "error.signature.size";
+
     public static final String VIDEO_REQUIRED = "error.video.required";
     public static final String VIDEO_TOO_LARGE = "error.video.size";
 
