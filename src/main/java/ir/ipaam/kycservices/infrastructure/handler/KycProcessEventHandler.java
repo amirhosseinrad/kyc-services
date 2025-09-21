@@ -435,10 +435,17 @@ public class KycProcessEventHandler {
         document.setStoragePath(metadata.getPath());
         document.setHash(metadata.getHash());
         document.setInquiryDocumentId(metadata.getInquiryDocumentId());
-        document.setVerified(false);
+        document.setVerified(metadata.isBranded());
         document.setProcess(processInstance);
         documentRepository.save(document);
-        log.info("Persisted document metadata for type {} at path {} for process {}", type, metadata.getPath(), processInstanceId);
+        log.info("Persisted document metadata for type {} at path {} for process {} (verified={})",
+                type,
+                metadata.getPath(),
+                processInstanceId,
+                document.isVerified());
+        if (!document.isVerified()) {
+            log.debug("Document {} for process {} is not verified because branding was skipped or failed", type, processInstanceId);
+        }
     }
 
     private String extractResultId(String resultMessage) {

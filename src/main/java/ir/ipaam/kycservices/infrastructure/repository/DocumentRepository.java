@@ -10,4 +10,8 @@ import java.util.Optional;
 public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     Optional<Document> findTopByTypeAndProcess_Customer_NationalCodeOrderByIdDesc(String type, String nationalCode);
+
+    Optional<Document> findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc(
+            String type,
+            String nationalCode);
 }

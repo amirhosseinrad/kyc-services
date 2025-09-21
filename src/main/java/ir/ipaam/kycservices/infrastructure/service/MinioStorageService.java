@@ -35,6 +35,7 @@ public class MinioStorageService {
     private final String idBucket;
     private final String biometricBucket;
     private final String signatureBucket;
+    private final ImageBrandingService imageBrandingService;
     private final Set<String> ensuredBuckets = ConcurrentHashMap.newKeySet();
 
     public MinioStorageService(
@@ -42,12 +43,14 @@ public class MinioStorageService {
             @Value("${storage.minio.bucket.card}") String cardBucket,
             @Value("${storage.minio.bucket.id}") String idBucket,
             @Value("${storage.minio.bucket.biometric}") String biometricBucket,
-            @Value("${storage.minio.bucket.signature}") String signatureBucket) {
+            @Value("${storage.minio.bucket.signature}") String signatureBucket,
+            ImageBrandingService imageBrandingService) {
         this.minioClient = minioClient;
         this.cardBucket = cardBucket;
         this.idBucket = idBucket;
         this.biometricBucket = biometricBucket;
         this.signatureBucket = signatureBucket;
+        this.imageBrandingService = imageBrandingService;
     }
 
     public DocumentMetadata upload(DocumentPayloadDescriptor descriptor, String documentType, String processInstanceId) {
@@ -60,6 +63,20 @@ public class MinioStorageService {
         byte[] data = descriptor.data();
         if (data == null || data.length == 0) {
             throw new IllegalArgumentException("descriptor data must not be empty");
+        }
+
+        boolean branded = false;
+        if (shouldApplyBranding(documentType)) {
+            ImageBrandingService.BrandingResult result = imageBrandingService.brand(data, descriptor.filename());
+            if (result.data() != null && result.data().length > 0) {
+                data = result.data();
+            }
+            branded = result.branded();
+            if (branded) {
+                log.debug("Applied branding for document {} ({})", documentType, descriptor.filename());
+            } else {
+                log.debug("Branding skipped or failed for document {} ({})", documentType, descriptor.filename());
+            }
         }
 
         String bucket = determineBucket(documentType);
@@ -83,6 +100,7 @@ public class MinioStorageService {
         DocumentMetadata metadata = new DocumentMetadata();
         metadata.setPath(bucket + "/" + objectName);
         metadata.setHash(hash(data));
+        metadata.setBranded(branded);
         return metadata;
     }
 
@@ -130,6 +148,16 @@ public class MinioStorageService {
             return biometricBucket;
         }
         throw new IllegalArgumentException("Unsupported document type: " + documentType);
+    }
+
+    private boolean shouldApplyBranding(String documentType) {
+        if (documentType == null) {
+            return false;
+        }
+        return documentType.startsWith("CARD_")
+                || documentType.startsWith("ID_PAGE_")
+                || "PHOTO".equals(documentType)
+                || "SIGNATURE".equals(documentType);
     }
 
     private String buildObjectName(String processInstanceId, String documentType, String filename) {
