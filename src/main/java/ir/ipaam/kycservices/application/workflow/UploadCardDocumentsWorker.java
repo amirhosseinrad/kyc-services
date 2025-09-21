@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
+import ir.ipaam.kycservices.common.image.ImageCompressionHelper;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -33,8 +34,8 @@ public class UploadCardDocumentsWorker {
                 throw new IllegalArgumentException("processInstanceId must be provided");
             }
 
-            validateSize(front, "frontImage");
-            validateSize(back, "backImage");
+            front = ensureWithinLimit(front, "frontImage");
+            back = ensureWithinLimit(back, "backImage");
 
             kycUserTasks.uploadCardDocuments(front, back, processInstanceId);
             return Map.of("cardDocumentsUploaded", true);
@@ -47,13 +48,24 @@ public class UploadCardDocumentsWorker {
         }
     }
 
-    private void validateSize(byte[] data, String fieldName) {
+    private byte[] ensureWithinLimit(byte[] data, String fieldName) {
         if (data.length == 0) {
             throw new IllegalArgumentException(fieldName + " must not be empty");
         }
+
+        if (data.length > MAX_IMAGE_SIZE_BYTES) {
+            try {
+                data = ImageCompressionHelper.reduceToMaxSize(data, MAX_IMAGE_SIZE_BYTES);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException(fieldName + " exceeds max size of " + MAX_IMAGE_SIZE_BYTES + " bytes");
+            }
+        }
+
         if (data.length > MAX_IMAGE_SIZE_BYTES) {
             throw new IllegalArgumentException(fieldName + " exceeds max size of " + MAX_IMAGE_SIZE_BYTES + " bytes");
         }
+
+        return data;
     }
 
     private byte[] extractBinary(Object value, String fieldName) {

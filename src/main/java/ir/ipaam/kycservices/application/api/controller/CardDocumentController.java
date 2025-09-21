@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.common.image.ImageCompressionHelper;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -45,8 +46,8 @@ public class CardDocumentController {
             @RequestPart("frontImage") MultipartFile frontImage,
             @RequestPart("backImage") MultipartFile backImage,
             @RequestPart("processInstanceId") String processInstanceId) {
-        validateFile(frontImage, CARD_FRONT_REQUIRED, CARD_FRONT_TOO_LARGE, MAX_IMAGE_SIZE_BYTES);
-        validateFile(backImage, CARD_BACK_REQUIRED, CARD_BACK_TOO_LARGE, MAX_IMAGE_SIZE_BYTES);
+        validateFile(frontImage, CARD_FRONT_REQUIRED);
+        validateFile(backImage, CARD_BACK_REQUIRED);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
@@ -54,8 +55,8 @@ public class CardDocumentController {
             throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
-        byte[] frontBytes = readFile(frontImage);
-        byte[] backBytes = readFile(backImage);
+        byte[] frontBytes = ensureWithinLimit(readFile(frontImage), CARD_FRONT_TOO_LARGE);
+        byte[] backBytes = ensureWithinLimit(readFile(backImage), CARD_BACK_TOO_LARGE);
 
         UploadCardDocumentsCommand command = new UploadCardDocumentsCommand(
                 normalizedProcessId,
@@ -74,12 +75,9 @@ public class CardDocumentController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
-    private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
+    private void validateFile(MultipartFile file, String requiredKey) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(requiredKey);
-        }
-        if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException(sizeKey);
         }
     }
 
@@ -96,5 +94,21 @@ public class CardDocumentController {
         } catch (IOException e) {
             throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
+    }
+
+    private byte[] ensureWithinLimit(byte[] data, String sizeKey) {
+        if (data.length > MAX_IMAGE_SIZE_BYTES) {
+            try {
+                data = ImageCompressionHelper.reduceToMaxSize(data, MAX_IMAGE_SIZE_BYTES);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException(sizeKey);
+            }
+        }
+
+        if (data.length > MAX_IMAGE_SIZE_BYTES) {
+            throw new IllegalArgumentException(sizeKey);
+        }
+
+        return data;
     }
 }
