@@ -28,7 +28,7 @@ class MinioStorageServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MinioStorageService(minioClient, "card", "id", "bio");
+        service = new MinioStorageService(minioClient, "card", "id", "bio", "signature");
     }
 
     @Test

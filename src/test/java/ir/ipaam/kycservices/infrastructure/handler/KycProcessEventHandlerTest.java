@@ -514,7 +514,7 @@ class KycProcessEventHandlerTest {
         );
 
         DocumentMetadata storageMetadata = new DocumentMetadata();
-        storageMetadata.setPath("kyc-card-documents/proc1/signature/signature-file");
+        storageMetadata.setPath("kyc-signature-documents/proc1/signature/signature-file");
         storageMetadata.setHash("signature-hash");
         storageMetadata.setInquiryDocumentId("inquiry-signature-id");
 
@@ -526,7 +526,7 @@ class KycProcessEventHandlerTest {
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
         assertEquals("SIGNATURE", saved.getType());
-        assertEquals("kyc-card-documents/proc1/signature/signature-file", saved.getStoragePath());
+        assertEquals("kyc-signature-documents/proc1/signature/signature-file", saved.getStoragePath());
         assertEquals("signature-hash", saved.getHash());
         assertNull(saved.getInquiryDocumentId());
         assertEquals(processInstance, saved.getProcess());
@@ -599,7 +599,7 @@ class KycProcessEventHandlerTest {
         );
 
         DocumentMetadata storageMetadata = new DocumentMetadata();
-        storageMetadata.setPath("kyc-card-documents/proc1/signature/signature-file");
+        storageMetadata.setPath("kyc-signature-documents/proc1/signature/signature-file");
         storageMetadata.setHash("signature-hash");
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
@@ -609,7 +609,7 @@ class KycProcessEventHandlerTest {
         ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
         verify(documentRepository).save(captor.capture());
         ir.ipaam.kycservices.domain.model.entity.Document saved = captor.getValue();
-        assertEquals("kyc-card-documents/proc1/signature/signature-file", saved.getStoragePath());
+        assertEquals("kyc-signature-documents/proc1/signature/signature-file", saved.getStoragePath());
         assertEquals(processInstance, saved.getProcess());
         assertNull(saved.getInquiryDocumentId());
         verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
