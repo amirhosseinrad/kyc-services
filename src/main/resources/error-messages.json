@@ -63,6 +63,14 @@
     "en": "selfie exceeds maximum size",
     "fa": "حجم تصویر سلفی بیشتر از حد مجاز است"
   },
+  "error.signature.required": {
+    "en": "signature must be provided",
+    "fa": "امضا باید بارگذاری شود"
+  },
+  "error.signature.size": {
+    "en": "signature exceeds maximum size",
+    "fa": "حجم امضا بیشتر از حد مجاز است"
+  },
   "error.video.required": {
     "en": "video must be provided",
     "fa": "ویدئو باید بارگذاری شود"
