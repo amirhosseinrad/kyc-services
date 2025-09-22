@@ -7,12 +7,18 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ImageBrandingServiceTest {
 
-    private final ImageBrandingService service = new ImageBrandingService();
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2024-05-12T10:15:00Z"), ZoneOffset.UTC);
+
+    private final ImageBrandingService service = new ImageBrandingService(FIXED_CLOCK);
 
     @Test
     void brandAddsBorderAndMarkForPng() throws Exception {
@@ -36,6 +42,7 @@ class ImageBrandingServiceTest {
         assertThat(result.branded()).isTrue();
         assertThat(result.data()).isNotNull();
         assertThat(result.data().length).isGreaterThan(payload.length);
+        assertThat(result.label()).isEqualTo("Uploaded by KYC Service - 2024-05-12 10:15");
 
         BufferedImage branded = ImageIO.read(new ByteArrayInputStream(result.data()));
         assertThat(branded.getWidth()).isGreaterThan(original.getWidth());
@@ -50,5 +57,6 @@ class ImageBrandingServiceTest {
 
         assertThat(result.branded()).isFalse();
         assertThat(result.data()).containsExactly(payload);
+        assertThat(result.label()).isNull();
     }
 }
