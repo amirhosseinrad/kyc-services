@@ -30,7 +30,7 @@ public class ImageBrandingService {
     private static final int CARD_DPI = 300;
     static final int CARD_WIDTH_PX = (int) Math.round(CARD_WIDTH_MM / MM_PER_INCH * CARD_DPI);
     static final int CARD_HEIGHT_PX = (int) Math.round(CARD_HEIGHT_MM / MM_PER_INCH * CARD_DPI);
-    private static final String BRANDING_PREFIX = "Uploaded by KYC Service";
+    private static final String BRANDING_PREFIX = "Uploaded by ToBank® KYC Service";
     private static final DateTimeFormatter BRANDING_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT);
 
@@ -158,7 +158,7 @@ public class ImageBrandingService {
             int topPadding = Math.max(10, Math.round(cardSurfaceHeight * 0.02f));
             int maxSidePadding = Math.max((cardSurfaceWidth - 1) / 2, 0);
             int sidePadding = Math.min(topPadding, maxSidePadding);
-            sidePadding = Math.max(1, sidePadding);
+            sidePadding = Math.max(1/2, sidePadding/2);
 
             int bottomPadding = Math.max(50, Math.round(cardSurfaceHeight * 0.02f));
             int totalVerticalPadding = topPadding + bottomPadding;
@@ -212,7 +212,7 @@ public class ImageBrandingService {
                 textY = maxTextY;
             }
 
-            g2d.setColor(new Color(66, 133, 244));
+            g2d.setColor(new Color(87, 87, 87));
             g2d.drawString(brandingLabel, textX, textY);
         } finally {
             g2d.dispose();
