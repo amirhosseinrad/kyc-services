@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -194,7 +195,8 @@ class KycUserTasksImplTest {
     void uploadVideoPropagatesTokenErrors() {
         byte[] video = "video".getBytes(StandardCharsets.UTF_8);
 
-        when(inquiryTokenService.generateToken("process-1")).thenReturn(Optional.empty());
+        when(inquiryTokenService.generateToken("process-1"))
+                .thenThrow(new InquiryTokenException(INQUIRY_TOKEN_FAILED));
 
         assertThrows(InquiryTokenException.class, () -> tasks.uploadVideo(video, "process-1"));
         verify(commandGateway, never()).sendAndWait(any());

@@ -4,6 +4,7 @@ import ir.ipaam.kycservices.application.api.controller.VideoController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -20,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -264,7 +266,7 @@ class VideoControllerTest {
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(new ProcessInstance()));
         when(inquiryTokenService.generateToken("process-456"))
-                .thenReturn(Optional.empty());
+                .thenThrow(new InquiryTokenException(INQUIRY_TOKEN_FAILED));
 
         mockMvc.perform(multipart("/kyc/video")
                         .file(video)
