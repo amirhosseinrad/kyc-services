@@ -157,8 +157,9 @@ public class ImageBrandingService {
 
             int topPadding = Math.max(10, Math.round(cardSurfaceHeight * 0.02f));
             int maxSidePadding = Math.max((cardSurfaceWidth - 1) / 2, 0);
-            int sidePadding = Math.min(topPadding, maxSidePadding);
-            sidePadding = Math.max(1/2, sidePadding/2);
+            int imageSidePadding = Math.min(topPadding, maxSidePadding);
+            imageSidePadding = Math.max(1/2, imageSidePadding/2);
+            int brandingSidePadding = Math.max(1, Math.round(imageSidePadding / 2f));
 
             int bottomPadding = Math.max(50, Math.round(cardSurfaceHeight * 0.02f));
             int totalVerticalPadding = topPadding + bottomPadding;
@@ -171,7 +172,7 @@ public class ImageBrandingService {
                 bottomPadding = Math.max(1, bottomPadding - bottomReduction);
             }
 
-            int imageAreaWidth = Math.max(1, cardSurfaceWidth - sidePadding * 2);
+            int imageAreaWidth = Math.max(1, cardSurfaceWidth - imageSidePadding * 2);
             int imageAreaHeight = Math.max(1, cardSurfaceHeight - topPadding - bottomPadding);
 
             float widthScale = imageAreaWidth / (float) original.getWidth();
@@ -184,7 +185,7 @@ public class ImageBrandingService {
             int scaledWidth = Math.max(1, Math.round(original.getWidth() * scale));
             int scaledHeight = Math.max(1, Math.round(original.getHeight() * scale));
 
-            int imageX = sidePadding + (imageAreaWidth - scaledWidth) / 2;
+            int imageX = imageSidePadding + (imageAreaWidth - scaledWidth) / 2;
             int imageY = topPadding + (imageAreaHeight - scaledHeight) / 2;
 
             g2d.drawImage(original, imageX, imageY, scaledWidth, scaledHeight, null);
@@ -193,7 +194,7 @@ public class ImageBrandingService {
             int textAreaHeight = Math.max(1, cardSurfaceHeight - textAreaTop);
 
             g2d.setColor(new Color(235, 235, 235));
-            g2d.drawLine(sidePadding, textAreaTop, cardSurfaceWidth - sidePadding, textAreaTop);
+            g2d.drawLine(brandingSidePadding, textAreaTop, cardSurfaceWidth - brandingSidePadding, textAreaTop);
 
             int fontSize = Math.max(18, Math.min(36, textAreaHeight - 32));
             if (fontSize > textAreaHeight) {
@@ -203,7 +204,7 @@ public class ImageBrandingService {
             g2d.setFont(font);
 
             FontMetrics metrics = g2d.getFontMetrics(font);
-            int textX = sidePadding;
+            int textX = brandingSidePadding;
 
             int verticalSpace = Math.max(0, textAreaHeight - metrics.getHeight());
             int textY = textAreaTop + verticalSpace / 2 + metrics.getAscent();
