@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
+import ir.ipaam.kycservices.common.ErrorMessageKeys;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 
@@ -59,14 +60,14 @@ public class MinioStorageService {
 
     public DocumentMetadata upload(DocumentPayloadDescriptor descriptor, String documentType, String processInstanceId) {
         if (descriptor == null) {
-            throw new IllegalArgumentException("descriptor must not be null");
+            throw new IllegalArgumentException(ErrorMessageKeys.STORAGE_DESCRIPTOR_REQUIRED);
         }
         if (documentType == null || documentType.isBlank()) {
-            throw new IllegalArgumentException("documentType must not be blank");
+            throw new IllegalArgumentException(ErrorMessageKeys.STORAGE_DOCUMENT_TYPE_REQUIRED);
         }
         byte[] data = descriptor.data();
         if (data == null || data.length == 0) {
-            throw new IllegalArgumentException("descriptor data must not be empty");
+            throw new IllegalArgumentException(ErrorMessageKeys.STORAGE_DESCRIPTOR_DATA_REQUIRED);
         }
 
         boolean branded = false;
