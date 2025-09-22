@@ -153,6 +153,8 @@ public class KycProcessEventHandler {
             backMetadata.setInquiryDocumentId(null);
         }
         persistMetadata(backMetadata, DOCUMENT_TYPE_BACK, event.getProcessInstanceId(), processInstance);
+
+        recordSuccessfulStep(processInstance, "CARD_DOCUMENTS_UPLOADED", event.getUploadedAt());
     }
 
     @EventHandler
@@ -216,6 +218,8 @@ public class KycProcessEventHandler {
                     event.processInstanceId(),
                     processInstance);
         }
+
+        recordSuccessfulStep(processInstance, "ID_PAGES_UPLOADED", event.uploadedAt());
     }
 
     @EventHandler
@@ -246,6 +250,8 @@ public class KycProcessEventHandler {
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         persistMetadata(storageMetadata, DOCUMENT_TYPE_SELFIE, event.getProcessInstanceId(), processInstance);
+
+        recordSuccessfulStep(processInstance, "SELFIE_UPLOADED", event.getUploadedAt());
     }
 
     @EventHandler
@@ -315,6 +321,8 @@ public class KycProcessEventHandler {
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         persistMetadata(storageMetadata, DOCUMENT_TYPE_VIDEO, event.getProcessInstanceId(), processInstance);
+
+        recordSuccessfulStep(processInstance, "VIDEO_UPLOADED", event.getUploadedAt());
     }
 
     @EventHandler
@@ -412,6 +420,30 @@ public class KycProcessEventHandler {
         if (!document.isVerified()) {
             log.debug("Document {} for process {} is not verified because branding was skipped or failed", type, processInstanceId);
         }
+    }
+
+    private void recordSuccessfulStep(ProcessInstance processInstance, String status, LocalDateTime timestamp) {
+        if (processInstance == null) {
+            return;
+        }
+
+        processInstance.setStatus(status);
+
+        StepStatus stepStatus = new StepStatus();
+        stepStatus.setProcess(processInstance);
+        stepStatus.setStepName(status);
+        stepStatus.setTimestamp(timestamp);
+        stepStatus.setState(StepStatus.State.PASSED);
+
+        List<StepStatus> statuses = processInstance.getStatuses();
+        if (statuses == null) {
+            statuses = new ArrayList<>();
+            processInstance.setStatuses(statuses);
+        }
+        statuses.add(stepStatus);
+
+        kycProcessInstanceRepository.save(processInstance);
+        kycStepStatusRepository.save(stepStatus);
     }
 
     private String extractResultId(String resultMessage) {
