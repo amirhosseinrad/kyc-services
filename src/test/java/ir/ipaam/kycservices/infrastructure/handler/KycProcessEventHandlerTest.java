@@ -509,11 +509,12 @@ class KycProcessEventHandlerTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
 
+        LocalDateTime uploadedAt = LocalDateTime.of(2024, 2, 1, 8, 30);
         SignatureUploadedEvent event = new SignatureUploadedEvent(
                 "proc1",
                 "123",
                 new DocumentPayloadDescriptor("signature".getBytes(), "signature-file"),
-                LocalDateTime.now()
+                uploadedAt
         );
 
         DocumentMetadata storageMetadata = new DocumentMetadata();
@@ -523,6 +524,7 @@ class KycProcessEventHandlerTest {
         storageMetadata.setBranded(true);
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
+        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -538,6 +540,17 @@ class KycProcessEventHandlerTest {
         verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
         assertNull(lastTokenRequestProcessId.get());
         assertNull(lastSignatureToken.get());
+        assertEquals("SIGNATURE_UPLOADED", processInstance.getStatus());
+        verify(instanceRepository).save(processInstance);
+
+        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
+        verify(stepStatusRepository).save(statusCaptor.capture());
+        StepStatus stepStatus = statusCaptor.getValue();
+        assertEquals("SIGNATURE_UPLOADED", stepStatus.getStepName());
+        assertEquals(StepStatus.State.PASSED, stepStatus.getState());
+        assertEquals(uploadedAt, stepStatus.getTimestamp());
+        assertEquals(processInstance, stepStatus.getProcess());
+        assertTrue(processInstance.getStatuses().contains(stepStatus));
     }
 
     @Test
@@ -599,11 +612,12 @@ class KycProcessEventHandlerTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
 
+        LocalDateTime uploadedAt = LocalDateTime.of(2024, 2, 1, 9, 45);
         SignatureUploadedEvent event = new SignatureUploadedEvent(
                 "proc1",
                 "123",
                 new DocumentPayloadDescriptor("signature".getBytes(), "signature-file"),
-                LocalDateTime.now()
+                uploadedAt
         );
 
         DocumentMetadata storageMetadata = new DocumentMetadata();
@@ -612,6 +626,7 @@ class KycProcessEventHandlerTest {
         storageMetadata.setBranded(true);
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
+        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -625,6 +640,17 @@ class KycProcessEventHandlerTest {
         verify(storageService).upload(event.getDescriptor(), "SIGNATURE", "proc1");
         assertNull(lastTokenRequestProcessId.get());
         assertNull(lastSignatureToken.get());
+        assertEquals("SIGNATURE_UPLOADED", processInstance.getStatus());
+        verify(instanceRepository).save(processInstance);
+
+        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
+        verify(stepStatusRepository).save(statusCaptor.capture());
+        StepStatus stepStatus = statusCaptor.getValue();
+        assertEquals("SIGNATURE_UPLOADED", stepStatus.getStepName());
+        assertEquals(StepStatus.State.PASSED, stepStatus.getState());
+        assertEquals(uploadedAt, stepStatus.getTimestamp());
+        assertEquals(processInstance, stepStatus.getProcess());
+        assertTrue(processInstance.getStatuses().contains(stepStatus));
     }
 
     @Test
