@@ -45,8 +45,8 @@ class ImageBrandingServiceTest {
         assertThat(result.label()).isEqualTo("Uploaded by KYC Service - 2024-05-12 10:15");
 
         BufferedImage branded = ImageIO.read(new ByteArrayInputStream(result.data()));
-        assertThat(branded.getWidth()).isGreaterThan(original.getWidth());
-        assertThat(branded.getHeight()).isGreaterThan(original.getHeight());
+        assertThat(branded.getWidth()).isEqualTo(ImageBrandingService.CARD_WIDTH_PX);
+        assertThat(branded.getHeight()).isEqualTo(ImageBrandingService.CARD_HEIGHT_PX);
     }
 
     @Test
