@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.queryhandling.NoHandlerForQueryException;
-import org.axonframework.queryhandling.QueryDispatchException;
 import org.axonframework.queryhandling.QueryExecutionException;
 import org.axonframework.queryhandling.QueryGateway;
 import org.slf4j.Logger;
@@ -38,7 +37,7 @@ public class KycServiceTasksImpl implements KycServiceTasks {
         try {
             return queryGateway.query(new FindKycStatusQuery(nationalCode),
                     ResponseTypes.instanceOf(ProcessInstance.class)).get();
-        } catch (NoHandlerForQueryException | QueryDispatchException | QueryExecutionException e) {
+        } catch (NoHandlerForQueryException | QueryExecutionException e) {
             log.error("Failed to query KYC status", e);
             throw queryFailed(e);
         } catch (CompletionException e) {
