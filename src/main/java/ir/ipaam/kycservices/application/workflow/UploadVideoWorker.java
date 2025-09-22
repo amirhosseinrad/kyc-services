@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,15 +20,18 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_VIDEO_UPLOAD
 public class UploadVideoWorker {
 
     private static final Logger log = LoggerFactory.getLogger(UploadVideoWorker.class);
+    static final String STEP_NAME = "VIDEO_UPLOADED";
 
     private final KycUserTasks kycUserTasks;
+    private final KycServiceTasks kycServiceTasks;
 
     @JobWorker(type = "upload-video")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
+        String processInstanceId = null;
         try {
             byte[] video = extractBinary(variables.get("videoFile"), "videoFile");
-            String processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
+            processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
 
             kycUserTasks.uploadVideo(video, processInstanceId);
             return Map.of("videoUploaded", true);
@@ -35,8 +39,20 @@ public class UploadVideoWorker {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
         } catch (RuntimeException e) {
+            logFailure(processInstanceId);
             log.error("Failed to upload video for job {}: {}", job.getKey(), WORKFLOW_VIDEO_UPLOAD_FAILED, e);
             throw new WorkflowTaskException(WORKFLOW_VIDEO_UPLOAD_FAILED, e);
+        }
+    }
+
+    private void logFailure(String processInstanceId) {
+        if (processInstanceId == null || processInstanceId.isBlank()) {
+            return;
+        }
+        try {
+            kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_VIDEO_UPLOAD_FAILED, processInstanceId);
+        } catch (RuntimeException loggingError) {
+            log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
         }
     }
 

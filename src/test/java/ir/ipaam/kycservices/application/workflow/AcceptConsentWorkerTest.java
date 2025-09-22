@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,8 @@ import static org.mockito.Mockito.*;
 class AcceptConsentWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
-    private final AcceptConsentWorker worker = new AcceptConsentWorker(kycUserTasks);
+    private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
+    private final AcceptConsentWorker worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDelegatesToService() {
@@ -31,6 +33,7 @@ class AcceptConsentWorkerTest {
 
         verify(kycUserTasks).acceptConsent("v1", true, "proc-1");
         assertEquals(true, result.get("consentAccepted"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -48,6 +51,7 @@ class AcceptConsentWorkerTest {
 
         verify(kycUserTasks).acceptConsent("v2", true, "proc-2");
         assertEquals(true, result.get("consentAccepted"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -62,6 +66,7 @@ class AcceptConsentWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -77,6 +82,7 @@ class AcceptConsentWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -95,5 +101,6 @@ class AcceptConsentWorkerTest {
 
         WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
         assertEquals(WORKFLOW_ACCEPT_CONSENT_FAILED, exception.getMessage());
+        verify(kycServiceTasks).logFailureAndRetry(AcceptConsentWorker.STEP_NAME, WORKFLOW_ACCEPT_CONSENT_FAILED, "proc-5");
     }
 }

@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -21,17 +22,20 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ID_UPLOAD_FA
 public class UploadIdPagesWorker {
 
     static final long MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB per page
+    static final String STEP_NAME = "ID_PAGES_UPLOADED";
 
     private static final Logger log = LoggerFactory.getLogger(UploadIdPagesWorker.class);
 
     private final KycUserTasks kycUserTasks;
+    private final KycServiceTasks kycServiceTasks;
 
     @JobWorker(type = "upload-id-pages")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
+        String processInstanceId = null;
         try {
             List<byte[]> pages = extractPages(variables.get("pages"));
-            String processInstanceId = (String) variables.get("processInstanceId");
+            processInstanceId = (String) variables.get("processInstanceId");
             if (processInstanceId == null || processInstanceId.isBlank()) {
                 throw new IllegalArgumentException("processInstanceId must be provided");
             }
@@ -46,8 +50,20 @@ public class UploadIdPagesWorker {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
         } catch (RuntimeException e) {
+            logFailure(processInstanceId);
             log.error("Failed to upload ID pages for job {}: {}", job.getKey(), WORKFLOW_ID_UPLOAD_FAILED, e);
             throw new WorkflowTaskException(WORKFLOW_ID_UPLOAD_FAILED, e);
+        }
+    }
+
+    private void logFailure(String processInstanceId) {
+        if (processInstanceId == null || processInstanceId.isBlank()) {
+            return;
+        }
+        try {
+            kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_ID_UPLOAD_FAILED, processInstanceId);
+        } catch (RuntimeException loggingError) {
+            log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
         }
     }
 

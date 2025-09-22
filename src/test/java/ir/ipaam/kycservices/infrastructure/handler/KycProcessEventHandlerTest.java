@@ -199,6 +199,38 @@ class KycProcessEventHandlerTest {
     }
 
     @Test
+    void onStatusUpdatedEventWithFailureTracksFailedStep() {
+        ProcessInstance instance = new ProcessInstance();
+
+        when(instanceRepository.findByCamundaInstanceId("proc-fail")).thenReturn(Optional.of(instance));
+        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocalDateTime timestamp = LocalDateTime.of(2024, 2, 2, 8, 0);
+        String errorCode = "error.workflow.cardUpload.failed";
+        KycStatusUpdatedEvent event = new KycStatusUpdatedEvent(
+                "proc-fail",
+                "321",
+                errorCode,
+                "CARD_DOCUMENTS_UPLOADED",
+                "FAILED",
+                timestamp);
+
+        handler.on(event);
+
+        assertEquals(errorCode, instance.getStatus());
+        verify(instanceRepository).save(instance);
+
+        ArgumentCaptor<StepStatus> captor = ArgumentCaptor.forClass(StepStatus.class);
+        verify(stepStatusRepository).save(captor.capture());
+        StepStatus savedStatus = captor.getValue();
+        assertEquals("CARD_DOCUMENTS_UPLOADED", savedStatus.getStepName());
+        assertEquals(StepStatus.State.FAILED, savedStatus.getState());
+        assertEquals(timestamp, savedStatus.getTimestamp());
+        assertEquals(instance, savedStatus.getProcess());
+        assertTrue(instance.getStatuses().contains(savedStatus));
+    }
+
+    @Test
     void onEnglishPersonalInfoEventUpdatesExistingCustomer() {
         Customer customer = new Customer();
         customer.setNationalCode("123");
