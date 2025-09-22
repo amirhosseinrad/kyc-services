@@ -436,6 +436,8 @@ public class KycProcessEventHandler {
         document.setHash(metadata.getHash());
         document.setInquiryDocumentId(metadata.getInquiryDocumentId());
         document.setVerified(metadata.isBranded());
+        document.setEncrypted(metadata.isEncrypted());
+        document.setEncryptionIv(metadata.getEncryptionIv());
         document.setProcess(processInstance);
         documentRepository.save(document);
         log.info("Persisted document metadata for type {} at path {} for process {} (verified={})",

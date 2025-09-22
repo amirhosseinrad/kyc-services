@@ -15,8 +15,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.security.MessageDigest;
-import java.util.NoSuchElementException;
+import java.util.Base64;
 import java.util.Locale;
+import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,9 +38,16 @@ class MinioStorageServiceTest {
     @Mock
     private ImageBrandingService imageBrandingService;
 
+    @Mock
+    private DocumentCryptoService documentCryptoService;
+
     @BeforeEach
     void setUp() {
-        service = new MinioStorageService(minioClient, "card", "id", "bio", "signature", imageBrandingService);
+        service = new MinioStorageService(minioClient, "card", "id", "bio", "signature", imageBrandingService, documentCryptoService);
+        when(documentCryptoService.encrypt(any())).thenAnswer(invocation -> {
+            byte[] plaintext = invocation.getArgument(0, byte[].class);
+            return new DocumentCryptoService.EncryptionResult(plaintext.clone(), null, false);
+        });
     }
 
     @Test
@@ -87,8 +95,46 @@ class MinioStorageServiceTest {
         assertThat(metadata.isBranded()).isTrue();
         assertThat(metadata.getPath()).isEqualTo("bio/process-1/photo/front-png");
         assertThat(metadata.getHash()).isEqualTo(sha256Hex(branded));
+        assertThat(metadata.isEncrypted()).isFalse();
+        assertThat(metadata.getEncryptionIv()).isNull();
 
         verify(imageBrandingService).brand(any(byte[].class), eq("front.png"));
+    }
+
+    @Test
+    void uploadEncryptsPayloadWhenEncryptionEnabled() throws Exception {
+        byte[] original = new byte[]{1, 2, 3, 4};
+        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(original, "video.mp4");
+        byte[] encrypted = new byte[]{9, 9, 9};
+        byte[] iv = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
+        when(documentCryptoService.encrypt(any())).thenReturn(
+                new DocumentCryptoService.EncryptionResult(encrypted, iv, true));
+        when(minioClient.bucketExists(any(BucketExistsArgs.class))).thenReturn(true);
+        when(minioClient.putObject(any(PutObjectArgs.class))).thenReturn(null);
+
+        DocumentMetadata metadata = service.upload(descriptor, "VIDEO", "process-99");
+
+        assertThat(metadata.isEncrypted()).isTrue();
+        assertThat(metadata.getEncryptionIv()).isEqualTo(Base64.getEncoder().encodeToString(iv));
+        assertThat(metadata.getHash()).isEqualTo(sha256Hex(original));
+    }
+
+    @Test
+    void downloadDecryptsEncryptedPayload() throws Exception {
+        byte[] encrypted = new byte[]{5, 4, 3};
+        byte[] decrypted = new byte[]{1, 2, 3};
+        String base64Iv = Base64.getEncoder().encodeToString(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+
+        GetObjectResponse response = mock(GetObjectResponse.class);
+        when(response.readAllBytes()).thenReturn(encrypted);
+        when(minioClient.getObject(any(GetObjectArgs.class))).thenReturn(response);
+        when(documentCryptoService.decrypt(any(), any())).thenReturn(decrypted);
+
+        byte[] result = service.download("bucket/object", true, base64Iv);
+
+        assertThat(result).containsExactly(decrypted);
+        verify(documentCryptoService).decrypt(any(), any());
     }
 
     private String sha256Hex(byte[] data) throws Exception {

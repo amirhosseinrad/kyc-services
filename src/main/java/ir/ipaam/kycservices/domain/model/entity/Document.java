@@ -20,6 +20,8 @@ public class Document {
     private String hash;
     private String inquiryDocumentId;
     private boolean verified;
+    private boolean encrypted;
+    private String encryptionIv;
 
     @ManyToOne
     private ProcessInstance process;
