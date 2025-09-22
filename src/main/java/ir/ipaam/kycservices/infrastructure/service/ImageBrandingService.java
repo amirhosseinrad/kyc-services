@@ -11,6 +11,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Objects;
@@ -21,7 +24,19 @@ public class ImageBrandingService {
 
     private static final Logger log = LoggerFactory.getLogger(ImageBrandingService.class);
     private static final Set<String> SUPPORTED_FORMATS = Set.of("png", "jpeg", "jpg");
-    private static final String BRANDING_TEXT = "Uploaded by KYC Service";
+    private static final String BRANDING_PREFIX = "Uploaded by KYC Service";
+    private static final DateTimeFormatter BRANDING_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT);
+
+    private final Clock clock;
+
+    public ImageBrandingService() {
+        this(Clock.systemDefaultZone());
+    }
+
+    public ImageBrandingService(Clock clock) {
+        this.clock = clock;
+    }
 
     public BrandingResult brand(byte[] payload, String filename) {
         if (payload == null || payload.length == 0) {
@@ -61,7 +76,8 @@ public class ImageBrandingService {
             }
 
             boolean supportsAlpha = supportsAlpha(formatName);
-            BufferedImage branded = redrawWithBranding(original, supportsAlpha);
+            String brandingLabel = buildBrandingLabel();
+            BufferedImage branded = redrawWithBranding(original, supportsAlpha, brandingLabel);
 
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 boolean written = ImageIO.write(branded, formatName, baos);
@@ -69,13 +85,18 @@ public class ImageBrandingService {
                     log.warn("ImageIO failed to encode {} as {}", filename, formatName);
                     return BrandingResult.unmodified(payload, formatName);
                 }
-                return new BrandingResult(baos.toByteArray(), true, formatName);
+                return new BrandingResult(baos.toByteArray(), true, formatName, brandingLabel);
             }
         } catch (Exception ex) {
             log.warn("Failed to brand image {}: {}", filename, ex.getMessage());
             log.debug("Branding failure", ex);
             return BrandingResult.unmodified(payload, null);
         }
+    }
+
+    private String buildBrandingLabel() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return String.format("%s - %s", BRANDING_PREFIX, now.format(BRANDING_FORMATTER));
     }
 
     private String normalizeFormat(String formatName) {
@@ -93,7 +114,7 @@ public class ImageBrandingService {
         return "png".equals(formatName);
     }
 
-    private BufferedImage redrawWithBranding(BufferedImage original, boolean supportsAlpha) {
+    private BufferedImage redrawWithBranding(BufferedImage original, boolean supportsAlpha, String brandingLabel) {
         int sidePadding = Math.max(32, Math.round(original.getWidth() * 0.08f));
         int topPadding = Math.max(28, Math.round(original.getHeight() * 0.08f));
         int bottomPadding = Math.max(96, Math.round(original.getHeight() * 0.18f));
@@ -144,7 +165,7 @@ public class ImageBrandingService {
             g2d.setFont(font);
 
             FontMetrics metrics = g2d.getFontMetrics(font);
-            int textWidth = metrics.stringWidth(BRANDING_TEXT);
+            int textWidth = metrics.stringWidth(brandingLabel);
             int textX = (cardWidth - textWidth) / 2;
             int minTextX = sidePadding;
             int maxTextX = cardWidth - sidePadding - textWidth;
@@ -158,16 +179,16 @@ public class ImageBrandingService {
             int textY = textAreaTop + ((textAreaHeight - metrics.getHeight()) / 2) + metrics.getAscent();
 
             g2d.setColor(new Color(66, 133, 244));
-            g2d.drawString(BRANDING_TEXT, textX, textY);
+            g2d.drawString(brandingLabel, textX, textY);
         } finally {
             g2d.dispose();
         }
         return canvas;
     }
 
-    public record BrandingResult(byte[] data, boolean branded, String format) {
+    public record BrandingResult(byte[] data, boolean branded, String format, String label) {
         public static BrandingResult unmodified(byte[] data, String format) {
-            return new BrandingResult(data, false, format);
+            return new BrandingResult(data, false, format, null);
         }
     }
 }
