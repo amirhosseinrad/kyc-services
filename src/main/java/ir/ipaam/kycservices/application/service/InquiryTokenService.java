@@ -12,7 +12,9 @@ public interface InquiryTokenService {
      *
      * @param processInstanceId the Camunda process instance identifier associated with the inquiry
      * @return an {@link Optional} containing the generated token when the remote call succeeds, or an empty optional when
-     * the inquiry service reports an error or cannot be reached
+     * the inquiry service reports a business error
+     * @throws ir.ipaam.kycservices.domain.exception.InquiryTokenException when the inquiry service cannot be reached or the
+     * response cannot be decoded
      */
     Optional<String> generateToken(String processInstanceId);
 }

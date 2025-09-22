@@ -1,14 +1,21 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.application.service.InquiryTokenService;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.infrastructure.service.dto.GenerateTempTokenResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.core.codec.DecodingException;
+import org.springframework.web.reactive.function.client.WebClientException;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.Optional;
+
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 
 @Service
 @Slf4j
@@ -33,9 +40,12 @@ public class InquiryTokenServiceImpl implements InquiryTokenService {
                     .retrieve()
                     .bodyToMono(GenerateTempTokenResponse.class)
                     .block();
-        } catch (Exception ex) {
+        } catch (WebClientResponseException | WebClientRequestException | DecodingException ex) {
             log.error("Failed to generate inquiry token for process {}", processInstanceId, ex);
-            return Optional.empty();
+            throw new InquiryTokenException(INQUIRY_TOKEN_FAILED, ex);
+        } catch (WebClientException ex) {
+            log.error("Failed to generate inquiry token for process {}", processInstanceId, ex);
+            throw new InquiryTokenException(INQUIRY_TOKEN_FAILED, ex);
         }
 
         if (response == null) {
