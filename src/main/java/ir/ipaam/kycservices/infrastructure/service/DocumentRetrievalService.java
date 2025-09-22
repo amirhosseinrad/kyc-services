@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.infrastructure.service;
 
 import ir.ipaam.kycservices.common.ErrorMessageKeys;
 import ir.ipaam.kycservices.domain.model.entity.Document;
+import ir.ipaam.kycservices.domain.model.DocumentType;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,10 @@ public class DocumentRetrievalService {
     private final DocumentRepository documentRepository;
     private final MinioStorageService minioStorageService;
 
-    public RetrievedDocument retrieveLatestDocument(String nationalCode, String documentType) {
+    public RetrievedDocument retrieveLatestDocument(String nationalCode, DocumentType documentType) {
+        String repositoryDocumentType = documentType.name();
         Document document = documentRepository
-                .findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc(documentType, nationalCode)
+                .findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc(repositoryDocumentType, nationalCode)
                 .orElseThrow(() -> new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND));
 
         if (!document.isVerified()) {
@@ -36,12 +38,22 @@ public class DocumentRetrievalService {
             throw new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND, ex);
         }
 
-        return new RetrievedDocument(document.getType(), content);
+        DocumentType retrievedType;
+        try {
+            retrievedType = DocumentType.fromValue(document.getType());
+        } catch (IllegalArgumentException ex) {
+            throw new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND, ex);
+        }
+
+        return new RetrievedDocument(retrievedType, content);
     }
 
-    public record RetrievedDocument(String documentType, byte[] content) {
+    public record RetrievedDocument(DocumentType documentType, byte[] content) {
 
         public RetrievedDocument {
+            if (documentType == null) {
+                throw new IllegalArgumentException("documentType must not be null");
+            }
             if (content == null) {
                 throw new IllegalArgumentException("content must not be null");
             }
