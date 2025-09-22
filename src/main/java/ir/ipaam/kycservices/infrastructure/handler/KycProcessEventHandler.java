@@ -250,6 +250,27 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SignatureUploadedEvent event) {
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        if (processInstance != null) {
+            processInstance.setStatus("SIGNATURE_UPLOADED");
+
+            StepStatus stepStatus = new StepStatus();
+            stepStatus.setProcess(processInstance);
+            stepStatus.setStepName("SIGNATURE_UPLOADED");
+            stepStatus.setTimestamp(event.getUploadedAt());
+            stepStatus.setState(StepStatus.State.PASSED);
+
+            List<StepStatus> statuses = processInstance.getStatuses();
+            if (statuses == null) {
+                statuses = new ArrayList<>();
+                processInstance.setStatuses(statuses);
+            }
+            statuses.add(stepStatus);
+
+            kycProcessInstanceRepository.save(processInstance);
+            kycStepStatusRepository.save(stepStatus);
+        }
+
         DocumentMetadata metadata = storageService.upload(
                 event.getDescriptor(),
                 DOCUMENT_TYPE_SIGNATURE,
@@ -258,7 +279,6 @@ public class KycProcessEventHandler {
             metadata.setInquiryDocumentId(null);
         }
 
-        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         persistMetadata(metadata, DOCUMENT_TYPE_SIGNATURE, event.getProcessInstanceId(), processInstance);
     }
 
