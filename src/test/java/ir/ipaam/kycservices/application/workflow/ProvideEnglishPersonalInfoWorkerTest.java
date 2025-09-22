@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ENGLISH_INFO_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -69,7 +70,7 @@ class ProvideEnglishPersonalInfoWorkerTest {
         doThrow(new RuntimeException("boom"))
                 .when(kycUserTasks).provideEnglishPersonalInfo("John", "Doe", "john.doe@example.com", "0912", "proc-3");
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
-        assertEquals("Failed to provide english personal info", exception.getMessage());
+        WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
+        assertEquals(WORKFLOW_ENGLISH_INFO_FAILED, exception.getMessage());
     }
 }

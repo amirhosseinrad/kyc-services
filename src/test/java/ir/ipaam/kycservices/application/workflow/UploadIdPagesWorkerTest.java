@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ID_UPLOAD_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -106,7 +107,7 @@ class UploadIdPagesWorkerTest {
 
         doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadIdPages(List.of(page), "proc-4");
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
-        assertEquals("Failed to upload ID pages", exception.getMessage());
+        WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
+        assertEquals(WORKFLOW_ID_UPLOAD_FAILED, exception.getMessage());
     }
 }

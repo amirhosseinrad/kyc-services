@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_SELFIE_UPLOAD_FAILED;
+
 @Component
 @RequiredArgsConstructor
 public class UploadSelfieWorker {
@@ -34,9 +36,9 @@ public class UploadSelfieWorker {
         } catch (IllegalArgumentException e) {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
-        } catch (Exception e) {
-            log.error("Failed to upload selfie for job {}", job.getKey(), e);
-            throw new RuntimeException("Failed to upload selfie", e);
+        } catch (RuntimeException e) {
+            log.error("Failed to upload selfie for job {}: {}", job.getKey(), WORKFLOW_SELFIE_UPLOAD_FAILED, e);
+            throw new WorkflowTaskException(WORKFLOW_SELFIE_UPLOAD_FAILED, e);
         }
     }
 

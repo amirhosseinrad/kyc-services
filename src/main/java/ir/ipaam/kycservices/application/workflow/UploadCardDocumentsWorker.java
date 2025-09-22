@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_CARD_UPLOAD_FAILED;
+
 @Component
 @RequiredArgsConstructor
 public class UploadCardDocumentsWorker {
@@ -42,9 +44,9 @@ public class UploadCardDocumentsWorker {
         } catch (IllegalArgumentException e) {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
-        } catch (Exception e) {
-            log.error("Failed to upload card documents for job {}", job.getKey(), e);
-            throw new RuntimeException("Failed to upload card documents", e);
+        } catch (RuntimeException e) {
+            log.error("Failed to upload card documents for job {}: {}", job.getKey(), WORKFLOW_CARD_UPLOAD_FAILED, e);
+            throw new WorkflowTaskException(WORKFLOW_CARD_UPLOAD_FAILED, e);
         }
     }
 

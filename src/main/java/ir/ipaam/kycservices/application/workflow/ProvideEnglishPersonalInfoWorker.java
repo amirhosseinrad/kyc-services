@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ENGLISH_INFO_FAILED;
+
 @Component
 @RequiredArgsConstructor
 public class ProvideEnglishPersonalInfoWorker {
@@ -33,9 +35,9 @@ public class ProvideEnglishPersonalInfoWorker {
         } catch (IllegalArgumentException e) {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
-        } catch (Exception e) {
-            log.error("Failed to provide english personal info for job {}", job.getKey(), e);
-            throw new RuntimeException("Failed to provide english personal info", e);
+        } catch (RuntimeException e) {
+            log.error("Failed to provide english personal info for job {}: {}", job.getKey(), WORKFLOW_ENGLISH_INFO_FAILED, e);
+            throw new WorkflowTaskException(WORKFLOW_ENGLISH_INFO_FAILED, e);
         }
     }
 
