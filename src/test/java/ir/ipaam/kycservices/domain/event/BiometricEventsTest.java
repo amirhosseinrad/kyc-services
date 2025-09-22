@@ -29,10 +29,11 @@ class BiometricEventsTest {
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{10, 11, 12}, "video.mp4");
         LocalDateTime uploadedAt = LocalDateTime.now();
 
-        VideoUploadedEvent event = new VideoUploadedEvent("proc-2", "456", descriptor, uploadedAt);
+        VideoUploadedEvent event = new VideoUploadedEvent("proc-2", "456", "token", descriptor, uploadedAt);
 
         assertEquals("proc-2", event.getProcessInstanceId());
         assertEquals("456", event.getNationalCode());
+        assertEquals("token", event.getInquiryToken());
         assertSame(descriptor, event.getDescriptor());
         assertEquals(uploadedAt, event.getUploadedAt());
         assertTrue(Arrays.equals(descriptor.data(), event.getDescriptor().data()));

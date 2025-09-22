@@ -12,6 +12,7 @@ public class VideoUploadedEvent {
 
     private final String processInstanceId;
     private final String nationalCode;
+    private final String inquiryToken;
     private final DocumentPayloadDescriptor descriptor;
     private final LocalDateTime uploadedAt;
 }

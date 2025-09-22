@@ -5,6 +5,7 @@ import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
 public record UploadVideoCommand(
         @TargetAggregateIdentifier String processInstanceId,
-        DocumentPayloadDescriptor videoDescriptor
+        DocumentPayloadDescriptor videoDescriptor,
+        String inquiryToken
 ) {
 }

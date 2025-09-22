@@ -31,6 +31,8 @@ public final class ErrorMessageKeys {
 
     public static final String VIDEO_REQUIRED = "error.video.required";
     public static final String VIDEO_TOO_LARGE = "error.video.size";
+    public static final String INQUIRY_TOKEN_FAILED = "error.inquiry.token.failed";
+    public static final String INQUIRY_TOKEN_REQUIRED = "error.inquiry.token.required";
 
     public static final String ID_PAGES_REQUIRED = "error.id.pages.required";
     public static final String ID_PAGES_LIMIT = "error.id.pages.limit";

@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
+import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
@@ -23,7 +24,6 @@ import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
-import ir.ipaam.kycservices.infrastructure.service.dto.GenerateTempTokenResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentRequest;
 import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentResponse;
@@ -69,6 +69,7 @@ public class KycProcessEventHandler {
     private final DocumentRepository documentRepository;
     private final ConsentRepository consentRepository;
     private final WebClient inquiryWebClient;
+    private final InquiryTokenService inquiryTokenService;
     private final MinioStorageService storageService;
 
     public KycProcessEventHandler(
@@ -78,6 +79,7 @@ public class KycProcessEventHandler {
             DocumentRepository documentRepository,
             ConsentRepository consentRepository,
             @Qualifier("inquiryWebClient") WebClient inquiryWebClient,
+            InquiryTokenService inquiryTokenService,
             MinioStorageService storageService) {
         this.kycProcessInstanceRepository = kycProcessInstanceRepository;
         this.customerRepository = customerRepository;
@@ -85,6 +87,7 @@ public class KycProcessEventHandler {
         this.documentRepository = documentRepository;
         this.consentRepository = consentRepository;
         this.inquiryWebClient = inquiryWebClient;
+        this.inquiryTokenService = inquiryTokenService;
         this.storageService = storageService;
     }
 
@@ -190,7 +193,7 @@ public class KycProcessEventHandler {
             return;
         }
 
-        String token = fetchInquiryToken(event.processInstanceId());
+        String token = inquiryTokenService.generateToken(event.processInstanceId()).orElse(null);
         List<String> inquiryIds = new ArrayList<>(Collections.nCopies(descriptors.size(), null));
         if (token == null) {
             log.warn("Skipping inquiry ID page upload for process {} because inquiry token could not be generated",
@@ -232,7 +235,7 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SelfieUploadedEvent event) {
-        String token = fetchInquiryToken(event.getProcessInstanceId());
+        String token = inquiryTokenService.generateToken(event.getProcessInstanceId()).orElse(null);
         if (token == null) {
             log.warn("Skipping selfie upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
             return;
@@ -279,8 +282,8 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(VideoUploadedEvent event) {
-        String token = fetchInquiryToken(event.getProcessInstanceId());
-        if (token == null) {
+        String token = event.getInquiryToken();
+        if (token == null || token.isBlank()) {
             log.warn("Skipping video upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
             return;
         }
@@ -370,47 +373,6 @@ public class KycProcessEventHandler {
         }
 
         return response.getResult();
-    }
-
-    private String fetchInquiryToken(String processInstanceId) {
-        GenerateTempTokenResponse response;
-        try {
-            response = inquiryWebClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/api/Inquiry/GenerateTempToken")
-                            .queryParam("tempTokenValue", processInstanceId)
-                            .build())
-                    .retrieve()
-                    .bodyToMono(GenerateTempTokenResponse.class)
-                    .block();
-        } catch (Exception ex) {
-            log.error("Failed to generate inquiry token for process {}", processInstanceId, ex);
-            return null;
-        }
-
-        if (response == null) {
-            log.warn("Inquiry service returned empty response for process {} when generating token", processInstanceId);
-            return null;
-        }
-
-        Integer responseCode = response.getResponseCode();
-        if (responseCode != null && responseCode != 0) {
-            String message = response.getResponseMessage();
-            if (response.getException() != null && response.getException().getErrorMessage() != null) {
-                message = response.getException().getErrorMessage();
-            }
-            log.error("Inquiry service reported error code {} for process {} when generating token: {}",
-                    responseCode, processInstanceId, message);
-            return null;
-        }
-
-        String token = response.getResult();
-        if (token == null || token.isBlank()) {
-            log.warn("Inquiry service returned empty token for process {}", processInstanceId);
-            return null;
-        }
-
-        return token;
     }
 
     private ProcessInstance findProcessInstance(String processInstanceId) {

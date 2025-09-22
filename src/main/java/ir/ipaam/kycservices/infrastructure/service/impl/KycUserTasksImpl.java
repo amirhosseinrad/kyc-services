@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
+import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
@@ -7,6 +8,7 @@ import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
+
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class KycUserTasksImpl implements KycUserTasks {
     static final String ID_PAGE_FILENAME = "id-page";
 
     private final CommandGateway commandGateway;
+    private final InquiryTokenService inquiryTokenService;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
 
@@ -142,9 +147,13 @@ public class KycUserTasksImpl implements KycUserTasks {
 
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(video, randomizeFilename(VIDEO_FILENAME));
 
+        String inquiryToken = inquiryTokenService.generateToken(normalizedProcessInstanceId)
+                .orElseThrow(() -> new InquiryTokenException(INQUIRY_TOKEN_FAILED));
+
         commandGateway.sendAndWait(new UploadVideoCommand(
                 normalizedProcessInstanceId,
-                descriptor
+                descriptor,
+                inquiryToken
         ));
     }
 
