@@ -1,5 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
+
 import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
@@ -10,6 +12,7 @@ import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
 import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.Document;
@@ -17,11 +20,11 @@ import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
-import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
+import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
+import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
-import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
@@ -193,22 +196,18 @@ public class KycProcessEventHandler {
             return;
         }
 
-        String token = inquiryTokenService.generateToken(event.processInstanceId()).orElse(null);
+        String token = inquiryTokenService.generateToken(event.processInstanceId())
+                .orElseThrow(() -> new InquiryTokenException(INQUIRY_TOKEN_FAILED));
         List<String> inquiryIds = new ArrayList<>(Collections.nCopies(descriptors.size(), null));
-        if (token == null) {
-            log.warn("Skipping inquiry ID page upload for process {} because inquiry token could not be generated",
-                    event.processInstanceId());
-        } else {
-            for (int i = 0; i < descriptors.size(); i++) {
-                int documentType = INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE + i;
-                String inquiryId = uploadInquiryCardDocument(
-                        token,
-                        descriptors.get(i),
-                        documentType,
-                        event.processInstanceId(),
-                        "ID page " + (i + 1));
-                inquiryIds.set(i, inquiryId);
-            }
+        for (int i = 0; i < descriptors.size(); i++) {
+            int documentType = INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE + i;
+            String inquiryId = uploadInquiryCardDocument(
+                    token,
+                    descriptors.get(i),
+                    documentType,
+                    event.processInstanceId(),
+                    "ID page " + (i + 1));
+            inquiryIds.set(i, inquiryId);
         }
 
         ProcessInstance processInstance = findProcessInstance(event.processInstanceId());
@@ -235,11 +234,8 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SelfieUploadedEvent event) {
-        String token = inquiryTokenService.generateToken(event.getProcessInstanceId()).orElse(null);
-        if (token == null) {
-            log.warn("Skipping selfie upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
-            return;
-        }
+        String token = inquiryTokenService.generateToken(event.getProcessInstanceId())
+                .orElseThrow(() -> new InquiryTokenException(INQUIRY_TOKEN_FAILED));
 
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("tokenValue", token);

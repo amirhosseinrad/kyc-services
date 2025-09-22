@@ -13,6 +13,7 @@ import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
 import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -451,11 +452,8 @@ class KycProcessEventHandlerTest {
     }
 
     @Test
-    void onIdPagesUploadedEventSkipsInquiryWhenTokenGenerationFails() {
+    void onIdPagesUploadedEventThrowsWhenTokenGenerationFails() {
         tokenEndpointShouldFail.set(true);
-
-        ProcessInstance processInstance = new ProcessInstance();
-        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
 
         IdPagesUploadedEvent event = new IdPagesUploadedEvent(
                 "proc1",
@@ -466,30 +464,12 @@ class KycProcessEventHandlerTest {
                 ),
                 LocalDateTime.now()
         );
+        assertThrows(InquiryTokenException.class, () -> handler.on(event));
 
-        DocumentMetadata page1Metadata = new DocumentMetadata();
-        page1Metadata.setPath("kyc-id-documents/proc1/id-page-1/page1-file");
-        page1Metadata.setBranded(true);
-        DocumentMetadata page2Metadata = new DocumentMetadata();
-        page2Metadata.setPath("kyc-id-documents/proc1/id-page-2/page2-file");
-        page2Metadata.setBranded(true);
-
-        when(storageService.upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1")).thenReturn(page1Metadata);
-        when(storageService.upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1")).thenReturn(page2Metadata);
-
-        handler.on(event);
-
-        ArgumentCaptor<ir.ipaam.kycservices.domain.model.entity.Document> captor = ArgumentCaptor.forClass(ir.ipaam.kycservices.domain.model.entity.Document.class);
-        verify(documentRepository, times(2)).save(captor.capture());
-        List<ir.ipaam.kycservices.domain.model.entity.Document> saved = captor.getAllValues();
-        assertEquals("kyc-id-documents/proc1/id-page-1/page1-file", saved.get(0).getStoragePath());
-        assertEquals("kyc-id-documents/proc1/id-page-2/page2-file", saved.get(1).getStoragePath());
-        assertTrue(saved.get(0).isVerified());
-        assertTrue(saved.get(1).isVerified());
+        verifyNoInteractions(storageService);
+        verify(documentRepository, never()).save(any());
         assertTrue(inquiryCardRequests.isEmpty());
         assertEquals("proc1", lastTokenRequestProcessId.get());
-        verify(storageService).upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1");
-        verify(storageService).upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1");
     }
 
     @Test
@@ -594,7 +574,7 @@ class KycProcessEventHandlerTest {
     }
 
     @Test
-    void onSelfieUploadedEventSkipsWhenTokenGenerationFails() {
+    void onSelfieUploadedEventThrowsWhenTokenGenerationFails() {
         tokenEndpointShouldFail.set(true);
 
         SelfieUploadedEvent event = new SelfieUploadedEvent(
@@ -604,7 +584,7 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
-        handler.on(event);
+        assertThrows(InquiryTokenException.class, () -> handler.on(event));
 
         verifyNoInteractions(storageService);
         verify(documentRepository, never()).save(any());
