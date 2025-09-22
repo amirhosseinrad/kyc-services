@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
+import ir.ipaam.kycservices.domain.model.DocumentType;
 import ir.ipaam.kycservices.domain.model.entity.Document;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,9 +49,9 @@ class DocumentRetrievalServiceTest {
         when(minioStorageService.download("bucket/object", false, null)).thenReturn(new byte[]{1, 2, 3});
 
         DocumentRetrievalService.RetrievedDocument result =
-                service.retrieveLatestDocument("0012345678", "PHOTO");
+                service.retrieveLatestDocument("0012345678", DocumentType.PHOTO);
 
-        assertThat(result.documentType()).isEqualTo("PHOTO");
+        assertThat(result.documentType()).isEqualTo(DocumentType.PHOTO);
         assertThat(result.content()).containsExactly(1, 2, 3);
 
         verify(minioStorageService).download("bucket/object", false, null);
@@ -61,7 +62,7 @@ class DocumentRetrievalServiceTest {
         when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
+        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", DocumentType.PHOTO))
                 .isInstanceOf(DocumentNotFoundException.class);
 
         verifyNoInteractions(minioStorageService);
@@ -82,7 +83,7 @@ class DocumentRetrievalServiceTest {
         when(minioStorageService.download("bucket/object", false, null))
                 .thenThrow(new NoSuchElementException("missing"));
 
-        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
+        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", DocumentType.PHOTO))
                 .isInstanceOf(DocumentNotFoundException.class);
     }
 
@@ -98,7 +99,7 @@ class DocumentRetrievalServiceTest {
         when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.of(document));
 
-        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
+        assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", DocumentType.PHOTO))
                 .isInstanceOf(DocumentNotFoundException.class);
 
         verifyNoInteractions(minioStorageService);
@@ -118,7 +119,7 @@ class DocumentRetrievalServiceTest {
         when(minioStorageService.download("bucket/object", true, "YWJj")).thenReturn(new byte[]{4, 5, 6});
 
         DocumentRetrievalService.RetrievedDocument result =
-                service.retrieveLatestDocument("0012345678", "PHOTO");
+                service.retrieveLatestDocument("0012345678", DocumentType.PHOTO);
 
         assertThat(result.content()).containsExactly(4, 5, 6);
         verify(minioStorageService).download("bucket/object", true, "YWJj");
