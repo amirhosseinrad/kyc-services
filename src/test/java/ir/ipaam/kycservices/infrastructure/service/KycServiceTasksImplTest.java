@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_STATUS_QUERY_FAILED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -28,6 +30,21 @@ class KycServiceTasksImplTest {
         when(queryGateway.query(any(FindKycStatusQuery.class), eq(ResponseTypes.instanceOf(ProcessInstance.class))))
                 .thenReturn(CompletableFuture.completedFuture(instance));
         assertEquals(instance, tasks.checkKycStatus("0024683416"));
+    }
+
+    @Test
+    void checkKycStatusFailureThrowsIllegalStateException() {
+        RuntimeException backendFailure = new RuntimeException("backend down");
+        CompletableFuture<ProcessInstance> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(backendFailure);
+        when(queryGateway.query(any(FindKycStatusQuery.class), eq(ResponseTypes.instanceOf(ProcessInstance.class))))
+                .thenReturn(failedFuture);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> tasks.checkKycStatus("0024683416"));
+
+        assertEquals(KYC_STATUS_QUERY_FAILED, exception.getMessage());
+        assertEquals(backendFailure, exception.getCause());
     }
 }
 

@@ -16,6 +16,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_STATUS_QUERY_FAILED;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -93,14 +94,15 @@ class KycProcessControllerTest {
     @Test
     void serviceThrowsRuntimeExceptionReturnsServerError() throws Exception {
         when(tasks.checkKycStatus("0024683416"))
-                .thenThrow(new RuntimeException("failure"));
+                .thenThrow(new IllegalStateException(KYC_STATUS_QUERY_FAILED));
 
         mockMvc.perform(post("/kyc/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nationalCode\":\"0024683416\"}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
-                .andExpect(jsonPath("$.message.en").value("failure"));
+                .andExpect(jsonPath("$.message.en").value("Unable to query KYC status"))
+                .andExpect(jsonPath("$.message.fa").value("امکان دریافت وضعیت احراز هویت وجود ندارد"));
     }
 
 }
