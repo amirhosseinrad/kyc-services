@@ -203,16 +203,7 @@ public class ImageBrandingService {
             g2d.setFont(font);
 
             FontMetrics metrics = g2d.getFontMetrics(font);
-            int textWidth = metrics.stringWidth(brandingLabel);
-            int availableTextWidth = Math.max(1, cardSurfaceWidth - sidePadding * 2);
-            int textX = sidePadding + Math.max(0, (availableTextWidth - textWidth) / 2);
-            int maxTextX = cardSurfaceWidth - sidePadding - textWidth;
-            if (textX > maxTextX) {
-                textX = maxTextX;
-            }
-            if (textX < sidePadding) {
-                textX = sidePadding;
-            }
+            int textX = sidePadding;
 
             int verticalSpace = Math.max(0, textAreaHeight - metrics.getHeight());
             int textY = textAreaTop + verticalSpace / 2 + metrics.getAscent();
