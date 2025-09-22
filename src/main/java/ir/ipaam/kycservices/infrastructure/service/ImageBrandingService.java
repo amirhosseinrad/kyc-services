@@ -155,13 +155,11 @@ public class ImageBrandingService {
             g2d.setColor(Color.WHITE);
             g2d.fillRoundRect(0, 0, cardSurfaceWidth, cardSurfaceHeight, cornerRadius, cornerRadius);
 
-            int sidePadding = Math.max(32, Math.round(cardSurfaceWidth * 0.04f));
-            int maxSidePadding = Math.max((cardSurfaceWidth - 1) / 2, 0);
-            if (sidePadding > maxSidePadding) {
-                sidePadding = maxSidePadding;
-            }
-
             int topPadding = Math.max(10, Math.round(cardSurfaceHeight * 0.02f));
+            int maxSidePadding = Math.max((cardSurfaceWidth - 1) / 2, 0);
+            int sidePadding = Math.min(topPadding, maxSidePadding);
+            sidePadding = Math.max(1, sidePadding);
+
             int bottomPadding = Math.max(50, Math.round(cardSurfaceHeight * 0.02f));
             int totalVerticalPadding = topPadding + bottomPadding;
             if (totalVerticalPadding >= cardSurfaceHeight) {
