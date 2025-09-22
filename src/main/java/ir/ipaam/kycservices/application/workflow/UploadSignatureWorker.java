@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_SIGNATURE_UPLOAD_FAILED;
+
 @Component
 @RequiredArgsConstructor
 public class UploadSignatureWorker {
@@ -32,9 +34,9 @@ public class UploadSignatureWorker {
         } catch (IllegalArgumentException e) {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
-        } catch (Exception e) {
-            log.error("Failed to upload signature for job {}", job.getKey(), e);
-            throw new RuntimeException("Failed to upload signature", e);
+        } catch (RuntimeException e) {
+            log.error("Failed to upload signature for job {}: {}", job.getKey(), WORKFLOW_SIGNATURE_UPLOAD_FAILED, e);
+            throw new WorkflowTaskException(WORKFLOW_SIGNATURE_UPLOAD_FAILED, e);
         }
     }
 

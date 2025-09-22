@@ -34,6 +34,14 @@ public final class ErrorMessageKeys {
     public static final String INQUIRY_TOKEN_FAILED = "error.inquiry.token.failed";
     public static final String INQUIRY_TOKEN_REQUIRED = "error.inquiry.token.required";
 
+    public static final String WORKFLOW_ACCEPT_CONSENT_FAILED = "error.workflow.acceptConsent.failed";
+    public static final String WORKFLOW_ENGLISH_INFO_FAILED = "error.workflow.englishInfo.failed";
+    public static final String WORKFLOW_CARD_UPLOAD_FAILED = "error.workflow.cardUpload.failed";
+    public static final String WORKFLOW_VIDEO_UPLOAD_FAILED = "error.workflow.videoUpload.failed";
+    public static final String WORKFLOW_SIGNATURE_UPLOAD_FAILED = "error.workflow.signatureUpload.failed";
+    public static final String WORKFLOW_ID_UPLOAD_FAILED = "error.workflow.idUpload.failed";
+    public static final String WORKFLOW_SELFIE_UPLOAD_FAILED = "error.workflow.selfieUpload.failed";
+
     public static final String ID_PAGES_REQUIRED = "error.id.pages.required";
     public static final String ID_PAGES_LIMIT = "error.id.pages.limit";
     public static final String ID_PAGE_REQUIRED = "error.id.page.required";

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ACCEPT_CONSENT_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -92,7 +93,7 @@ class AcceptConsentWorkerTest {
         doThrow(new RuntimeException("boom"))
                 .when(kycUserTasks).acceptConsent("v5", true, "proc-5");
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
-        assertEquals("Failed to accept consent", exception.getMessage());
+        WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
+        assertEquals(WORKFLOW_ACCEPT_CONSENT_FAILED, exception.getMessage());
     }
 }

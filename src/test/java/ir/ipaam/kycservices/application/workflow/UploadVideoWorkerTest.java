@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Base64;
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_VIDEO_UPLOAD_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -93,7 +94,7 @@ class UploadVideoWorkerTest {
 
         doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadVideo(videoBytes, "proc-5");
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
-        assertEquals("Failed to upload video", exception.getMessage());
+        WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
+        assertEquals(WORKFLOW_VIDEO_UPLOAD_FAILED, exception.getMessage());
     }
 }

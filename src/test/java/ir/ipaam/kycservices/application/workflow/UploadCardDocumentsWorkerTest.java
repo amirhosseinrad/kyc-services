@@ -14,6 +14,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Random;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_CARD_UPLOAD_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -132,7 +133,7 @@ class UploadCardDocumentsWorkerTest {
 
         doThrow(new RuntimeException("boom")).when(kycUserTasks).uploadCardDocuments(frontBytes, backBytes, "proc-3");
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> worker.handle(job));
-        assertEquals("Failed to upload card documents", exception.getMessage());
+        WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
+        assertEquals(WORKFLOW_CARD_UPLOAD_FAILED, exception.getMessage());
     }
 }

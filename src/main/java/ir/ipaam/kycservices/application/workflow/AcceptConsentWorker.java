@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ACCEPT_CONSENT_FAILED;
+
 @Component
 @RequiredArgsConstructor
 public class AcceptConsentWorker {
@@ -31,9 +33,9 @@ public class AcceptConsentWorker {
         } catch (IllegalArgumentException e) {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
-        } catch (Exception e) {
-            log.error("Failed to accept consent for job {}", job.getKey(), e);
-            throw new RuntimeException("Failed to accept consent", e);
+        } catch (RuntimeException e) {
+            log.error("Failed to accept consent for job {}: {}", job.getKey(), WORKFLOW_ACCEPT_CONSENT_FAILED, e);
+            throw new WorkflowTaskException(WORKFLOW_ACCEPT_CONSENT_FAILED, e);
         }
     }
 

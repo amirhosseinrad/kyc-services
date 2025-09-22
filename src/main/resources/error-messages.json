@@ -87,6 +87,34 @@
     "en": "Inquiry token must be provided",
     "fa": "توکن استعلام باید فراهم شود"
   },
+  "error.workflow.acceptConsent.failed": {
+    "en": "Unable to record consent decision",
+    "fa": "ثبت وضعیت موافقت با شرایط امکان‌پذیر نیست"
+  },
+  "error.workflow.englishInfo.failed": {
+    "en": "Unable to save English personal information",
+    "fa": "ثبت اطلاعات هویتی انگلیسی امکان‌پذیر نیست"
+  },
+  "error.workflow.cardUpload.failed": {
+    "en": "Unable to upload national card images",
+    "fa": "بارگذاری تصاویر کارت ملی امکان‌پذیر نیست"
+  },
+  "error.workflow.videoUpload.failed": {
+    "en": "Unable to upload verification video",
+    "fa": "بارگذاری ویدئوی احراز هویت امکان‌پذیر نیست"
+  },
+  "error.workflow.signatureUpload.failed": {
+    "en": "Unable to upload signature image",
+    "fa": "بارگذاری تصویر امضا امکان‌پذیر نیست"
+  },
+  "error.workflow.idUpload.failed": {
+    "en": "Unable to upload ID pages",
+    "fa": "بارگذاری صفحات شناسنامه امکان‌پذیر نیست"
+  },
+  "error.workflow.selfieUpload.failed": {
+    "en": "Unable to upload selfie photo",
+    "fa": "بارگذاری تصویر سلفی امکان‌پذیر نیست"
+  },
   "error.id.pages.required": {
     "en": "At least one ID page must be provided",
     "fa": "حداقل یک صفحه شناسنامه باید بارگذاری شود"
