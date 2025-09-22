@@ -87,15 +87,15 @@ class KycProcessAggregateTest {
                 .expectSuccessfulHandlerExecution()
                 .expectEventsMatching(payloadsMatching(exactSequenceOf(messageWithPayload(matches(event -> {
                     EnglishPersonalInfoProvidedEvent payload = (EnglishPersonalInfoProvidedEvent) event;
-                    return payload.processInstanceId().equals("proc-1")
-                            && payload.nationalCode().equals("123")
-                            && payload.firstNameEn().equals("John")
-                            && payload.lastNameEn().equals("Doe")
-                            && payload.email().equals("john.doe@example.com")
-                            && payload.telephone().equals("09120000000")
-                            && payload.providedAt() != null;
+                    return payload.getProcessInstanceId().equals("proc-1")
+                            && payload.getNationalCode().equals("123")
+                            && payload.getFirstNameEn().equals("John")
+                            && payload.getLastNameEn().equals("Doe")
+                            && payload.getEmail().equals("john.doe@example.com")
+                            && payload.getTelephone().equals("09120000000")
+                            && payload.getProvidedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", state.getStatus()));
+                .expectState(state -> assertEquals("ENGLISH_PERSONAL_INFO_PROVIDED", state));
     }
 
     @Test

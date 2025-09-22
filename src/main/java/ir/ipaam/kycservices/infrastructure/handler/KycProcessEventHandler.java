@@ -154,14 +154,14 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(EnglishPersonalInfoProvidedEvent event) {
-        Optional<ProcessInstance> processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(event.processInstanceId());
+        Optional<ProcessInstance> processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(event.getProcessInstanceId());
 
         Customer customer = processInstance
                 .map(ProcessInstance::getCustomer)
-                .orElseGet(() -> customerRepository.findByNationalCode(event.nationalCode())
+                .orElseGet(() -> customerRepository.findByNationalCode(event.getNationalCode())
                         .orElseGet(() -> {
                             Customer c = new Customer();
-                            c.setNationalCode(event.nationalCode());
+                            c.setNationalCode(event.getNationalCode());
                             return c;
                         }));
 
@@ -173,16 +173,16 @@ public class KycProcessEventHandler {
                 instance.setCustomer(customer);
             }
             instance.setStatus("ENGLISH_PERSONAL_INFO_PROVIDED");
-            instance.setCompletedAt(event.providedAt());
+            instance.setCompletedAt(event.getProvidedAt());
             kycProcessInstanceRepository.save(instance);
         });
     }
 
     private void updateCustomerInfo(Customer customer, EnglishPersonalInfoProvidedEvent event) {
-        customer.setFirstName(event.firstNameEn());
-        customer.setLastName(event.lastNameEn());
-        customer.setEmail(event.email());
-        customer.setMobile(event.telephone());
+        customer.setFirstName(event.getFirstNameEn());
+        customer.setLastName(event.getLastNameEn());
+        customer.setEmail(event.getEmail());
+        customer.setMobile(event.getTelephone());
     }
 
     @EventHandler

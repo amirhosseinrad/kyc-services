@@ -315,10 +315,10 @@ public class KycProcessAggregate {
 
     @EventSourcingHandler
     public void on(EnglishPersonalInfoProvidedEvent event) {
-        this.firstNameEn = event.firstNameEn();
-        this.lastNameEn = event.lastNameEn();
-        this.email = event.email();
-        this.telephone = event.telephone();
+        this.firstNameEn = event.getFirstNameEn();
+        this.lastNameEn = event.getLastNameEn();
+        this.email = event.getEmail();
+        this.telephone = event.getTelephone();
         this.status = "ENGLISH_PERSONAL_INFO_PROVIDED";
     }
 }

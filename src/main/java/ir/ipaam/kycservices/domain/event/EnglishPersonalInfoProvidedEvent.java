@@ -1,14 +1,25 @@
 package ir.ipaam.kycservices.domain.event;
 
-import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public record EnglishPersonalInfoProvidedEvent(
-        String processInstanceId,
-        String nationalCode,
-        String firstNameEn,
-        String lastNameEn,
-        String email,
-        String telephone,
-        LocalDateTime providedAt
-) {
+import java.time.LocalDateTime;
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+public class EnglishPersonalInfoProvidedEvent {
+    private String processInstanceId;
+    private String nationalCode;
+    private String firstNameEn;
+    private String lastNameEn;
+    private String email;
+    private String telephone;
+    private LocalDateTime providedAt;
+
 }
+
+
+
