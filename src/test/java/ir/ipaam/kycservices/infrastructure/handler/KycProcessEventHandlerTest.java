@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.infrastructure.handler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
+import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
@@ -25,6 +26,7 @@ import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceReposito
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
+import ir.ipaam.kycservices.infrastructure.service.impl.InquiryTokenServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -64,6 +66,7 @@ class KycProcessEventHandlerTest {
     private WebClient inquiryWebClient;
     private MinioStorageService storageService;
     private KycProcessEventHandler handler;
+    private InquiryTokenService inquiryTokenService;
     private AtomicReference<String> lastTokenRequestProcessId;
     private AtomicReference<String> lastSelfieToken;
     private AtomicReference<String> lastVideoToken;
@@ -146,8 +149,10 @@ class KycProcessEventHandlerTest {
         };
         inquiryWebClient = WebClient.builder().exchangeFunction(inquiryExchangeFunction).build();
 
+        inquiryTokenService = new InquiryTokenServiceImpl(inquiryWebClient);
+
         handler = new KycProcessEventHandler(instanceRepository, customerRepository, stepStatusRepository, documentRepository,
-                consentRepository, inquiryWebClient, storageService);
+                consentRepository, inquiryWebClient, inquiryTokenService, storageService);
     }
 
     @Test
@@ -563,6 +568,7 @@ class KycProcessEventHandlerTest {
         VideoUploadedEvent event = new VideoUploadedEvent(
                 "proc1",
                 "123",
+                "provided-token",
                 new DocumentPayloadDescriptor("video".getBytes(), "video-file"),
                 LocalDateTime.now()
         );
@@ -583,8 +589,8 @@ class KycProcessEventHandlerTest {
         assertEquals(processInstance, saved.getProcess());
         assertFalse(saved.isVerified());
         verify(storageService).upload(event.getDescriptor(), "VIDEO", "proc1");
-        assertEquals("proc1", lastTokenRequestProcessId.get());
-        assertEquals("token-for-proc1", lastVideoToken.get());
+        assertNull(lastTokenRequestProcessId.get());
+        assertEquals("provided-token", lastVideoToken.get());
     }
 
     @Test

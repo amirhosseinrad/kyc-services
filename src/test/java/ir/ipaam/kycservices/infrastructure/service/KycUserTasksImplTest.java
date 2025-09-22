@@ -6,7 +6,9 @@ import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
+import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.infrastructure.service.impl.KycUserTasksImpl;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,12 +27,15 @@ import static org.mockito.Mockito.*;
 class KycUserTasksImplTest {
 
     private CommandGateway commandGateway;
+    private InquiryTokenService inquiryTokenService;
     private KycUserTasksImpl tasks;
 
     @BeforeEach
     void setUp() {
         commandGateway = mock(CommandGateway.class);
-        tasks = new KycUserTasksImpl(commandGateway);
+        inquiryTokenService = mock(InquiryTokenService.class);
+        when(inquiryTokenService.generateToken(any())).thenReturn(Optional.of("token-123"));
+        tasks = new KycUserTasksImpl(commandGateway, inquiryTokenService);
     }
 
     @Test
@@ -160,6 +166,7 @@ class KycUserTasksImplTest {
         assertNotNull(command.videoDescriptor());
         assertTrue(command.videoDescriptor().filename().startsWith(KycUserTasksImpl.VIDEO_FILENAME));
         assertArrayEquals(video, command.videoDescriptor().data());
+        assertEquals("token-123", command.inquiryToken());
     }
 
     @Test
@@ -171,6 +178,7 @@ class KycUserTasksImplTest {
         assertThrows(IllegalArgumentException.class, () -> tasks.uploadVideo(video, " "));
 
         verify(commandGateway, never()).sendAndWait(any());
+        verify(inquiryTokenService, never()).generateToken(any());
     }
 
     @Test
@@ -180,6 +188,16 @@ class KycUserTasksImplTest {
         doThrow(new RuntimeException("boom")).when(commandGateway).sendAndWait(any());
 
         assertThrows(RuntimeException.class, () -> tasks.uploadVideo(video, "process-1"));
+    }
+
+    @Test
+    void uploadVideoPropagatesTokenErrors() {
+        byte[] video = "video".getBytes(StandardCharsets.UTF_8);
+
+        when(inquiryTokenService.generateToken("process-1")).thenReturn(Optional.empty());
+
+        assertThrows(InquiryTokenException.class, () -> tasks.uploadVideo(video, "process-1"));
+        verify(commandGateway, never()).sendAndWait(any());
     }
 
     @Test

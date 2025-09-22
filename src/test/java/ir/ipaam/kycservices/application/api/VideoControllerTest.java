@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.VideoController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
+import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -40,6 +41,9 @@ class VideoControllerTest {
     @MockBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
+    @MockBean
+    private InquiryTokenService inquiryTokenService;
+
     @Test
     void uploadVideoDispatchesCommand() throws Exception {
         MockMultipartFile video = new MockMultipartFile(
@@ -57,6 +61,8 @@ class VideoControllerTest {
 
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(new ProcessInstance()));
+        when(inquiryTokenService.generateToken("process-456"))
+                .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class))).thenReturn(null);
 
         mockMvc.perform(multipart("/kyc/video")
@@ -73,6 +79,7 @@ class VideoControllerTest {
         assertThat(command.processInstanceId()).isEqualTo("process-456");
         assertThat(command.videoDescriptor().filename()).isEqualTo("video_process-456");
         assertThat(command.videoDescriptor().data()).isEqualTo(video.getBytes());
+        assertThat(command.inquiryToken()).isEqualTo("token-123");
     }
 
     @Test
@@ -168,6 +175,8 @@ class VideoControllerTest {
 
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(new ProcessInstance()));
+        when(inquiryTokenService.generateToken("process-456"))
+                .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -196,6 +205,8 @@ class VideoControllerTest {
 
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(new ProcessInstance()));
+        when(inquiryTokenService.generateToken("process-456"))
+                .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -231,6 +242,36 @@ class VideoControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ErrorCode.RESOURCE_NOT_FOUND.getValue()))
                 .andExpect(jsonPath("$.message.en").value("Process instance not found"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+    }
+
+    @Test
+    void tokenGenerationFailureReturnsBadGateway() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(new ProcessInstance()));
+        when(inquiryTokenService.generateToken("process-456"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value(ErrorCode.INQUIRY_SERVICE_UNAVAILABLE.getValue()))
+                .andExpect(jsonPath("$.message.en").value("Unable to generate inquiry token"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
     }

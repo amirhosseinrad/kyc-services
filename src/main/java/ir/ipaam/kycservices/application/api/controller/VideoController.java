@@ -2,7 +2,9 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_REQUIRED;
@@ -37,6 +40,7 @@ public class VideoController {
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final InquiryTokenService inquiryTokenService;
 
     @PostMapping(path = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadVideo(
@@ -52,10 +56,13 @@ public class VideoController {
 
         byte[] videoBytes = readFile(video);
 
+        String inquiryToken = inquiryTokenService.generateToken(normalizedProcessId)
+                .orElseThrow(() -> new InquiryTokenException(INQUIRY_TOKEN_FAILED));
+
         DocumentPayloadDescriptor descriptor =
                 new DocumentPayloadDescriptor(videoBytes, "video_" + normalizedProcessId);
 
-        commandGateway.sendAndWait(new UploadVideoCommand(normalizedProcessId, descriptor));
+        commandGateway.sendAndWait(new UploadVideoCommand(normalizedProcessId, descriptor, inquiryToken));
 
         Map<String, Object> body = Map.of(
                 "processInstanceId", normalizedProcessId,

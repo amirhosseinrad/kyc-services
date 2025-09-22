@@ -11,6 +11,7 @@ public enum ErrorCode {
     RESOURCE_NOT_FOUND("KYC-002"),
     COMMAND_REJECTED("KYC-003"),
     FILE_PROCESSING_FAILED("KYC-004"),
+    INQUIRY_SERVICE_UNAVAILABLE("KYC-005"),
     UNEXPECTED_ERROR("KYC-999");
 
     private final String value;

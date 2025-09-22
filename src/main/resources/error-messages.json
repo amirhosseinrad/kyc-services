@@ -79,6 +79,14 @@
     "en": "video exceeds maximum size",
     "fa": "حجم ویدئو بیشتر از حد مجاز است"
   },
+  "error.inquiry.token.failed": {
+    "en": "Unable to generate inquiry token",
+    "fa": "امکان دریافت توکن استعلام وجود ندارد"
+  },
+  "error.inquiry.token.required": {
+    "en": "Inquiry token must be provided",
+    "fa": "توکن استعلام باید فراهم شود"
+  },
   "error.id.pages.required": {
     "en": "At least one ID page must be provided",
     "fa": "حداقل یک صفحه شناسنامه باید بارگذاری شود"
