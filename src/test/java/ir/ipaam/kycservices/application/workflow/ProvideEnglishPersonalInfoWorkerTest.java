@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,9 @@ import static org.mockito.Mockito.*;
 class ProvideEnglishPersonalInfoWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
-    private final ProvideEnglishPersonalInfoWorker worker = new ProvideEnglishPersonalInfoWorker(kycUserTasks);
+    private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
+    private final ProvideEnglishPersonalInfoWorker worker =
+            new ProvideEnglishPersonalInfoWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDelegatesToService() {
@@ -33,6 +36,7 @@ class ProvideEnglishPersonalInfoWorkerTest {
 
         verify(kycUserTasks).provideEnglishPersonalInfo("John", "Doe", "john.doe@example.com", "0912", "proc-1");
         assertEquals(true, result.get("englishPersonalInfoProvided"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -51,6 +55,7 @@ class ProvideEnglishPersonalInfoWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -72,5 +77,9 @@ class ProvideEnglishPersonalInfoWorkerTest {
 
         WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
         assertEquals(WORKFLOW_ENGLISH_INFO_FAILED, exception.getMessage());
+        verify(kycServiceTasks).logFailureAndRetry(
+                ProvideEnglishPersonalInfoWorker.STEP_NAME,
+                WORKFLOW_ENGLISH_INFO_FAILED,
+                "proc-3");
     }
 }

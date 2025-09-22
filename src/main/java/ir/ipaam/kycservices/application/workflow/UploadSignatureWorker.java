@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,15 +20,18 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_SIGNATURE_UP
 public class UploadSignatureWorker {
 
     private static final Logger log = LoggerFactory.getLogger(UploadSignatureWorker.class);
+    static final String STEP_NAME = "SIGNATURE_UPLOADED";
 
     private final KycUserTasks kycUserTasks;
+    private final KycServiceTasks kycServiceTasks;
 
     @JobWorker(type = "upload-signature")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
+        String processInstanceId = null;
         try {
             byte[] signature = extractBinary(variables.get("signatureImage"), "signatureImage");
-            String processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
+            processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
 
             kycUserTasks.uploadSignature(signature, processInstanceId);
             return Map.of("signatureUploaded", true);
@@ -35,8 +39,20 @@ public class UploadSignatureWorker {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
         } catch (RuntimeException e) {
+            logFailure(processInstanceId);
             log.error("Failed to upload signature for job {}: {}", job.getKey(), WORKFLOW_SIGNATURE_UPLOAD_FAILED, e);
             throw new WorkflowTaskException(WORKFLOW_SIGNATURE_UPLOAD_FAILED, e);
+        }
+    }
+
+    private void logFailure(String processInstanceId) {
+        if (processInstanceId == null || processInstanceId.isBlank()) {
+            return;
+        }
+        try {
+            kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_SIGNATURE_UPLOAD_FAILED, processInstanceId);
+        } catch (RuntimeException loggingError) {
+            log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
         }
     }
 

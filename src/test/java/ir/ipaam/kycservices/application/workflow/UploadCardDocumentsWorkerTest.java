@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,7 +23,8 @@ import static org.mockito.Mockito.*;
 class UploadCardDocumentsWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
-    private final UploadCardDocumentsWorker worker = new UploadCardDocumentsWorker(kycUserTasks);
+    private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
+    private final UploadCardDocumentsWorker worker = new UploadCardDocumentsWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDelegatesToService() {
@@ -43,6 +45,7 @@ class UploadCardDocumentsWorkerTest {
 
         verify(kycUserTasks).uploadCardDocuments(frontBytes, backBytes, "proc-1");
         assertTrue((Boolean) result.get("cardDocumentsUploaded"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -57,6 +60,7 @@ class UploadCardDocumentsWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -73,6 +77,7 @@ class UploadCardDocumentsWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -100,6 +105,7 @@ class UploadCardDocumentsWorkerTest {
         assertTrue(backCaptor.getValue().length <= UploadCardDocumentsWorker.MAX_IMAGE_SIZE_BYTES);
         assertTrue(frontCaptor.getValue().length < large.length);
         assertTrue(backCaptor.getValue().length < large.length);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     private byte[] createNoisyPng(int width, int height) throws IOException {
@@ -135,5 +141,9 @@ class UploadCardDocumentsWorkerTest {
 
         WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
         assertEquals(WORKFLOW_CARD_UPLOAD_FAILED, exception.getMessage());
+        verify(kycServiceTasks).logFailureAndRetry(
+                UploadCardDocumentsWorker.STEP_NAME,
+                WORKFLOW_CARD_UPLOAD_FAILED,
+                "proc-3");
     }
 }

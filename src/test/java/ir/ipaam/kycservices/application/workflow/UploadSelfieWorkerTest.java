@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,8 @@ import static org.mockito.Mockito.*;
 class UploadSelfieWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
-    private final UploadSelfieWorker worker = new UploadSelfieWorker(kycUserTasks);
+    private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
+    private final UploadSelfieWorker worker = new UploadSelfieWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDecodesBase64AndDelegates() {
@@ -34,6 +36,7 @@ class UploadSelfieWorkerTest {
 
         verify(kycUserTasks).uploadSelfie(selfieBytes, "proc-1");
         assertEquals(true, result.get("selfieUploaded"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -52,6 +55,7 @@ class UploadSelfieWorkerTest {
 
         verify(kycUserTasks).uploadSelfie(selfieBytes, "proc-2");
         assertEquals(true, result.get("selfieUploaded"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -65,6 +69,7 @@ class UploadSelfieWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -79,6 +84,7 @@ class UploadSelfieWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -96,5 +102,9 @@ class UploadSelfieWorkerTest {
 
         WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
         assertEquals(WORKFLOW_SELFIE_UPLOAD_FAILED, exception.getMessage());
+        verify(kycServiceTasks).logFailureAndRetry(
+                UploadSelfieWorker.STEP_NAME,
+                WORKFLOW_SELFIE_UPLOAD_FAILED,
+                "proc-5");
     }
 }

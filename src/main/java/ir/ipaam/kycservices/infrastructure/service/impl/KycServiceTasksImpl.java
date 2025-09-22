@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
+import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
@@ -60,7 +61,17 @@ public class KycServiceTasksImpl implements KycServiceTasks {
 
     @Override
     public void logFailureAndRetry(String stepName, String reason, String processInstanceId) {
-        // TODO: implement integration
+        if (commandGateway == null) {
+            log.warn("CommandGateway not initialized, unable to log failure for process {}", processInstanceId);
+            return;
+        }
+
+        UpdateKycStatusCommand command = new UpdateKycStatusCommand(
+                processInstanceId,
+                reason,
+                stepName,
+                "FAILED");
+        commandGateway.sendAndWait(command);
     }
 
     @Override

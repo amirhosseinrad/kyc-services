@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -17,14 +18,17 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ACCEPT_CONSE
 public class AcceptConsentWorker {
 
     private static final Logger log = LoggerFactory.getLogger(AcceptConsentWorker.class);
+    static final String STEP_NAME = "CONSENT_ACCEPTED";
 
     private final KycUserTasks kycUserTasks;
+    private final KycServiceTasks kycServiceTasks;
 
     @JobWorker(type = "accept-consent")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
+        String processInstanceId = null;
         try {
-            String processInstanceId = extractString(variables.get("processInstanceId"), "processInstanceId");
+            processInstanceId = extractString(variables.get("processInstanceId"), "processInstanceId");
             String termsVersion = extractString(variables.get("termsVersion"), "termsVersion");
             boolean accepted = extractBoolean(variables.get("accepted"), "accepted");
 
@@ -34,8 +38,20 @@ public class AcceptConsentWorker {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
         } catch (RuntimeException e) {
+            logFailure(processInstanceId);
             log.error("Failed to accept consent for job {}: {}", job.getKey(), WORKFLOW_ACCEPT_CONSENT_FAILED, e);
             throw new WorkflowTaskException(WORKFLOW_ACCEPT_CONSENT_FAILED, e);
+        }
+    }
+
+    private void logFailure(String processInstanceId) {
+        if (processInstanceId == null || processInstanceId.isBlank()) {
+            return;
+        }
+        try {
+            kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_ACCEPT_CONSENT_FAILED, processInstanceId);
+        } catch (RuntimeException loggingError) {
+            log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
         }
     }
 

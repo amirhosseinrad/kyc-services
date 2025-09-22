@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -17,7 +18,8 @@ import static org.mockito.Mockito.*;
 class UploadIdPagesWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
-    private final UploadIdPagesWorker worker = new UploadIdPagesWorker(kycUserTasks);
+    private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
+    private final UploadIdPagesWorker worker = new UploadIdPagesWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDelegatesToService() {
@@ -45,6 +47,7 @@ class UploadIdPagesWorkerTest {
         assertArrayEquals(page1, captured.get(0));
         assertArrayEquals(page2, captured.get(1));
         assertTrue((Boolean) result.get("idPagesUploaded"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -56,6 +59,7 @@ class UploadIdPagesWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -71,6 +75,7 @@ class UploadIdPagesWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -92,6 +97,7 @@ class UploadIdPagesWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -109,5 +115,9 @@ class UploadIdPagesWorkerTest {
 
         WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
         assertEquals(WORKFLOW_ID_UPLOAD_FAILED, exception.getMessage());
+        verify(kycServiceTasks).logFailureAndRetry(
+                UploadIdPagesWorker.STEP_NAME,
+                WORKFLOW_ID_UPLOAD_FAILED,
+                "proc-4");
     }
 }

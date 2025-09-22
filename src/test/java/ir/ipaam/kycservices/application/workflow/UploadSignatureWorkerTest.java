@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,8 @@ import static org.mockito.Mockito.*;
 class UploadSignatureWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
-    private final UploadSignatureWorker worker = new UploadSignatureWorker(kycUserTasks);
+    private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
+    private final UploadSignatureWorker worker = new UploadSignatureWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDecodesBase64AndDelegates() {
@@ -34,6 +36,7 @@ class UploadSignatureWorkerTest {
 
         verify(kycUserTasks).uploadSignature(signatureBytes, "proc-1");
         assertEquals(true, result.get("signatureUploaded"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -52,6 +55,7 @@ class UploadSignatureWorkerTest {
 
         verify(kycUserTasks).uploadSignature(signatureBytes, "proc-2");
         assertEquals(true, result.get("signatureUploaded"));
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -65,6 +69,7 @@ class UploadSignatureWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -79,6 +84,7 @@ class UploadSignatureWorkerTest {
 
         assertThrows(IllegalArgumentException.class, () -> worker.handle(job));
         verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
     }
 
     @Test
@@ -96,5 +102,9 @@ class UploadSignatureWorkerTest {
 
         WorkflowTaskException exception = assertThrows(WorkflowTaskException.class, () -> worker.handle(job));
         assertEquals(WORKFLOW_SIGNATURE_UPLOAD_FAILED, exception.getMessage());
+        verify(kycServiceTasks).logFailureAndRetry(
+                UploadSignatureWorker.STEP_NAME,
+                WORKFLOW_SIGNATURE_UPLOAD_FAILED,
+                "proc-5");
     }
 }

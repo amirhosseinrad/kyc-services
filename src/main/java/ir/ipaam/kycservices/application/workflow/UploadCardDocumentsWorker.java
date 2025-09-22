@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.application.workflow;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
 import ir.ipaam.kycservices.common.image.ImageCompressionHelper;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -20,18 +21,21 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_CARD_UPLOAD_
 public class UploadCardDocumentsWorker {
 
     static final long MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB per image
+    static final String STEP_NAME = "CARD_DOCUMENTS_UPLOADED";
 
     private static final Logger log = LoggerFactory.getLogger(UploadCardDocumentsWorker.class);
 
     private final KycUserTasks kycUserTasks;
+    private final KycServiceTasks kycServiceTasks;
 
     @JobWorker(type = "upload-card-documents")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
+        String processInstanceId = null;
         try {
             byte[] front = extractBinary(variables.get("frontImage"), "frontImage");
             byte[] back = extractBinary(variables.get("backImage"), "backImage");
-            String processInstanceId = (String) variables.get("processInstanceId");
+            processInstanceId = (String) variables.get("processInstanceId");
             if (processInstanceId == null || processInstanceId.isBlank()) {
                 throw new IllegalArgumentException("processInstanceId must be provided");
             }
@@ -45,8 +49,20 @@ public class UploadCardDocumentsWorker {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
         } catch (RuntimeException e) {
+            logFailure(processInstanceId);
             log.error("Failed to upload card documents for job {}: {}", job.getKey(), WORKFLOW_CARD_UPLOAD_FAILED, e);
             throw new WorkflowTaskException(WORKFLOW_CARD_UPLOAD_FAILED, e);
+        }
+    }
+
+    private void logFailure(String processInstanceId) {
+        if (processInstanceId == null || processInstanceId.isBlank()) {
+            return;
+        }
+        try {
+            kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_CARD_UPLOAD_FAILED, processInstanceId);
+        } catch (RuntimeException loggingError) {
+            log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
         }
     }
 

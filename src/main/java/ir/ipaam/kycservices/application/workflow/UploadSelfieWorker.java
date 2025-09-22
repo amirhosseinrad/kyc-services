@@ -2,6 +2,7 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
+import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,17 +20,20 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_SELFIE_UPLOA
 public class UploadSelfieWorker {
 
     static final long MAX_SELFIE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+    static final String STEP_NAME = "SELFIE_UPLOADED";
 
     private static final Logger log = LoggerFactory.getLogger(UploadSelfieWorker.class);
 
     private final KycUserTasks kycUserTasks;
+    private final KycServiceTasks kycServiceTasks;
 
     @JobWorker(type = "upload-selfie")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
+        String processInstanceId = null;
         try {
             byte[] selfie = extractBinary(variables.get("selfieImage"), "selfieImage");
-            String processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
+            processInstanceId = extractProcessInstanceId(variables.get("processInstanceId"));
 
             kycUserTasks.uploadSelfie(selfie, processInstanceId);
             return Map.of("selfieUploaded", true);
@@ -37,8 +41,20 @@ public class UploadSelfieWorker {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
         } catch (RuntimeException e) {
+            logFailure(processInstanceId);
             log.error("Failed to upload selfie for job {}: {}", job.getKey(), WORKFLOW_SELFIE_UPLOAD_FAILED, e);
             throw new WorkflowTaskException(WORKFLOW_SELFIE_UPLOAD_FAILED, e);
+        }
+    }
+
+    private void logFailure(String processInstanceId) {
+        if (processInstanceId == null || processInstanceId.isBlank()) {
+            return;
+        }
+        try {
+            kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_SELFIE_UPLOAD_FAILED, processInstanceId);
+        } catch (RuntimeException loggingError) {
+            log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
         }
     }
 
