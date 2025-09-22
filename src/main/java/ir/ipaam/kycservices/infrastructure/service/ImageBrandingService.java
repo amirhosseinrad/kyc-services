@@ -123,7 +123,7 @@ public class ImageBrandingService {
     private BufferedImage redrawWithBranding(BufferedImage original, boolean supportsAlpha, String brandingLabel) {
         int cardWidth = CARD_WIDTH_PX;
         int cardHeight = CARD_HEIGHT_PX;
-        int shadowOffset = Math.max(10, Math.min(18, Math.round(Math.max(cardWidth, cardHeight) * 0.02f)));
+        int shadowOffset = Math.max(1, Math.min(1, Math.round(Math.max(cardWidth, cardHeight) * 0.02f)));
         int cardSurfaceWidth = Math.max(1, cardWidth - shadowOffset);
         int cardSurfaceHeight = Math.max(1, cardHeight - shadowOffset);
         int cornerRadius = Math.max(24, Math.min(48, Math.round(Math.max(cardSurfaceWidth, cardSurfaceHeight) * 0.12f)));
@@ -155,14 +155,14 @@ public class ImageBrandingService {
             g2d.setColor(Color.WHITE);
             g2d.fillRoundRect(0, 0, cardSurfaceWidth, cardSurfaceHeight, cornerRadius, cornerRadius);
 
-            int sidePadding = Math.max(32, Math.round(cardSurfaceWidth * 0.08f));
+            int sidePadding = Math.max(32, Math.round(cardSurfaceWidth * 0.04f));
             int maxSidePadding = Math.max((cardSurfaceWidth - 1) / 2, 0);
             if (sidePadding > maxSidePadding) {
                 sidePadding = maxSidePadding;
             }
 
-            int topPadding = Math.max(28, Math.round(cardSurfaceHeight * 0.08f));
-            int bottomPadding = Math.max(96, Math.round(cardSurfaceHeight * 0.18f));
+            int topPadding = Math.max(10, Math.round(cardSurfaceHeight * 0.02f));
+            int bottomPadding = Math.max(50, Math.round(cardSurfaceHeight * 0.02f));
             int totalVerticalPadding = topPadding + bottomPadding;
             if (totalVerticalPadding >= cardSurfaceHeight) {
                 int allowableTotal = Math.max(cardSurfaceHeight - 1, 1);
