@@ -155,6 +155,10 @@
     "en": "KYC process has not been started",
     "fa": "فرآیند احراز هویت آغاز نشده است"
   },
+  "error.kyc.status.queryFailed": {
+    "en": "Unable to query KYC status",
+    "fa": "امکان دریافت وضعیت احراز هویت وجود ندارد"
+  },
   "error.kyc.card.descriptorsRequired": {
     "en": "Document descriptors must be provided",
     "fa": "توصیف‌گرهای اسناد کارت باید ارائه شود"

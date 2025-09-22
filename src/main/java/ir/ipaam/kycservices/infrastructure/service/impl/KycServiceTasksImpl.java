@@ -6,10 +6,18 @@ import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseTypes;
+import org.axonframework.queryhandling.NoHandlerForQueryException;
+import org.axonframework.queryhandling.QueryDispatchException;
+import org.axonframework.queryhandling.QueryExecutionException;
 import org.axonframework.queryhandling.QueryGateway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_STATUS_QUERY_FAILED;
+
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 @Service
 @RequiredArgsConstructor
@@ -28,11 +36,26 @@ public class KycServiceTasksImpl implements KycServiceTasks {
         }
         try {
             return queryGateway.query(new FindKycStatusQuery(nationalCode),
-                    ResponseTypes.instanceOf(ProcessInstance.class)).join();
-        } catch (Exception e) {
+                    ResponseTypes.instanceOf(ProcessInstance.class)).get();
+        } catch (NoHandlerForQueryException | QueryDispatchException | QueryExecutionException e) {
             log.error("Failed to query KYC status", e);
-            return null;
+            throw queryFailed(e);
+        } catch (CompletionException e) {
+            log.error("Failed to query KYC status", e);
+            throw queryFailed(e);
+        } catch (ExecutionException e) {
+            log.error("Failed to query KYC status", e);
+            throw queryFailed(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Failed to query KYC status", e);
+            throw queryFailed(e);
         }
+    }
+
+    private IllegalStateException queryFailed(Throwable e) {
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        return new IllegalStateException(KYC_STATUS_QUERY_FAILED, cause);
     }
 
     @Override

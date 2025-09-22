@@ -55,6 +55,7 @@ public final class ErrorMessageKeys {
     public static final String TELEPHONE_REQUIRED = "error.englishInfo.telephone.required";
 
     public static final String KYC_NOT_STARTED = "error.kyc.notStarted";
+    public static final String KYC_STATUS_QUERY_FAILED = "error.kyc.status.queryFailed";
     public static final String CARD_DESCRIPTORS_REQUIRED = "error.kyc.card.descriptorsRequired";
     public static final String ID_DESCRIPTORS_REQUIRED = "error.kyc.id.descriptorsRequired";
     public static final String ID_DESCRIPTOR_LIMIT = "error.kyc.id.descriptorLimit";
