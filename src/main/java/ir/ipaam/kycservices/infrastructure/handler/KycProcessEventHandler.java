@@ -195,21 +195,7 @@ public class KycProcessEventHandler {
             log.warn("Received ID pages event without descriptors for process {}", event.processInstanceId());
             return;
         }
-
-        String token = inquiryTokenService.generateToken(event.processInstanceId())
-                .orElseThrow(() -> new InquiryTokenException(INQUIRY_TOKEN_FAILED));
         List<String> inquiryIds = new ArrayList<>(Collections.nCopies(descriptors.size(), null));
-        for (int i = 0; i < descriptors.size(); i++) {
-            int documentType = INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE + i;
-            String inquiryId = uploadInquiryCardDocument(
-                    token,
-                    descriptors.get(i),
-                    documentType,
-                    event.processInstanceId(),
-                    "ID page " + (i + 1));
-            inquiryIds.set(i, inquiryId);
-        }
-
         ProcessInstance processInstance = findProcessInstance(event.processInstanceId());
         List<DocumentMetadata> metadataList = new ArrayList<>(descriptors.size());
         for (int i = 0; i < descriptors.size(); i++) {
@@ -417,58 +403,6 @@ public class KycProcessEventHandler {
             return resultMessage.substring(index + 1).trim();
         }
         return resultMessage.trim();
-    }
-
-    private String uploadInquiryCardDocument(String token, DocumentPayloadDescriptor descriptor, int documentType,
-                                             String processInstanceId, String logContext) {
-        SavePersonDocumentRequest.FileData fileData = new SavePersonDocumentRequest.FileData(
-                FILE_DATA_PART_NAME,
-                descriptor.filename(),
-                Base64.getEncoder().encodeToString(descriptor.data()));
-
-        SavePersonDocumentRequest request = new SavePersonDocumentRequest(token, documentType, fileData);
-
-        SavePersonDocumentResponse response = inquiryWebClient.post()
-                .uri("/api/Inquiry/SavePersonDocument")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(SavePersonDocumentResponse.class)
-                .onErrorResume(throwable -> {
-                    log.error("Failed to upload {} to inquiry service for process {}", logContext, processInstanceId, throwable);
-                    return Mono.error(throwable);
-                })
-                .block();
-
-        if (response == null) {
-            log.warn("Inquiry service returned empty response for process {} when uploading {}", processInstanceId, logContext);
-            return null;
-        }
-
-        Integer responseCode = response.getResponseCode();
-        if (responseCode != null && responseCode != 0) {
-            String message = response.getResponseMessage();
-            if (response.getException() != null && response.getException().getErrorMessage() != null) {
-                message = response.getException().getErrorMessage();
-            }
-            log.error("Inquiry service reported error code {} for process {} when uploading {}: {}",
-                    responseCode, processInstanceId, logContext, message);
-            return null;
-        }
-
-        String result = response.getResult();
-        if (result == null || result.isBlank()) {
-            log.warn("Inquiry service returned empty identifier for process {} when uploading {}", processInstanceId, logContext);
-            return null;
-        }
-
-        String documentId = extractResultId(result);
-        if (documentId == null || documentId.isBlank()) {
-            log.warn("Inquiry service returned invalid identifier for process {} when uploading {}", processInstanceId, logContext);
-            return null;
-        }
-
-        return documentId;
     }
 
     private ByteArrayResource asResource(byte[] data, String filename) {
