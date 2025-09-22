@@ -162,5 +162,17 @@
   "error.document.notFound": {
     "en": "Document not found",
     "fa": "سند مورد نظر یافت نشد"
+  },
+  "error.storage.descriptor.required": {
+    "en": "Document descriptor must be provided",
+    "fa": "توصیف‌گر سند باید ارائه شود"
+  },
+  "error.storage.documentType.required": {
+    "en": "documentType must be provided",
+    "fa": "نوع سند باید مشخص شود"
+  },
+  "error.storage.descriptor.dataRequired": {
+    "en": "Document descriptor data must not be empty",
+    "fa": "داده‌های توصیف‌گر سند نباید خالی باشد"
   }
 }

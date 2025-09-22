@@ -57,4 +57,8 @@ public final class ErrorMessageKeys {
     public static final String CONSENT_NOT_ACCEPTED = "error.kyc.consent.notAccepted";
 
     public static final String DOCUMENT_NOT_FOUND = "error.document.notFound";
+
+    public static final String STORAGE_DESCRIPTOR_REQUIRED = "error.storage.descriptor.required";
+    public static final String STORAGE_DOCUMENT_TYPE_REQUIRED = "error.storage.documentType.required";
+    public static final String STORAGE_DESCRIPTOR_DATA_REQUIRED = "error.storage.descriptor.dataRequired";
 }
