@@ -9,7 +9,8 @@ import java.util.Locale;
  * Enumeration of supported document types handled by the KYC services.
  */
 public enum DocumentType {
-    CARD,
+    CARD_BACK,
+    CARD_FRONT,
     ID_BOOKLET,
     PHOTO,
     VIDEO,
