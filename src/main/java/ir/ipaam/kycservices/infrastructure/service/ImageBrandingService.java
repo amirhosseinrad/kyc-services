@@ -8,6 +8,8 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -77,7 +79,8 @@ public class ImageBrandingService {
 
             boolean supportsAlpha = supportsAlpha(formatName);
             String brandingLabel = buildBrandingLabel();
-            BufferedImage branded = redrawWithBranding(original, supportsAlpha, brandingLabel);
+            BrandingRender render = redrawWithBranding(original, supportsAlpha, brandingLabel);
+            BufferedImage branded = render.image();
 
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 boolean written = ImageIO.write(branded, formatName, baos);
@@ -85,7 +88,7 @@ public class ImageBrandingService {
                     log.warn("ImageIO failed to encode {} as {}", filename, formatName);
                     return BrandingResult.unmodified(payload, formatName);
                 }
-                return new BrandingResult(baos.toByteArray(), true, formatName, brandingLabel);
+                return new BrandingResult(baos.toByteArray(), true, formatName, brandingLabel, render.textWidth());
             }
         } catch (Exception ex) {
             log.warn("Failed to brand image {}: {}", filename, ex.getMessage());
@@ -114,7 +117,7 @@ public class ImageBrandingService {
         return "png".equals(formatName);
     }
 
-    private BufferedImage redrawWithBranding(BufferedImage original, boolean supportsAlpha, String brandingLabel) {
+    private BrandingRender redrawWithBranding(BufferedImage original, boolean supportsAlpha, String brandingLabel) {
         int sidePadding = Math.max(32, Math.round(original.getWidth() * 0.08f));
         int topPadding = Math.max(28, Math.round(original.getHeight() * 0.08f));
         int bottomPadding = Math.max(96, Math.round(original.getHeight() * 0.18f));
@@ -160,12 +163,50 @@ public class ImageBrandingService {
             g2d.setColor(new Color(235, 235, 235));
             g2d.drawLine(sidePadding, textAreaTop, cardWidth - sidePadding, textAreaTop);
 
-            int fontSize = Math.max(18, Math.min(36, textAreaHeight - 32));
-            Font font = new Font(Font.SANS_SERIF, Font.BOLD, fontSize);
-            g2d.setFont(font);
+            int availableWidth = cardWidth - sidePadding * 2;
+            int maxTextHeight = Math.max(24, textAreaHeight - 16);
+            FontRenderContext fontRenderContext = g2d.getFontRenderContext();
 
+            Font font = new Font(Font.SANS_SERIF, Font.BOLD, 12);
+            Rectangle2D bounds = font.getStringBounds(brandingLabel, fontRenderContext);
+            while ((bounds.getHeight() > maxTextHeight || bounds.getWidth() > availableWidth) && font.getSize2D() > 6f) {
+                font = font.deriveFont(font.getSize2D() - 1f);
+                bounds = font.getStringBounds(brandingLabel, fontRenderContext);
+            }
+
+            float increment = 1.0f;
+            while (increment >= 0.1f) {
+                boolean grown = false;
+                while (true) {
+                    Font candidate = font.deriveFont(font.getSize2D() + increment);
+                    Rectangle2D candidateBounds = candidate.getStringBounds(brandingLabel, fontRenderContext);
+                    if (candidateBounds.getHeight() > maxTextHeight || candidateBounds.getWidth() > availableWidth) {
+                        break;
+                    }
+                    font = candidate;
+                    bounds = candidateBounds;
+                    grown = true;
+                }
+                if (!grown) {
+                    increment /= 2f;
+                }
+            }
+
+            double textWidthExact = bounds.getWidth();
+            if (textWidthExact < availableWidth) {
+                float targetSize = (float) (font.getSize2D() * (availableWidth / textWidthExact));
+                Font candidate = font.deriveFont(targetSize);
+                Rectangle2D candidateBounds = candidate.getStringBounds(brandingLabel, fontRenderContext);
+                if (candidateBounds.getHeight() <= maxTextHeight && candidateBounds.getWidth() <= availableWidth) {
+                    font = candidate;
+                    bounds = candidateBounds;
+                    textWidthExact = bounds.getWidth();
+                }
+            }
+
+            g2d.setFont(font);
             FontMetrics metrics = g2d.getFontMetrics(font);
-            int textWidth = metrics.stringWidth(brandingLabel);
+            int textWidth = Math.min(availableWidth, (int) Math.round(textWidthExact));
             int textX = (cardWidth - textWidth) / 2;
             int minTextX = sidePadding;
             int maxTextX = cardWidth - sidePadding - textWidth;
@@ -180,15 +221,19 @@ public class ImageBrandingService {
 
             g2d.setColor(new Color(66, 133, 244));
             g2d.drawString(brandingLabel, textX, textY);
+
+            return new BrandingRender(canvas, textWidth);
         } finally {
             g2d.dispose();
         }
-        return canvas;
     }
 
-    public record BrandingResult(byte[] data, boolean branded, String format, String label) {
+    private record BrandingRender(BufferedImage image, int textWidth) {
+    }
+
+    public record BrandingResult(byte[] data, boolean branded, String format, String label, Integer textWidth) {
         public static BrandingResult unmodified(byte[] data, String format) {
-            return new BrandingResult(data, false, format, null);
+            return new BrandingResult(data, false, format, null, null);
         }
     }
 }

@@ -43,10 +43,15 @@ class ImageBrandingServiceTest {
         assertThat(result.data()).isNotNull();
         assertThat(result.data().length).isGreaterThan(payload.length);
         assertThat(result.label()).isEqualTo("Uploaded by KYC Service - 2024-05-12 10:15");
+        assertThat(result.textWidth()).isNotNull();
 
         BufferedImage branded = ImageIO.read(new ByteArrayInputStream(result.data()));
         assertThat(branded.getWidth()).isGreaterThan(original.getWidth());
         assertThat(branded.getHeight()).isGreaterThan(original.getHeight());
+
+        int sidePadding = Math.max(32, Math.round(original.getWidth() * 0.08f));
+        int expectedBrandingWidth = (original.getWidth() + sidePadding * 2) - sidePadding * 2;
+        assertThat(result.textWidth()).isEqualTo(expectedBrandingWidth);
     }
 
     @Test
@@ -58,5 +63,6 @@ class ImageBrandingServiceTest {
         assertThat(result.branded()).isFalse();
         assertThat(result.data()).containsExactly(payload);
         assertThat(result.label()).isNull();
+        assertThat(result.textWidth()).isNull();
     }
 }
