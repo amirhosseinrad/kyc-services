@@ -5,7 +5,6 @@ import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -41,10 +40,12 @@ class DocumentRetrievalServiceTest {
         document.setStoragePath("bucket/object");
 
         document.setVerified(true);
+        document.setEncrypted(false);
+        document.setEncryptionIv(null);
 
         when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.of(document));
-        when(minioStorageService.download("bucket/object")).thenReturn(new byte[]{1, 2, 3});
+        when(minioStorageService.download("bucket/object", false, null)).thenReturn(new byte[]{1, 2, 3});
 
         DocumentRetrievalService.RetrievedDocument result =
                 service.retrieveLatestDocument("0012345678", "PHOTO");
@@ -52,9 +53,7 @@ class DocumentRetrievalServiceTest {
         assertThat(result.documentType()).isEqualTo("PHOTO");
         assertThat(result.content()).containsExactly(1, 2, 3);
 
-        ArgumentCaptor<String> storagePathCaptor = ArgumentCaptor.forClass(String.class);
-        verify(minioStorageService).download(storagePathCaptor.capture());
-        assertThat(storagePathCaptor.getValue()).isEqualTo("bucket/object");
+        verify(minioStorageService).download("bucket/object", false, null);
     }
 
     @Test
@@ -75,10 +74,12 @@ class DocumentRetrievalServiceTest {
         document.setStoragePath("bucket/object");
 
         document.setVerified(true);
+        document.setEncrypted(false);
+        document.setEncryptionIv(null);
 
         when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.of(document));
-        when(minioStorageService.download("bucket/object"))
+        when(minioStorageService.download("bucket/object", false, null))
                 .thenThrow(new NoSuchElementException("missing"));
 
         assertThatThrownBy(() -> service.retrieveLatestDocument("0012345678", "PHOTO"))
@@ -91,6 +92,8 @@ class DocumentRetrievalServiceTest {
         document.setType("PHOTO");
         document.setStoragePath("bucket/object");
         document.setVerified(false);
+        document.setEncrypted(false);
+        document.setEncryptionIv(null);
 
         when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
                 .thenReturn(Optional.of(document));
@@ -99,5 +102,25 @@ class DocumentRetrievalServiceTest {
                 .isInstanceOf(DocumentNotFoundException.class);
 
         verifyNoInteractions(minioStorageService);
+    }
+
+    @Test
+    void retrieveLatestDocumentDecryptsEncryptedContent() {
+        Document document = new Document();
+        document.setType("PHOTO");
+        document.setStoragePath("bucket/object");
+        document.setVerified(true);
+        document.setEncrypted(true);
+        document.setEncryptionIv("YWJj");
+
+        when(documentRepository.findTopByTypeAndProcess_Customer_NationalCodeAndVerifiedTrueOrderByIdDesc("PHOTO", "0012345678"))
+                .thenReturn(Optional.of(document));
+        when(minioStorageService.download("bucket/object", true, "YWJj")).thenReturn(new byte[]{4, 5, 6});
+
+        DocumentRetrievalService.RetrievedDocument result =
+                service.retrieveLatestDocument("0012345678", "PHOTO");
+
+        assertThat(result.content()).containsExactly(4, 5, 6);
+        verify(minioStorageService).download("bucket/object", true, "YWJj");
     }
 }

@@ -31,7 +31,7 @@ public class DocumentRetrievalService {
 
         byte[] content;
         try {
-            content = minioStorageService.download(storagePath);
+            content = minioStorageService.download(storagePath, document.isEncrypted(), document.getEncryptionIv());
         } catch (NoSuchElementException | IllegalArgumentException ex) {
             throw new DocumentNotFoundException(ErrorMessageKeys.DOCUMENT_NOT_FOUND, ex);
         }

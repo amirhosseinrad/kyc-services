@@ -10,4 +10,6 @@ public class DocumentMetadata {
     private String hash;
     private String inquiryDocumentId;
     private boolean branded;
+    private boolean encrypted;
+    private String encryptionIv;
 }

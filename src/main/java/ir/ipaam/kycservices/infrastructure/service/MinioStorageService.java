@@ -19,6 +19,7 @@ import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -36,6 +37,7 @@ public class MinioStorageService {
     private final String biometricBucket;
     private final String signatureBucket;
     private final ImageBrandingService imageBrandingService;
+    private final DocumentCryptoService documentCryptoService;
     private final Set<String> ensuredBuckets = ConcurrentHashMap.newKeySet();
 
     public MinioStorageService(
@@ -44,13 +46,15 @@ public class MinioStorageService {
             @Value("${storage.minio.bucket.id}") String idBucket,
             @Value("${storage.minio.bucket.biometric}") String biometricBucket,
             @Value("${storage.minio.bucket.signature}") String signatureBucket,
-            ImageBrandingService imageBrandingService) {
+            ImageBrandingService imageBrandingService,
+            DocumentCryptoService documentCryptoService) {
         this.minioClient = minioClient;
         this.cardBucket = cardBucket;
         this.idBucket = idBucket;
         this.biometricBucket = biometricBucket;
         this.signatureBucket = signatureBucket;
         this.imageBrandingService = imageBrandingService;
+        this.documentCryptoService = documentCryptoService;
     }
 
     public DocumentMetadata upload(DocumentPayloadDescriptor descriptor, String documentType, String processInstanceId) {
@@ -82,13 +86,17 @@ public class MinioStorageService {
         String bucket = determineBucket(documentType);
         String objectName = buildObjectName(processInstanceId, documentType, descriptor.filename());
 
+        String hash = hash(data);
+        DocumentCryptoService.EncryptionResult encryption = documentCryptoService.encrypt(data);
+        byte[] payload = encryption.payload();
+
         ensureBucketExists(bucket);
-        try (ByteArrayInputStream stream = new ByteArrayInputStream(data)) {
+        try (ByteArrayInputStream stream = new ByteArrayInputStream(payload)) {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucket)
                             .object(objectName)
-                            .stream(stream, data.length, -1)
+                            .stream(stream, payload.length, -1)
                             .contentType(MediaType.APPLICATION_OCTET_STREAM_VALUE)
                             .build()
             );
@@ -99,12 +107,41 @@ public class MinioStorageService {
 
         DocumentMetadata metadata = new DocumentMetadata();
         metadata.setPath(bucket + "/" + objectName);
-        metadata.setHash(hash(data));
+        metadata.setHash(hash);
         metadata.setBranded(branded);
+        metadata.setEncrypted(encryption.encrypted());
+        if (encryption.encrypted() && encryption.initializationVector() != null) {
+            metadata.setEncryptionIv(Base64.getEncoder().encodeToString(encryption.initializationVector()));
+        }
         return metadata;
     }
 
     public byte[] download(String storagePath) {
+        return download(storagePath, false, null);
+    }
+
+    public byte[] download(String storagePath, boolean encrypted, String base64InitializationVector) {
+        byte[] data = fetchObject(storagePath);
+
+        if (!encrypted) {
+            return data;
+        }
+
+        if (base64InitializationVector == null || base64InitializationVector.isBlank()) {
+            throw new IllegalArgumentException("Initialization vector metadata is required for encrypted objects");
+        }
+
+        byte[] iv;
+        try {
+            iv = Base64.getDecoder().decode(base64InitializationVector);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Initialization vector metadata is not valid Base64", ex);
+        }
+
+        return documentCryptoService.decrypt(data, iv);
+    }
+
+    private byte[] fetchObject(String storagePath) {
         if (storagePath == null || storagePath.isBlank()) {
             throw new IllegalArgumentException("storagePath must not be blank");
         }
