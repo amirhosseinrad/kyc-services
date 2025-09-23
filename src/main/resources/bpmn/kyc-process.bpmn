@@ -18,6 +18,8 @@
     <bpmn:task id="Activity_0c3vph7" name="OCR extraction of text">
       <bpmn:incoming>Flow_04ijzlb</bpmn:incoming>
       <bpmn:incoming>Flow_197j0mu</bpmn:incoming>
+      <bpmn:incoming>Flow_status_card_ocr</bpmn:incoming>
+      <bpmn:incoming>Flow_status_idpages_ocr</bpmn:incoming>
       <bpmn:outgoing>Flow_0noqqub</bpmn:outgoing>
     </bpmn:task>
     <bpmn:task id="Activity_0gugnxi" name="Compare OCR data with provided identity info">
@@ -48,16 +50,58 @@
     </bpmn:task>
     <bpmn:sequenceFlow id="Flow_0hl5zl8" sourceRef="Activity_0wfzi8k" targetRef="Activity_10347zg" />
     <bpmn:sequenceFlow id="Flow_1elia8p" sourceRef="Activity_10347zg" targetRef="Gateway_039mf43" />
-    <bpmn:sequenceFlow id="Flow_0dmbp43" sourceRef="check-kyc-status" targetRef="Activity_0phc2h9" />
+    <bpmn:sequenceFlow id="Flow_0dmbp43" sourceRef="check-kyc-status" targetRef="Gateway_routeByStatus" />
+    <bpmn:exclusiveGateway id="Gateway_routeByStatus" name="route by KYC status" default="Flow_route_consent">
+      <bpmn:incoming>Flow_0dmbp43</bpmn:incoming>
+      <bpmn:outgoing>Flow_route_consent</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_card_gateway</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_card_selfie</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_card_video</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_noncard_video</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_card_ocr</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_noncard_idpages</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_idpages_ocr</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_signature_english</bpmn:outgoing>
+      <bpmn:outgoing>Flow_status_english_complete</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_route_consent" sourceRef="Gateway_routeByStatus" targetRef="Activity_0phc2h9" />
+    <bpmn:sequenceFlow id="Flow_status_card_gateway" sourceRef="Gateway_routeByStatus" targetRef="Gateway_0evrolw">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "CONSENT_ACCEPTED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_card_selfie" sourceRef="Gateway_routeByStatus" targetRef="Activity_1005rxn">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "CARD_DOCUMENTS_UPLOADED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_card_video" sourceRef="Gateway_routeByStatus" targetRef="Activity_uploadVideoCard">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "SELFIE_UPLOADED" and (card = true or card = "true")</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_noncard_video" sourceRef="Gateway_routeByStatus" targetRef="Activity_uploadVideoNonCard">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "SELFIE_UPLOADED" and (card = false or card = "false")</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_card_ocr" sourceRef="Gateway_routeByStatus" targetRef="Activity_0c3vph7">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "VIDEO_UPLOADED" and (card = true or card = "true")</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_noncard_idpages" sourceRef="Gateway_routeByStatus" targetRef="Activity_1j0wll2">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "VIDEO_UPLOADED" and (card = false or card = "false")</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_idpages_ocr" sourceRef="Gateway_routeByStatus" targetRef="Activity_0c3vph7">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "ID_PAGES_UPLOADED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_signature_english" sourceRef="Gateway_routeByStatus" targetRef="Activity_0us5yta">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "SIGNATURE_UPLOADED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_status_english_complete" sourceRef="Gateway_routeByStatus" targetRef="Event_0m1cck6">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "ENGLISH_PERSONAL_INFO_PROVIDED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:serviceTask id="Activity_0phc2h9" name="Consent &#38; Declarations">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="accept-consent" />
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_0dmbp43</bpmn:incoming>
+      <bpmn:incoming>Flow_route_consent</bpmn:incoming>
       <bpmn:outgoing>Flow_0jhb3l4</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_0evrolw" name="New National Card?">
       <bpmn:incoming>Flow_0jhb3l4</bpmn:incoming>
+      <bpmn:incoming>Flow_status_card_gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_0ayjnrf</bpmn:outgoing>
       <bpmn:outgoing>Flow_0prl3kq</bpmn:outgoing>
     </bpmn:exclusiveGateway>
@@ -112,6 +156,7 @@
     <bpmn:sequenceFlow id="Flow_03g3dw4" sourceRef="Activity_1emgltl" targetRef="Activity_1ou5oet" />
     <bpmn:intermediateThrowEvent id="Event_0m1cck6">
       <bpmn:incoming>Flow_1180tca</bpmn:incoming>
+      <bpmn:incoming>Flow_status_english_complete</bpmn:incoming>
     </bpmn:intermediateThrowEvent>
     <bpmn:task id="Activity_0h6mzvy" name="store tracking number for new Card">
       <bpmn:incoming>Flow_0prl3kq</bpmn:incoming>
@@ -133,6 +178,7 @@
         <zeebe:taskDefinition type="upload-video" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1h4d4w1</bpmn:incoming>
+      <bpmn:incoming>Flow_status_noncard_video</bpmn:incoming>
       <bpmn:outgoing>Flow_1q4axgf</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:sequenceFlow id="Flow_1h4d4w1" sourceRef="Activity_0ub0wqi" targetRef="Activity_uploadVideoNonCard" />
@@ -141,6 +187,7 @@
         <zeebe:taskDefinition type="upload-id-pages" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1q4axgf</bpmn:incoming>
+      <bpmn:incoming>Flow_status_noncard_idpages</bpmn:incoming>
       <bpmn:outgoing>Flow_197j0mu</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:sequenceFlow id="Flow_1q4axgf" sourceRef="Activity_uploadVideoNonCard" targetRef="Activity_1j0wll2" />
@@ -149,6 +196,7 @@
         <zeebe:taskDefinition type="upload-selfie" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1gyum9g</bpmn:incoming>
+      <bpmn:incoming>Flow_status_card_selfie</bpmn:incoming>
       <bpmn:outgoing>Flow_0cfcvb9</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:sequenceFlow id="Flow_1gyum9g" sourceRef="Activity_1lbjv3o" targetRef="Activity_1005rxn" />
@@ -157,6 +205,7 @@
         <zeebe:taskDefinition type="upload-video" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0cfcvb9</bpmn:incoming>
+      <bpmn:incoming>Flow_status_card_video</bpmn:incoming>
       <bpmn:outgoing>Flow_04ijzlb</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:sequenceFlow id="Flow_0cfcvb9" sourceRef="Activity_1005rxn" targetRef="Activity_uploadVideoCard" />
@@ -167,6 +216,7 @@
         <zeebe:taskDefinition type="provide-english-personal-info" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1te1f82</bpmn:incoming>
+      <bpmn:incoming>Flow_status_signature_english</bpmn:incoming>
       <bpmn:outgoing>Flow_1180tca</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:sequenceFlow id="Flow_1te1f82" sourceRef="Activity_1ou5oet" targetRef="Activity_0us5yta" />
@@ -296,6 +346,12 @@
         <dc:Bounds x="-170" y="230" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_routeByStatus_di" bpmnElement="Gateway_routeByStatus" isMarkerVisible="true">
+        <dc:Bounds x="-90" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-118" y="305" width="106" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0phc2h9_di" bpmnElement="Activity_0phc2h9">
         <dc:Bounds x="-20" y="230" width="100" height="80" />
         <bpmndi:BPMNLabel />
@@ -322,7 +378,57 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0dmbp43_di" bpmnElement="Flow_0dmbp43">
         <di:waypoint x="-70" y="270" />
+        <di:waypoint x="-40" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_route_consent_di" bpmnElement="Flow_route_consent">
+        <di:waypoint x="-40" y="270" />
         <di:waypoint x="-20" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_card_gateway_di" bpmnElement="Flow_status_card_gateway">
+        <di:waypoint x="-40" y="220" />
+        <di:waypoint x="160" y="220" />
+        <di:waypoint x="160" y="245" />
+        <di:waypoint x="160" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_card_selfie_di" bpmnElement="Flow_status_card_selfie">
+        <di:waypoint x="-40" y="210" />
+        <di:waypoint x="420" y="210" />
+        <di:waypoint x="420" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_card_video_di" bpmnElement="Flow_status_card_video">
+        <di:waypoint x="-40" y="200" />
+        <di:waypoint x="570" y="200" />
+        <di:waypoint x="570" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_noncard_video_di" bpmnElement="Flow_status_noncard_video">
+        <di:waypoint x="-40" y="295" />
+        <di:waypoint x="520" y="295" />
+        <di:waypoint x="520" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_card_ocr_di" bpmnElement="Flow_status_card_ocr">
+        <di:waypoint x="-40" y="205" />
+        <di:waypoint x="720" y="205" />
+        <di:waypoint x="720" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_noncard_idpages_di" bpmnElement="Flow_status_noncard_idpages">
+        <di:waypoint x="-40" y="305" />
+        <di:waypoint x="670" y="305" />
+        <di:waypoint x="670" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_idpages_ocr_di" bpmnElement="Flow_status_idpages_ocr">
+        <di:waypoint x="-40" y="320" />
+        <di:waypoint x="700" y="320" />
+        <di:waypoint x="700" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_signature_english_di" bpmnElement="Flow_status_signature_english">
+        <di:waypoint x="-40" y="215" />
+        <di:waypoint x="2270" y="215" />
+        <di:waypoint x="2270" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_status_english_complete_di" bpmnElement="Flow_status_english_complete">
+        <di:waypoint x="-40" y="230" />
+        <di:waypoint x="2452" y="230" />
+        <di:waypoint x="2452" y="270" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0jhb3l4_di" bpmnElement="Flow_0jhb3l4">
         <di:waypoint x="80" y="270" />
