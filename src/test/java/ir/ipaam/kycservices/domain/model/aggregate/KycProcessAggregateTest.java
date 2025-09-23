@@ -49,7 +49,7 @@ class KycProcessAggregateTest {
                             && payload.isAccepted()
                             && payload.getAcceptedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("CONSENT_ACCEPTED", state.getStatus()));
+                .expectState(state -> assertEquals("CONSENT_ACCEPTED", state));
     }
 
     @Test
@@ -151,7 +151,7 @@ class KycProcessAggregateTest {
                             && payload.getBackDescriptor().filename().equals("back.png")
                             && payload.getUploadedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("CARD_DOCUMENTS_UPLOADED", state.getStatus()));
+                .expectState(state -> assertEquals("CARD_DOCUMENTS_UPLOADED", state));
     }
 
     @Test
@@ -204,7 +204,7 @@ class KycProcessAggregateTest {
                             && Arrays.equals(payload.pageDescriptors().get(1).data(), page2.data())
                             && payload.uploadedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("ID_PAGES_UPLOADED", state.getStatus()));
+                .expectState(state -> assertEquals("ID_PAGES_UPLOADED", state));
     }
 
     @Test
@@ -261,7 +261,7 @@ class KycProcessAggregateTest {
                             && Arrays.equals(payload.getDescriptor().data(), descriptor.data())
                             && payload.getUploadedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("SELFIE_UPLOADED", state.getStatus()));
+                .expectState(state -> assertEquals("SELFIE_UPLOADED", state));
     }
 
     @Test
@@ -280,7 +280,7 @@ class KycProcessAggregateTest {
                             && Arrays.equals(payload.getDescriptor().data(), descriptor.data())
                             && payload.getUploadedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("SIGNATURE_UPLOADED", state.getStatus()));
+                .expectState(state -> assertEquals("SIGNATURE_UPLOADED", state));
     }
 
     @Test
@@ -350,7 +350,7 @@ class KycProcessAggregateTest {
                             && Arrays.equals(payload.getDescriptor().data(), descriptor.data())
                             && payload.getUploadedAt() != null;
                 })))))
-                .expectState(state -> assertEquals("VIDEO_UPLOADED", state.getStatus()));
+                .expectState(state -> assertEquals("VIDEO_UPLOADED", state));
     }
 
     @Test

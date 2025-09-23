@@ -18,11 +18,11 @@ class ImageCompressionHelperTest {
     void reduceToMaxSizeShrinksLargeImage() throws IOException {
         byte[] noisyImage = createNoisyPng(1200, 1200);
         long limit = 250_000L;
-        assertThat(noisyImage.length).isGreaterThan(limit);
+        assertThat(noisyImage.length).isGreaterThan((int) limit);
 
         byte[] reduced = ImageCompressionHelper.reduceToMaxSize(noisyImage, limit);
 
-        assertThat(reduced.length).isLessThanOrEqualTo(limit);
+        assertThat(reduced.length).isLessThanOrEqualTo((int) limit);
         assertThat(reduced.length).isLessThan(noisyImage.length);
     }
 
@@ -30,7 +30,7 @@ class ImageCompressionHelperTest {
     void reduceToMaxSizeThrowsWhenLimitUnreachable() throws IOException {
         byte[] noisyImage = createNoisyPng(300, 300);
         long limit = 50L;
-        assertThat(noisyImage.length).isGreaterThan(limit);
+        assertThat(noisyImage.length).isGreaterThan((int) limit);
 
         assertThatThrownBy(() -> ImageCompressionHelper.reduceToMaxSize(noisyImage, limit))
                 .isInstanceOf(IllegalArgumentException.class)

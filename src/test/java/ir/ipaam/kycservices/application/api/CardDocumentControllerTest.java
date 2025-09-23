@@ -83,11 +83,11 @@ class CardDocumentControllerTest {
         ArgumentCaptor<UploadCardDocumentsCommand> captor = ArgumentCaptor.forClass(UploadCardDocumentsCommand.class);
         verify(commandGateway).sendAndWait(captor.capture());
         UploadCardDocumentsCommand command = captor.getValue();
-        assertThat(command.processInstanceId()).isEqualTo("process-123");
-        assertThat(command.frontDescriptor().filename()).isEqualTo("frontImage_process-123");
-        assertThat(command.backDescriptor().filename()).isEqualTo("backImage_process-123");
-        assertThat(command.frontDescriptor().data()).isEqualTo(front.getBytes());
-        assertThat(command.backDescriptor().data()).isEqualTo(back.getBytes());
+        assertThat(command.getProcessInstanceId()).isEqualTo("process-123");
+        assertThat(command.getFrontDescriptor().filename()).isEqualTo("frontImage_process-123");
+        assertThat(command.getBackDescriptor().filename()).isEqualTo("backImage_process-123");
+        assertThat(command.getFrontDescriptor().data()).isEqualTo(front.getBytes());
+        assertThat(command.getBackDescriptor().data()).isEqualTo(back.getBytes());
     }
 
     @Test
@@ -192,11 +192,11 @@ class CardDocumentControllerTest {
         ArgumentCaptor<UploadCardDocumentsCommand> captor = ArgumentCaptor.forClass(UploadCardDocumentsCommand.class);
         verify(commandGateway).sendAndWait(captor.capture());
         UploadCardDocumentsCommand command = captor.getValue();
-        assertThat(command.frontDescriptor().data().length)
-                .isLessThanOrEqualTo(CardDocumentController.MAX_IMAGE_SIZE_BYTES)
+        assertThat(command.getFrontDescriptor().data().length)
+                .isLessThanOrEqualTo((int) CardDocumentController.MAX_IMAGE_SIZE_BYTES)
                 .isLessThan(large.length);
-        assertThat(command.backDescriptor().data().length)
-                .isLessThanOrEqualTo(CardDocumentController.MAX_IMAGE_SIZE_BYTES)
+        assertThat(command.getBackDescriptor().data().length)
+                .isLessThanOrEqualTo((int) CardDocumentController.MAX_IMAGE_SIZE_BYTES)
                 .isLessThan(large.length);
     }
 

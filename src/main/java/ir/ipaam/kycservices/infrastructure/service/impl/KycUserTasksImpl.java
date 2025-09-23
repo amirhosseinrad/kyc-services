@@ -27,12 +27,12 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 @RequiredArgsConstructor
 public class KycUserTasksImpl implements KycUserTasks {
 
-    static final String FRONT_FILENAME = "front-image";
-    static final String BACK_FILENAME = "back-image";
-    static final String SELFIE_FILENAME = "selfie-image";
-    static final String VIDEO_FILENAME = "video-file";
-    static final String SIGNATURE_FILENAME = "signature-image";
-    static final String ID_PAGE_FILENAME = "id-page";
+    public static final String FRONT_FILENAME = "front-image";
+    public static final String BACK_FILENAME = "back-image";
+    public static final String SELFIE_FILENAME = "selfie-image";
+    public static final String VIDEO_FILENAME = "video-file";
+    public static final String SIGNATURE_FILENAME = "signature-image";
+    public static final String ID_PAGE_FILENAME = "id-page";
 
     private final CommandGateway commandGateway;
     private final InquiryTokenService inquiryTokenService;

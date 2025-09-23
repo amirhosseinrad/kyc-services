@@ -20,6 +20,7 @@ import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
 import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
@@ -89,19 +90,19 @@ public class KycProcessAggregate {
             throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
-        if (!command.processInstanceId().equals(this.processInstanceId)) {
+        if (!command.getProcessInstanceId().equals(this.processInstanceId)) {
             throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
-        if (command.frontDescriptor() == null || command.backDescriptor() == null) {
+        if (command.getFrontDescriptor() == null || command.getBackDescriptor() == null) {
             throw new IllegalArgumentException(CARD_DESCRIPTORS_REQUIRED);
         }
 
         AggregateLifecycle.apply(new CardDocumentsUploadedEvent(
-                command.processInstanceId(),
+                command.getProcessInstanceId(),
                 this.nationalCode,
-                command.frontDescriptor(),
-                command.backDescriptor(),
+                command.getFrontDescriptor(),
+                command.getBackDescriptor(),
                 LocalDateTime.now()));
     }
 
@@ -207,23 +208,23 @@ public class KycProcessAggregate {
             throw new IllegalStateException(KYC_NOT_STARTED);
         }
 
-        if (!command.processInstanceId().equals(this.processInstanceId)) {
+        if (!command.getProcessInstanceId().equals(this.processInstanceId)) {
             throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
         }
 
-        if (command.termsVersion() == null || command.termsVersion().isBlank()) {
+        if (command.getTermsVersion() == null || command.getTermsVersion().isBlank()) {
             throw new IllegalArgumentException(TERMS_VERSION_REQUIRED);
         }
 
-        if (!command.accepted()) {
+        if (!command.isAccepted()) {
             throw new IllegalArgumentException(CONSENT_NOT_ACCEPTED);
         }
 
         AggregateLifecycle.apply(new ConsentAcceptedEvent(
-                command.processInstanceId(),
+                command.getProcessInstanceId(),
                 this.nationalCode,
-                command.termsVersion().trim(),
-                command.accepted(),
+                command.getTermsVersion().trim(),
+                true,
                 LocalDateTime.now()));
     }
 

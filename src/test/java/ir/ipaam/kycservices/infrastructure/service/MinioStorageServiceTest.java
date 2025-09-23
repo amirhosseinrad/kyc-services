@@ -86,7 +86,7 @@ class MinioStorageServiceTest {
         byte[] branded = new byte[]{9, 8, 7, 6};
 
         when(imageBrandingService.brand(any(byte[].class), eq("front.png")))
-                .thenReturn(new ImageBrandingService.BrandingResult(branded, true, "png", null, null));
+                .thenReturn(new ImageBrandingService.BrandingResult(branded, true, "png", null));
         when(minioClient.bucketExists(any(BucketExistsArgs.class))).thenReturn(true);
         when(minioClient.putObject(any(PutObjectArgs.class))).thenReturn(null);
 
