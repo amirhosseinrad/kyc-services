@@ -337,6 +337,9 @@ public class KycProcessEventHandler {
                     consent.setTermsVersion(event.getTermsVersion());
                     consentRepository.save(consent);
                 }, () -> log.warn("No persisted process instance found for Camunda id {}", event.getProcessInstanceId()));
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        recordSuccessfulStep(processInstance, "CONSENT_ACCEPTED", event.getAcceptedAt());
+
     }
 
     @QueryHandler
