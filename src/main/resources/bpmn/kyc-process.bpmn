@@ -8,13 +8,13 @@
       <bpmn:incoming>Flow_0mkvv15</bpmn:incoming>
       <bpmn:outgoing>Flow_0dmbp43</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:serviceTask id="Activity_1lbjv3o" name="upload front and back of  card with back number">
+    <bpmn:userTask id="Activity_1lbjv3o" name="upload front and back of  card with back number">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="upload-card-documents" />
-      </bpmn:extensionElements>
+      </bpmn:extensionElements>.
       <bpmn:incoming>Flow_0ayjnrf</bpmn:incoming>
       <bpmn:outgoing>Flow_1gyum9g</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
     <bpmn:task id="Activity_0c3vph7" name="OCR extraction of text">
       <bpmn:incoming>Flow_04ijzlb</bpmn:incoming>
       <bpmn:incoming>Flow_status_card_ocr</bpmn:incoming>
@@ -87,13 +87,13 @@
     <bpmn:sequenceFlow id="Flow_status_english_complete" sourceRef="Gateway_routeByStatus" targetRef="Event_0m1cck6">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "ENGLISH_PERSONAL_INFO_PROVIDED"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:serviceTask id="Activity_0phc2h9" name="Consent &#38; Declarations">
+    <bpmn:userTask id="Activity_0phc2h9" name="Consent &#38; Declarations">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="accept-consent" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_route_consent</bpmn:incoming>
       <bpmn:outgoing>Flow_0jhb3l4</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_0evrolw" name="New National Card?">
       <bpmn:incoming>Flow_0jhb3l4</bpmn:incoming>
       <bpmn:incoming>Flow_status_card_gateway</bpmn:incoming>
@@ -141,13 +141,13 @@
     <bpmn:sequenceFlow id="Flow_0v4jsue" sourceRef="Gateway_1gctxw2" targetRef="Activity_070byyo">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(valid)</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:serviceTask id="Activity_1ou5oet" name="upload-signature">
+    <bpmn:userTask id="Activity_1ou5oet" name="upload-signature">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="upload-signature" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_03g3dw4</bpmn:incoming>
       <bpmn:outgoing>Flow_1te1f82</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
     <bpmn:sequenceFlow id="Flow_03g3dw4" sourceRef="Activity_1emgltl" targetRef="Activity_1ou5oet" />
     <bpmn:intermediateThrowEvent id="Event_0m1cck6">
       <bpmn:incoming>Flow_1180tca</bpmn:incoming>
@@ -160,15 +160,15 @@
     <bpmn:sequenceFlow id="Flow_0prl3kq" sourceRef="Gateway_0evrolw" targetRef="Activity_0h6mzvy">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(card)</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:serviceTask id="Activity_1j0wll2" name="save 1-4 pages ID pages">
+    <bpmn:userTask id="Activity_1j0wll2" name="save 1-4 pages ID pages">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="upload-id-pages" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_status_noncard_idpages</bpmn:incoming>
       <bpmn:incoming>Flow_0rcryas</bpmn:incoming>
       <bpmn:outgoing>Flow_197j0mu</bpmn:outgoing>
-    </bpmn:serviceTask>
-    <bpmn:serviceTask id="Activity_1005rxn" name="upload personal selfie">
+    </bpmn:userTask>
+    <bpmn:userTask id="Activity_1005rxn" name="upload personal selfie">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="upload-selfie" />
       </bpmn:extensionElements>
@@ -176,27 +176,27 @@
       <bpmn:incoming>Flow_status_card_selfie</bpmn:incoming>
       <bpmn:incoming>Flow_197j0mu</bpmn:incoming>
       <bpmn:outgoing>Flow_0cfcvb9</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
     <bpmn:sequenceFlow id="Flow_1gyum9g" sourceRef="Activity_1lbjv3o" targetRef="Activity_1005rxn" />
-    <bpmn:serviceTask id="Activity_uploadVideoCard" name="upload live face video">
+    <bpmn:userTask id="Activity_uploadVideoCard" name="upload live face video">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="upload-video" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0cfcvb9</bpmn:incoming>
       <bpmn:incoming>Flow_status_card_video</bpmn:incoming>
       <bpmn:outgoing>Flow_04ijzlb</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
     <bpmn:sequenceFlow id="Flow_0cfcvb9" sourceRef="Activity_1005rxn" targetRef="Activity_uploadVideoCard" />
     <bpmn:sequenceFlow id="Flow_04ijzlb" sourceRef="Activity_uploadVideoCard" targetRef="Activity_0c3vph7" />
     <bpmn:sequenceFlow id="Flow_197j0mu" sourceRef="Activity_1j0wll2" targetRef="Activity_1005rxn" />
-    <bpmn:serviceTask id="Activity_0us5yta" name="save : english firstname, lastname, email, telephone">
+    <bpmn:userTask id="Activity_0us5yta" name="save : english firstname, lastname, email, telephone">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="provide-english-personal-info" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1te1f82</bpmn:incoming>
       <bpmn:incoming>Flow_status_signature_english</bpmn:incoming>
       <bpmn:outgoing>Flow_1180tca</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
     <bpmn:sequenceFlow id="Flow_1te1f82" sourceRef="Activity_1ou5oet" targetRef="Activity_0us5yta" />
     <bpmn:sequenceFlow id="Flow_1180tca" sourceRef="Activity_0us5yta" targetRef="Event_0m1cck6" />
     <bpmn:startEvent id="Event_114ocnc">

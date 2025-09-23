@@ -178,6 +178,7 @@ public class KycProcessEventHandler {
             }
             instance.setStatus("ENGLISH_PERSONAL_INFO_PROVIDED");
             instance.setCompletedAt(event.getProvidedAt());
+            recordSuccessfulStep(processInstance.get(), "ENGLISH_PERSONAL_INFO_PROVIDED", event.getProvidedAt());
             kycProcessInstanceRepository.save(instance);
         });
     }
