@@ -29,7 +29,7 @@ public class KycProcessController {
     private final CommandGateway commandGateway;
     private final ZeebeClient zeebeClient;
 
-    @Operation(summary = "Start a new KYC process")
+    @Operation(summary = "▶ Start a new KYC process")
     @PostMapping("/process")
     public ResponseEntity<StartKycResponse> startProcess(@Valid @RequestBody StartKycRequest request) {
         ProcessInstance existingInstance = kycServiceTasks.checkKycStatus(request.nationalCode());
@@ -58,7 +58,7 @@ public class KycProcessController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new StartKycResponse(processInstanceKey, "STARTED"));
     }
-    @Operation(summary = "Get KYC process state")
+    @Operation(summary = "❚❚ Get KYC process state")
     @PostMapping("/status")
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
         ProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
