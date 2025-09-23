@@ -369,7 +369,6 @@ class KycProcessEventHandlerTest {
 
         when(storageService.upload(event.getFrontDescriptor(), "CARD_FRONT", "proc1")).thenReturn(frontMetadata);
         when(storageService.upload(event.getBackDescriptor(), "CARD_BACK", "proc1")).thenReturn(backMetadata);
-        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -396,14 +395,15 @@ class KycProcessEventHandlerTest {
         assertEquals("CARD_DOCUMENTS_UPLOADED", processInstance.getStatus());
         verify(instanceRepository).save(processInstance);
 
-        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
-        verify(stepStatusRepository).save(statusCaptor.capture());
-        StepStatus stepStatus = statusCaptor.getValue();
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
         assertEquals("CARD_DOCUMENTS_UPLOADED", stepStatus.getStepName());
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
-        assertTrue(processInstance.getStatuses().contains(stepStatus));
+        verify(stepStatusRepository, never()).save(any());
     }
 
     @Test
@@ -475,7 +475,6 @@ class KycProcessEventHandlerTest {
 
         when(storageService.upload(event.pageDescriptors().get(0), "ID_PAGE_1", "proc1")).thenReturn(page1Metadata);
         when(storageService.upload(event.pageDescriptors().get(1), "ID_PAGE_2", "proc1")).thenReturn(page2Metadata);
-        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -501,14 +500,15 @@ class KycProcessEventHandlerTest {
         assertEquals("ID_PAGES_UPLOADED", processInstance.getStatus());
         verify(instanceRepository).save(processInstance);
 
-        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
-        verify(stepStatusRepository).save(statusCaptor.capture());
-        StepStatus stepStatus = statusCaptor.getValue();
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
         assertEquals("ID_PAGES_UPLOADED", stepStatus.getStepName());
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
-        assertTrue(processInstance.getStatuses().contains(stepStatus));
+        verify(stepStatusRepository, never()).save(any());
     }
 
     @Test
@@ -550,7 +550,6 @@ class KycProcessEventHandlerTest {
         storageMetadata.setHash("minio-selfie-hash");
         storageMetadata.setBranded(true);
         when(storageService.upload(event.getDescriptor(), "PHOTO", "proc1")).thenReturn(storageMetadata);
-        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -568,14 +567,15 @@ class KycProcessEventHandlerTest {
         assertEquals("SELFIE_UPLOADED", processInstance.getStatus());
         verify(instanceRepository).save(processInstance);
 
-        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
-        verify(stepStatusRepository).save(statusCaptor.capture());
-        StepStatus stepStatus = statusCaptor.getValue();
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
         assertEquals("SELFIE_UPLOADED", stepStatus.getStepName());
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
-        assertTrue(processInstance.getStatuses().contains(stepStatus));
+        verify(stepStatusRepository, never()).save(any());
     }
 
     @Test
@@ -598,7 +598,6 @@ class KycProcessEventHandlerTest {
         storageMetadata.setBranded(true);
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
-        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -617,14 +616,15 @@ class KycProcessEventHandlerTest {
         assertEquals("SIGNATURE_UPLOADED", processInstance.getStatus());
         verify(instanceRepository).save(processInstance);
 
-        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
-        verify(stepStatusRepository).save(statusCaptor.capture());
-        StepStatus stepStatus = statusCaptor.getValue();
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
         assertEquals("SIGNATURE_UPLOADED", stepStatus.getStepName());
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
-        assertTrue(processInstance.getStatuses().contains(stepStatus));
+        verify(stepStatusRepository, never()).save(any());
     }
 
     @Test
@@ -646,7 +646,6 @@ class KycProcessEventHandlerTest {
         storageMetadata.setHash("minio-video-hash");
         storageMetadata.setBranded(false);
         when(storageService.upload(event.getDescriptor(), "VIDEO", "proc1")).thenReturn(storageMetadata);
-        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -664,14 +663,15 @@ class KycProcessEventHandlerTest {
         assertEquals("VIDEO_UPLOADED", processInstance.getStatus());
         verify(instanceRepository).save(processInstance);
 
-        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
-        verify(stepStatusRepository).save(statusCaptor.capture());
-        StepStatus stepStatus = statusCaptor.getValue();
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
         assertEquals("VIDEO_UPLOADED", stepStatus.getStepName());
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
-        assertTrue(processInstance.getStatuses().contains(stepStatus));
+        verify(stepStatusRepository, never()).save(any());
     }
 
     @Test
@@ -714,7 +714,6 @@ class KycProcessEventHandlerTest {
         storageMetadata.setBranded(true);
 
         when(storageService.upload(event.getDescriptor(), "SIGNATURE", "proc1")).thenReturn(storageMetadata);
-        when(stepStatusRepository.save(any(StepStatus.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         handler.on(event);
 
@@ -731,14 +730,15 @@ class KycProcessEventHandlerTest {
         assertEquals("SIGNATURE_UPLOADED", processInstance.getStatus());
         verify(instanceRepository).save(processInstance);
 
-        ArgumentCaptor<StepStatus> statusCaptor = ArgumentCaptor.forClass(StepStatus.class);
-        verify(stepStatusRepository).save(statusCaptor.capture());
-        StepStatus stepStatus = statusCaptor.getValue();
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
         assertEquals("SIGNATURE_UPLOADED", stepStatus.getStepName());
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
-        assertTrue(processInstance.getStatuses().contains(stepStatus));
+        verify(stepStatusRepository, never()).save(any());
     }
 
     @Test

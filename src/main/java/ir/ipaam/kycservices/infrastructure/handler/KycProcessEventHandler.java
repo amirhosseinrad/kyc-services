@@ -109,7 +109,7 @@ public class KycProcessEventHandler {
         instance.setStartedAt(LocalDateTime.now());
         instance.setCustomer(customer);
 
-        kycProcessInstanceRepository.save(instance);
+                    kycProcessInstanceRepository.save(instance);
     }
 
     @EventHandler
@@ -129,7 +129,6 @@ public class KycProcessEventHandler {
                     instance.getStatuses().add(stepStatus);
 
                     kycProcessInstanceRepository.save(instance);
-                    kycStepStatusRepository.save(stepStatus);
                 });
     }
 
@@ -274,7 +273,6 @@ public class KycProcessEventHandler {
             statuses.add(stepStatus);
 
             kycProcessInstanceRepository.save(processInstance);
-            kycStepStatusRepository.save(stepStatus);
         }
 
         DocumentMetadata metadata = storageService.upload(
@@ -443,7 +441,6 @@ public class KycProcessEventHandler {
         statuses.add(stepStatus);
 
         kycProcessInstanceRepository.save(processInstance);
-        kycStepStatusRepository.save(stepStatus);
     }
 
     private String extractResultId(String resultMessage) {
