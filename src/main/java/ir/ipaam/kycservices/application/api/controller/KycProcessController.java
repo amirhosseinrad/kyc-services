@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
+import ir.ipaam.kycservices.application.api.dto.StartKycResponse;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -30,7 +31,21 @@ public class KycProcessController {
 
     @Operation(summary = "Start a new KYC process")
     @PostMapping("/process")
-    public ResponseEntity<Map<String, String>> startProcess(@Valid @RequestBody StartKycRequest request) {
+    public ResponseEntity<StartKycResponse> startProcess(@Valid @RequestBody StartKycRequest request) {
+        ProcessInstance existingInstance = kycServiceTasks.checkKycStatus(request.nationalCode());
+        if (existingInstance != null) {
+            String existingCamundaId = existingInstance.getCamundaInstanceId();
+            String existingStatus = existingInstance.getStatus();
+            if (existingCamundaId != null && !existingCamundaId.isBlank() && existingStatus != null) {
+                String normalizedStatus = existingStatus.trim();
+                if (!normalizedStatus.isEmpty()
+                        && !"UNKNOWN".equalsIgnoreCase(normalizedStatus)
+                        && !"COMPLETED".equalsIgnoreCase(normalizedStatus)) {
+                    return ResponseEntity.ok(new StartKycResponse(existingCamundaId, normalizedStatus));
+                }
+            }
+        }
+
         long key = zeebeClient.newCreateInstanceCommand()
                 .bpmnProcessId("kyc-process")
                 .latestVersion()
@@ -41,7 +56,7 @@ public class KycProcessController {
         String processInstanceKey = Long.toString(key);
         commandGateway.send(new StartKycProcessCommand(processInstanceKey, request.nationalCode()));
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("processInstanceKey", processInstanceKey));
+                .body(new StartKycResponse(processInstanceKey, "STARTED"));
     }
     @Operation(summary = "Get KYC process state")
     @PostMapping("/status")
