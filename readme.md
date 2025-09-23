@@ -22,6 +22,11 @@ Uses **Camunda 8 (Zeebe)** to model and execute the entire KYC flow:
 - Fraud checks & mismatch handling by third party
 - User notifications and status updates
 
+An exclusive gateway placed immediately after the `check-kyc-status` worker inspects the persisted `kycStatus` and jumps
+directly to the first incomplete automated step. Completed stages such as consent capture or document uploads are skipped,
+while the worker now publishes the Zeebe `processInstanceKey` as `processInstanceId` so every downstream job receives the
+identifier even when earlier steps are bypassed.
+
 ### **Dynamic Deployment**
 Supports runtime BPMN deployment through a REST API, with **hash-based deduplication** and **Zeebe deployment metadata** (deployment key, process version) stored in the database.
 
