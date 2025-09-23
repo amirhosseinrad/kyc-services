@@ -1,6 +1,9 @@
 package ir.ipaam.kycservices.application.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.command.SetVariablesCommandStep1;
+import io.camunda.zeebe.client.api.response.SetVariablesResponse;
 import ir.ipaam.kycservices.application.api.controller.ConsentController;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
@@ -17,7 +20,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,27 +46,41 @@ class ConsentControllerTest {
     @MockBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
+    @MockBean
+    private ZeebeClient zeebeClient;
+
     @Test
     void acceptConsentDispatchesCommand() throws Exception {
-        ConsentRequest request = new ConsentRequest(" process-123 ", " v1 ", true);
-        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+        ConsentRequest request = new ConsentRequest(" 123456 ", " v1 ", true);
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("123456"))
                 .thenReturn(Optional.of(new ProcessInstance()));
         when(commandGateway.sendAndWait(any(AcceptConsentCommand.class))).thenReturn(null);
+        SetVariablesCommandStep1 step1 = mock(SetVariablesCommandStep1.class);
+        SetVariablesResponse response = mock(SetVariablesResponse.class);
+        when(zeebeClient.newSetVariablesCommand(123456L)).thenReturn(step1);
+        when(step1.variables(any(Map.class))).thenReturn(step1);
+        when(step1.send()).thenReturn(CompletableFuture.completedFuture(response));
 
         mockMvc.perform(post("/kyc/consent")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.processInstanceId").value("process-123"))
+                .andExpect(jsonPath("$.processInstanceId").value("123456"))
                 .andExpect(jsonPath("$.termsVersion").value("v1"))
                 .andExpect(jsonPath("$.status").value("CONSENT_ACCEPTED"));
 
         ArgumentCaptor<AcceptConsentCommand> captor = ArgumentCaptor.forClass(AcceptConsentCommand.class);
         verify(commandGateway).sendAndWait(captor.capture());
         AcceptConsentCommand command = captor.getValue();
-        assertThat(command.getProcessInstanceId()).isEqualTo("process-123");
+        assertThat(command.getProcessInstanceId()).isEqualTo("123456");
         assertThat(command.getTermsVersion()).isEqualTo("v1");
         assertThat(command.isAccepted()).isTrue();
+
+        ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(step1).variables(variablesCaptor.capture());
+        Map<String, Object> variables = variablesCaptor.getValue();
+        assertThat(variables.get("accepted")).isEqualTo(true);
+        assertThat(variables.get("termsVersion")).isEqualTo("v1");
     }
 
     @Test
