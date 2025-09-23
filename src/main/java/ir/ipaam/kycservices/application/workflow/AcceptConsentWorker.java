@@ -29,11 +29,15 @@ public class AcceptConsentWorker {
         String processInstanceId = null;
         try {
             processInstanceId = extractString(variables.get("processInstanceId"), "processInstanceId");
+            ensureConsentPayloadPresent(variables, processInstanceId);
             String termsVersion = extractString(variables.get("termsVersion"), "termsVersion");
             boolean accepted = extractBoolean(variables.get("accepted"), "accepted");
 
             kycUserTasks.acceptConsent(termsVersion, accepted, processInstanceId);
             return Map.of("consentAccepted", accepted);
+        } catch (MissingConsentVariablesException e) {
+            log.info("Consent payload not yet available for job {} and process {}", job.getKey(), processInstanceId);
+            throw e;
         } catch (IllegalArgumentException e) {
             log.error("Invalid job payload for job {}: {}", job.getKey(), e.getMessage());
             throw e;
@@ -52,6 +56,14 @@ public class AcceptConsentWorker {
             kycServiceTasks.logFailureAndRetry(STEP_NAME, WORKFLOW_ACCEPT_CONSENT_FAILED, processInstanceId);
         } catch (RuntimeException loggingError) {
             log.warn("Failed to log retry for process {} and step {}", processInstanceId, STEP_NAME, loggingError);
+        }
+    }
+
+    private void ensureConsentPayloadPresent(Map<String, Object> variables, String processInstanceId) {
+        Object termsVersion = variables.get("termsVersion");
+        Object accepted = variables.get("accepted");
+        if (termsVersion == null || accepted == null) {
+            throw new MissingConsentVariablesException(processInstanceId);
         }
     }
 
@@ -84,5 +96,12 @@ public class AcceptConsentWorker {
             throw new IllegalArgumentException(fieldName + " must be 'true' or 'false'");
         }
         throw new IllegalArgumentException(fieldName + " must be a boolean");
+    }
+
+    static class MissingConsentVariablesException extends RuntimeException {
+
+        MissingConsentVariablesException(String processInstanceId) {
+            super("Consent variables missing for process " + processInstanceId);
+        }
     }
 }

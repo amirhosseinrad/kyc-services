@@ -1,5 +1,6 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
@@ -33,6 +34,7 @@ public class ConsentController {
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final ZeebeClient zeebeClient;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> acceptConsent(@Valid @RequestBody ConsentRequest request) {
@@ -55,11 +57,32 @@ public class ConsentController {
 
         commandGateway.sendAndWait(command);
 
+        updateWorkflowVariables(processInstanceId, termsVersion);
+
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
                 "processInstanceId", processInstanceId,
                 "termsVersion", termsVersion,
                 "status", "CONSENT_ACCEPTED"
         ));
+    }
+
+    private void updateWorkflowVariables(String processInstanceId, String termsVersion) {
+        long processKey = parseProcessInstanceKey(processInstanceId);
+        zeebeClient.newSetVariablesCommand(processKey)
+                .variables(Map.of(
+                        "accepted", true,
+                        "termsVersion", termsVersion
+                ))
+                .send()
+                .join();
+    }
+
+    private long parseProcessInstanceKey(String processInstanceId) {
+        try {
+            return Long.parseLong(processInstanceId);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("processInstanceId must be a numeric value", ex);
+        }
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {

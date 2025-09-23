@@ -103,4 +103,21 @@ class AcceptConsentWorkerTest {
         assertEquals(WORKFLOW_ACCEPT_CONSENT_FAILED, exception.getMessage());
         verify(kycServiceTasks).logFailureAndRetry(AcceptConsentWorker.STEP_NAME, WORKFLOW_ACCEPT_CONSENT_FAILED, "proc-5");
     }
+
+    @Test
+    void handleRetriesWhenConsentVariablesMissing() {
+        Map<String, Object> variables = Map.of(
+                "processInstanceId", "proc-6"
+        );
+
+        ActivatedJob job = mock(ActivatedJob.class);
+        when(job.getVariablesAsMap()).thenReturn(variables);
+        when(job.getKey()).thenReturn(6L);
+
+        AcceptConsentWorker.MissingConsentVariablesException exception =
+                assertThrows(AcceptConsentWorker.MissingConsentVariablesException.class, () -> worker.handle(job));
+        assertTrue(exception.getMessage().contains("proc-6"));
+        verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
+    }
 }
