@@ -22,7 +22,8 @@ class AcceptConsentWorkerTest {
         Map<String, Object> variables = Map.of(
                 "processInstanceId", "proc-1",
                 "termsVersion", "v1",
-                "accepted", true
+                "accepted", true,
+                "card", true
         );
 
         ActivatedJob job = mock(ActivatedJob.class);
@@ -41,7 +42,8 @@ class AcceptConsentWorkerTest {
         Map<String, Object> variables = Map.of(
                 "processInstanceId", "proc-2",
                 "termsVersion", "v2",
-                "accepted", "true"
+                "accepted", "true",
+                "card", false
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
@@ -74,7 +76,8 @@ class AcceptConsentWorkerTest {
         Map<String, Object> variables = Map.of(
                 "processInstanceId", "proc-4",
                 "termsVersion", "v4",
-                "accepted", 123
+                "accepted", 123,
+                "card", true
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
@@ -90,7 +93,8 @@ class AcceptConsentWorkerTest {
         Map<String, Object> variables = Map.of(
                 "processInstanceId", "proc-5",
                 "termsVersion", "v5",
-                "accepted", true
+                "accepted", true,
+                "card", true
         );
         ActivatedJob job = mock(ActivatedJob.class);
         when(job.getVariablesAsMap()).thenReturn(variables);
@@ -117,6 +121,25 @@ class AcceptConsentWorkerTest {
         AcceptConsentWorker.MissingConsentVariablesException exception =
                 assertThrows(AcceptConsentWorker.MissingConsentVariablesException.class, () -> worker.handle(job));
         assertTrue(exception.getMessage().contains("proc-6"));
+        verifyNoInteractions(kycUserTasks);
+        verifyNoInteractions(kycServiceTasks);
+    }
+
+    @Test
+    void handleRetriesWhenCardVariableMissing() {
+        Map<String, Object> variables = Map.of(
+                "processInstanceId", "proc-7",
+                "termsVersion", "v7",
+                "accepted", true
+        );
+
+        ActivatedJob job = mock(ActivatedJob.class);
+        when(job.getVariablesAsMap()).thenReturn(variables);
+        when(job.getKey()).thenReturn(7L);
+
+        AcceptConsentWorker.MissingConsentVariablesException exception =
+                assertThrows(AcceptConsentWorker.MissingConsentVariablesException.class, () -> worker.handle(job));
+        assertTrue(exception.getMessage().contains("proc-7"));
         verifyNoInteractions(kycUserTasks);
         verifyNoInteractions(kycServiceTasks);
     }
