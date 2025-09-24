@@ -88,7 +88,7 @@ class CardStatusControllerTest {
         verify(commandGateway).sendAndWait(commandCaptor.capture());
         UpdateKycStatusCommand command = commandCaptor.getValue();
         assertThat(command.processInstanceId()).isEqualTo("123456");
-        assertThat(command.status()).isEqualTo("CONSENT_ACCEPTED");
+        assertThat(command.status()).isEqualTo("CARD_STATUS_RECORDED");
         assertThat(command.stepName()).isEqualTo("CARD_STATUS_RECORDED");
         assertThat(command.state()).isEqualTo("PASSED");
 
@@ -97,7 +97,7 @@ class CardStatusControllerTest {
         assertThat(captor.getValue())
                 .containsEntry("card", true)
                 .containsEntry("processInstanceId", "123456")
-                .containsEntry("kycStatus", "CONSENT_ACCEPTED");
+                .containsEntry("kycStatus", "CARD_STATUS_RECORDED");
     }
 
     @Test
