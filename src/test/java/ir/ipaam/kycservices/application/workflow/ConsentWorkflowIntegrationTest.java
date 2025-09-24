@@ -45,7 +45,7 @@ class ConsentWorkflowIntegrationTest {
         consentController = new ConsentController(commandGateway, kycProcessInstanceRepository, zeebeClient);
         kycUserTasks = mock(KycUserTasks.class);
         kycServiceTasks = mock(KycServiceTasks.class);
-        worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks);
+        worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks, kycProcessInstanceRepository);
     }
 
     @Test
@@ -105,7 +105,10 @@ class ConsentWorkflowIntegrationTest {
 
         updatedVariables.put("card", true);
         Map<String, Object> workerResult = worker.handle(job);
-        assertThat(workerResult).containsEntry("consentAccepted", true);
+        assertThat(workerResult)
+                .containsEntry("consentAccepted", true)
+                .containsEntry("card", true)
+                .containsEntry("kycStatus", AcceptConsentWorker.STEP_NAME);
         verify(kycUserTasks).acceptConsent("v9", true, processInstanceId);
         verify(step1).send();
     }
