@@ -2,14 +2,13 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
-import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
-import org.axonframework.queryhandling.SubscriptionQueryResult;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,27 +23,24 @@ public class CheckKycStatusWorker {
         Map<String, Object> variables = job.getVariablesAsMap();
         String processInstanceId = Long.toString(job.getProcessInstanceKey());
         String nationalCode = (String) variables.get("nationalCode");
-        SubscriptionQueryResult<ProcessInstance, ProcessInstance> result = queryGateway.subscriptionQuery(
+        ProcessInstance instance = queryGateway.query(
                 new FindKycStatusQuery(nationalCode),
-                ResponseTypes.instanceOf(ProcessInstance.class),
-                ResponseTypes.instanceOf(ProcessInstance.class));
-        try {
-            Map<String, Object> response = new HashMap<>();
-            response.put("processInstanceId", processInstanceId);
-            ProcessInstance initial = result.initialResult().block();
-            if (initial != null && !"UNKNOWN".equals(initial.getStatus())) {
-                response.put("kycStatus", initial.getStatus());
-                return response;
-            }
-            ProcessInstance update = Flux.from(result.updates())
-                    .filter(pi -> pi != null && !"UNKNOWN".equals(pi.getStatus()))
-                    .blockFirst();
-            if (update != null) {
-                response.put("kycStatus", update.getStatus());
-            }
-            return response;
-        } finally {
-            result.close();
+                ResponseTypes.instanceOf(ProcessInstance.class))
+                .join();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("processInstanceId", processInstanceId);
+
+        String status = null;
+        if (instance != null) {
+            status = instance.getStatus();
         }
+
+        if (status == null || status.isBlank() || "UNKNOWN".equalsIgnoreCase(status)) {
+            status = "STARTED";
+        }
+
+        response.put("kycStatus", status);
+        return response;
     }
 }
