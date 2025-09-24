@@ -11,7 +11,7 @@
     <bpmn:userTask id="Activity_1lbjv3o" name="upload front and back of  card with back number">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="upload-card-documents" />
-      </bpmn:extensionElements>.
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_0ayjnrf</bpmn:incoming>
       <bpmn:outgoing>Flow_1gyum9g</bpmn:outgoing>
     </bpmn:userTask>
