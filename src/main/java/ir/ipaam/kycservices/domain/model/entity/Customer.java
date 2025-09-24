@@ -25,4 +25,5 @@ public class Customer {
     private LocalDate birthDate;
     private String mobile;
     private String email;
+    private Boolean hasNewNationalCard;
 }

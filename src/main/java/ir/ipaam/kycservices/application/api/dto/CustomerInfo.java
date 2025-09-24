@@ -9,7 +9,8 @@ public record CustomerInfo(
         String lastName,
         LocalDate birthDate,
         String mobile,
-        String email
+        String email,
+        Boolean hasNewNationalCard
 ) {
     public static CustomerInfo from(Customer customer) {
         if (customer == null) {
@@ -21,7 +22,8 @@ public record CustomerInfo(
                 customer.getLastName(),
                 customer.getBirthDate(),
                 customer.getMobile(),
-                customer.getEmail()
+                customer.getEmail(),
+                customer.getHasNewNationalCard()
         );
     }
 }
