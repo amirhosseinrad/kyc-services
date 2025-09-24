@@ -4,6 +4,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.api.command.SetVariablesCommandStep1;
 import ir.ipaam.kycservices.application.api.dto.CardStatusRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
@@ -11,6 +12,7 @@ import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceReposito
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -35,6 +37,7 @@ public class CardStatusController {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
     private final ZeebeClient zeebeClient;
+    private final CommandGateway commandGateway;
 
     @PostMapping("/status")
     public ResponseEntity<Map<String, Object>> updateCardStatus(@Valid @RequestBody CardStatusRequest request) {
@@ -50,13 +53,24 @@ public class CardStatusController {
             throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
+        long processKey = parseProcessInstanceKey(processInstanceId);
+
         customer.setHasNewNationalCard(hasNewNationalCard);
         customerRepository.save(customer);
 
-        long processKey = parseProcessInstanceKey(processInstanceId);
+        commandGateway.sendAndWait(new UpdateKycStatusCommand(
+                processInstanceId,
+                "CONSENT_ACCEPTED",
+                "CARD_STATUS_RECORDED",
+                "PASSED"
+        ));
         SetVariablesCommandStep1 commandStep = zeebeClient.newSetVariablesCommand(processKey);
         commandStep
-                .variables(Map.of("card", hasNewNationalCard))
+                .variables(Map.of(
+                        "card", hasNewNationalCard,
+                        "processInstanceId", processInstanceId,
+                        "kycStatus", "CONSENT_ACCEPTED"
+                ))
                 .send()
                 .join();
 
