@@ -111,6 +111,7 @@ class KycProcessControllerTest {
         customer.setBirthDate(LocalDate.of(1990, 1, 1));
         customer.setMobile("09123456789");
         customer.setEmail("john@example.com");
+        customer.setHasNewNationalCard(Boolean.TRUE);
 
         ProcessInstance instance = new ProcessInstance();
         instance.setCamundaInstanceId("proc1");
@@ -134,6 +135,7 @@ class KycProcessControllerTest {
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.camundaInstanceId").value("proc1"))
                 .andExpect(jsonPath("$.customer.nationalCode").value("0024683416"))
+                .andExpect(jsonPath("$.customer.hasNewNationalCard").value(true))
                 .andExpect(jsonPath("$.stepHistory").isArray())
                 .andExpect(jsonPath("$.stepHistory[0].stepName").value("OCR"))
                 .andExpect(jsonPath("$.stepHistory[0].state").value("PASSED"));
