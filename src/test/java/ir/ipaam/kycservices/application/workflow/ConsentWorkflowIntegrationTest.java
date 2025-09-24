@@ -96,6 +96,14 @@ class ConsentWorkflowIntegrationTest {
         updatedVariables.put("processInstanceId", processInstanceId);
         jobVariables.set(updatedVariables);
 
+        AcceptConsentWorker.MissingConsentVariablesException cardMissing = assertThrows(
+                AcceptConsentWorker.MissingConsentVariablesException.class,
+                () -> worker.handle(job)
+        );
+        assertThat(cardMissing.getMessage()).contains(processInstanceId);
+        verifyNoInteractions(kycUserTasks);
+
+        updatedVariables.put("card", true);
         Map<String, Object> workerResult = worker.handle(job);
         assertThat(workerResult).containsEntry("consentAccepted", true);
         verify(kycUserTasks).acceptConsent("v9", true, processInstanceId);

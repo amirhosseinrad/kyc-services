@@ -9,8 +9,10 @@ import ir.ipaam.kycservices.application.api.dto.CardStatusRequest;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,9 @@ class CardStatusControllerTest {
     @MockBean
     private ZeebeClient zeebeClient;
 
+    @MockBean
+    private CommandGateway commandGateway;
+
     @Test
     void updateCardStatusPersistsCustomerAndUpdatesWorkflow() throws Exception {
         Customer customer = new Customer();
@@ -58,6 +63,7 @@ class CardStatusControllerTest {
         when(kycProcessInstanceRepository.findByCamundaInstanceId("123456"))
                 .thenReturn(Optional.of(processInstance));
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(commandGateway.sendAndWait(any(UpdateKycStatusCommand.class))).thenReturn(null);
 
         SetVariablesCommandStep1 step1 = mock(SetVariablesCommandStep1.class);
         SetVariablesResponse response = mock(SetVariablesResponse.class);
@@ -78,9 +84,20 @@ class CardStatusControllerTest {
         assertThat(customer.getHasNewNationalCard()).isTrue();
         verify(customerRepository).save(customer);
 
+        ArgumentCaptor<UpdateKycStatusCommand> commandCaptor = ArgumentCaptor.forClass(UpdateKycStatusCommand.class);
+        verify(commandGateway).sendAndWait(commandCaptor.capture());
+        UpdateKycStatusCommand command = commandCaptor.getValue();
+        assertThat(command.processInstanceId()).isEqualTo("123456");
+        assertThat(command.status()).isEqualTo("CONSENT_ACCEPTED");
+        assertThat(command.stepName()).isEqualTo("CARD_STATUS_RECORDED");
+        assertThat(command.state()).isEqualTo("PASSED");
+
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
         verify(step1).variables(captor.capture());
-        assertThat(captor.getValue()).containsEntry("card", true);
+        assertThat(captor.getValue())
+                .containsEntry("card", true)
+                .containsEntry("processInstanceId", "123456")
+                .containsEntry("kycStatus", "CONSENT_ACCEPTED");
     }
 
     @Test
@@ -99,6 +116,7 @@ class CardStatusControllerTest {
 
         verify(customerRepository, never()).save(any(Customer.class));
         verifyNoInteractions(zeebeClient);
+        verifyNoInteractions(commandGateway);
     }
 
     @Test
@@ -111,6 +129,7 @@ class CardStatusControllerTest {
                 .andExpect(jsonPath("$.message.en").value("Validation failed"))
                 .andExpect(jsonPath("$.details.fieldErrors.processInstanceId[0]")
                         .value("processInstanceId is required"));
+        verifyNoInteractions(commandGateway);
     }
 
     @Test
@@ -123,6 +142,7 @@ class CardStatusControllerTest {
                 .andExpect(jsonPath("$.message.en").value("Validation failed"))
                 .andExpect(jsonPath("$.details.fieldErrors.hasNewNationalCard[0]")
                         .value("hasNewNationalCard is required"));
+        verifyNoInteractions(commandGateway);
     }
 
     @Test
@@ -141,6 +161,7 @@ class CardStatusControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
                 .andExpect(jsonPath("$.message.en").value("processInstanceId must be a numeric value"));
+        verifyNoInteractions(commandGateway);
     }
 
     @Test
@@ -161,5 +182,6 @@ class CardStatusControllerTest {
 
         verifyNoInteractions(zeebeClient);
         verify(customerRepository, never()).save(any());
+        verifyNoInteractions(commandGateway);
     }
 }

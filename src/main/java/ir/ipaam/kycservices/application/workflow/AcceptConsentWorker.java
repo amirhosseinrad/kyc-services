@@ -62,7 +62,8 @@ public class AcceptConsentWorker {
     private void ensureConsentPayloadPresent(Map<String, Object> variables, String processInstanceId) {
         Object termsVersion = variables.get("termsVersion");
         Object accepted = variables.get("accepted");
-        if (termsVersion == null || accepted == null) {
+        Object card = variables.get("card");
+        if (termsVersion == null || accepted == null || card == null) {
             throw new MissingConsentVariablesException(processInstanceId);
         }
     }
