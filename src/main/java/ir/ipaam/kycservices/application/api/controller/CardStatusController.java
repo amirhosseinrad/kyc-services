@@ -60,7 +60,7 @@ public class CardStatusController {
 
         commandGateway.sendAndWait(new UpdateKycStatusCommand(
                 processInstanceId,
-                "CONSENT_ACCEPTED",
+                "CARD_STATUS_RECORDED",
                 "CARD_STATUS_RECORDED",
                 "PASSED"
         ));
@@ -69,7 +69,7 @@ public class CardStatusController {
                 .variables(Map.of(
                         "card", hasNewNationalCard,
                         "processInstanceId", processInstanceId,
-                        "kycStatus", "CONSENT_ACCEPTED"
+                        "kycStatus", "CARD_STATUS_RECORDED"
                 ))
                 .send()
                 .join();

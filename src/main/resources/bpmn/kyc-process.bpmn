@@ -64,7 +64,7 @@
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_route_consent" sourceRef="Gateway_routeByStatus" targetRef="Activity_0phc2h9" />
     <bpmn:sequenceFlow id="Flow_status_card_gateway" sourceRef="Gateway_routeByStatus" targetRef="Gateway_0evrolw">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "CONSENT_ACCEPTED"</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "CONSENT_ACCEPTED" or kycStatus = "CARD_STATUS_RECORDED"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_status_card_selfie" sourceRef="Gateway_routeByStatus" targetRef="Activity_1005rxn">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "CARD_DOCUMENTS_UPLOADED"</bpmn:conditionExpression>
