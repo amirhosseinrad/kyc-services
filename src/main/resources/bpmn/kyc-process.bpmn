@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_02m23tv" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.10.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.15.0">
+  <!-- ✅ Message Definitions -->
+  <bpmn:message id="Message_ConsentAccepted" name="consent-accepted">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=processInstanceId"/>
+    </bpmn:extensionElements>
+  </bpmn:message>
   <bpmn:process id="kyc-process" name="kyc-process" isExecutable="true">
     <bpmn:serviceTask id="check-kyc-status" name="check-kyc-status">
       <bpmn:extensionElements>
@@ -87,13 +93,7 @@
     <bpmn:sequenceFlow id="Flow_status_english_complete" sourceRef="Gateway_routeByStatus" targetRef="Event_0m1cck6">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "ENGLISH_PERSONAL_INFO_PROVIDED"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:userTask id="Activity_0phc2h9" name="Consent &#38; Declarations">
-      <bpmn:extensionElements>
-        <zeebe:taskDefinition type="accept-consent" />
-      </bpmn:extensionElements>
-      <bpmn:incoming>Flow_route_consent</bpmn:incoming>
-      <bpmn:outgoing>Flow_0jhb3l4</bpmn:outgoing>
-    </bpmn:userTask>
+    <bpmn:receiveTask id="Activity_0phc2h9" name="Consent and Declarations" messageRef="Message_ConsentAccepted" />
     <bpmn:exclusiveGateway id="Gateway_0evrolw" name="New National Card?">
       <bpmn:incoming>Flow_0jhb3l4</bpmn:incoming>
       <bpmn:incoming>Flow_status_card_gateway</bpmn:incoming>

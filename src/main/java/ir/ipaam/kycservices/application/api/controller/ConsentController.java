@@ -68,10 +68,13 @@ public class ConsentController {
 
     private void updateWorkflowVariables(String processInstanceId, String termsVersion) {
         long processKey = parseProcessInstanceKey(processInstanceId);
-        zeebeClient.newSetVariablesCommand(processKey)
+        zeebeClient.newPublishMessageCommand()
+                .messageName("consent-accepted")
+                .correlationKey(processInstanceId)
                 .variables(Map.of(
                         "accepted", true,
-                        "termsVersion", termsVersion
+                        "termsVersion", termsVersion,
+                        "kycStatus", "CONSENT_ACCEPTED"
                 ))
                 .send()
                 .join();
