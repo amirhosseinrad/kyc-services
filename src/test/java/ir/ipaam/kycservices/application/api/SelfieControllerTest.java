@@ -1,8 +1,14 @@
 package ir.ipaam.kycservices.application.api;
 
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
+import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.SelfieController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
+import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -17,13 +23,13 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,6 +46,9 @@ class SelfieControllerTest {
     @MockBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
+    @MockBean
+    private ZeebeClient zeebeClient;
+
     @Test
     void uploadSelfieDispatchesCommand() throws Exception {
         MockMultipartFile selfie = new MockMultipartFile(
@@ -55,9 +64,23 @@ class SelfieControllerTest {
                 "  process-123  ".getBytes(StandardCharsets.UTF_8)
         );
 
+        Customer customer = new Customer();
+        customer.setHasNewNationalCard(true);
+        ProcessInstance processInstance = new ProcessInstance();
+        processInstance.setCustomer(customer);
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class))).thenReturn(null);
+
+        PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
+        PublishMessageCommandStep2 step2 = mock(PublishMessageCommandStep2.class);
+        PublishMessageCommandStep3 step3 = mock(PublishMessageCommandStep3.class);
+        PublishMessageResponse response = mock(PublishMessageResponse.class);
+        when(zeebeClient.newPublishMessageCommand()).thenReturn(step1);
+        when(step1.messageName("selfie-uploaded")).thenReturn(step2);
+        when(step2.correlationKey("process-123")).thenReturn(step3);
+        when(step3.variables(any(Map.class))).thenReturn(step3);
+        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
 
         mockMvc.perform(multipart("/kyc/selfie")
                         .file(selfie)
@@ -73,6 +96,15 @@ class SelfieControllerTest {
         assertThat(command.processInstanceId()).isEqualTo("process-123");
         assertThat(command.selfieDescriptor().filename()).isEqualTo("selfie_process-123");
         assertThat(command.selfieDescriptor().data()).isEqualTo(selfie.getBytes());
+
+        ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(step1).messageName("selfie-uploaded");
+        verify(step2).correlationKey("process-123");
+        verify(step3).variables(variablesCaptor.capture());
+        assertThat(variablesCaptor.getValue())
+                .containsEntry("processInstanceId", "process-123")
+                .containsEntry("kycStatus", "SELFIE_UPLOADED")
+                .containsEntry("card", true);
     }
 
     @Test
@@ -98,6 +130,7 @@ class SelfieControllerTest {
                 .andExpect(jsonPath("$.message.en").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test
@@ -123,6 +156,7 @@ class SelfieControllerTest {
                 .andExpect(jsonPath("$.message.en").value("selfie must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test
@@ -140,8 +174,9 @@ class SelfieControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -168,8 +203,9 @@ class SelfieControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -207,5 +243,6 @@ class SelfieControllerTest {
                 .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 }
