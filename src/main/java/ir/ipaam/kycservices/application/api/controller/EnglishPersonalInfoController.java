@@ -1,8 +1,10 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -39,14 +42,16 @@ public class EnglishPersonalInfoController {
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final ZeebeClient zeebeClient;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> provideEnglishPersonalInfo(@Valid @RequestBody EnglishPersonalInfoRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
-        if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
-            log.warn("Process instance with id {} not found", processInstanceId);
-            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
-        }
+        ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId)
+                .orElseThrow(() -> {
+                    log.warn("Process instance with id {} not found", processInstanceId);
+                    return new ResourceNotFoundException(PROCESS_NOT_FOUND);
+                });
 
         String firstNameEn = normalizeRequiredText(request.firstNameEn(), ENGLISH_FIRST_NAME_REQUIRED);
         String lastNameEn = normalizeRequiredText(request.lastNameEn(), ENGLISH_LAST_NAME_REQUIRED);
@@ -63,6 +68,13 @@ public class EnglishPersonalInfoController {
 
         commandGateway.sendAndWait(command);
 
+        Boolean hasNewCard = null;
+        if (processInstance.getCustomer() != null) {
+            hasNewCard = processInstance.getCustomer().getHasNewNationalCard();
+        }
+
+        publishWorkflowUpdate(processInstanceId, hasNewCard);
+
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
                 "processInstanceId", processInstanceId,
                 "firstNameEn", firstNameEn,
@@ -71,6 +83,21 @@ public class EnglishPersonalInfoController {
                 "telephone", telephone,
                 "status", "ENGLISH_PERSONAL_INFO_PROVIDED"
         ));
+    }
+
+    private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("processInstanceId", processInstanceId);
+        variables.put("kycStatus", "ENGLISH_PERSONAL_INFO_PROVIDED");
+        if (hasNewCard != null) {
+            variables.put("card", hasNewCard);
+        }
+        zeebeClient.newPublishMessageCommand()
+                .messageName("english-personal-info-provided")
+                .correlationKey(processInstanceId)
+                .variables(variables)
+                .send()
+                .join();
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {

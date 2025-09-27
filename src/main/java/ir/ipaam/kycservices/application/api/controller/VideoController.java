@@ -1,10 +1,12 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
@@ -41,6 +44,7 @@ public class VideoController {
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final InquiryTokenService inquiryTokenService;
+    private final ZeebeClient zeebeClient;
 
     @PostMapping(path = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadVideo(
@@ -49,10 +53,11 @@ public class VideoController {
         validateFile(video, VIDEO_REQUIRED, VIDEO_TOO_LARGE, MAX_VIDEO_SIZE_BYTES);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
-        if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
-            log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
-        }
+        ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
+                .orElseThrow(() -> {
+                    log.warn("Process instance with id {} not found", normalizedProcessId);
+                    return new ResourceNotFoundException(PROCESS_NOT_FOUND);
+                });
 
         byte[] videoBytes = readFile(video);
 
@@ -64,12 +69,34 @@ public class VideoController {
 
         commandGateway.sendAndWait(new UploadVideoCommand(normalizedProcessId, descriptor, inquiryToken));
 
+        Boolean hasNewCard = null;
+        if (processInstance.getCustomer() != null) {
+            hasNewCard = processInstance.getCustomer().getHasNewNationalCard();
+        }
+
+        publishWorkflowUpdate(normalizedProcessId, hasNewCard);
+
         Map<String, Object> body = Map.of(
                 "processInstanceId", normalizedProcessId,
                 "videoSize", videoBytes.length,
                 "status", "VIDEO_RECEIVED"
         );
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+    }
+
+    private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("processInstanceId", processInstanceId);
+        variables.put("kycStatus", "VIDEO_UPLOADED");
+        if (hasNewCard != null) {
+            variables.put("card", hasNewCard);
+        }
+        zeebeClient.newPublishMessageCommand()
+                .messageName("video-uploaded")
+                .correlationKey(processInstanceId)
+                .variables(variables)
+                .send()
+                .join();
     }
 
     private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {

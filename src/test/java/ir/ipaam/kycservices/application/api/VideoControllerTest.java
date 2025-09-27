@@ -1,10 +1,16 @@
 package ir.ipaam.kycservices.application.api;
 
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
+import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.VideoController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
+import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -19,14 +25,14 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -46,6 +52,9 @@ class VideoControllerTest {
     @MockBean
     private InquiryTokenService inquiryTokenService;
 
+    @MockBean
+    private ZeebeClient zeebeClient;
+
     @Test
     void uploadVideoDispatchesCommand() throws Exception {
         MockMultipartFile video = new MockMultipartFile(
@@ -61,11 +70,25 @@ class VideoControllerTest {
                 " process-456 ".getBytes(StandardCharsets.UTF_8)
         );
 
+        Customer customer = new Customer();
+        customer.setHasNewNationalCard(true);
+        ProcessInstance processInstance = new ProcessInstance();
+        processInstance.setCustomer(customer);
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(inquiryTokenService.generateToken("process-456"))
                 .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class))).thenReturn(null);
+
+        PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
+        PublishMessageCommandStep2 step2 = mock(PublishMessageCommandStep2.class);
+        PublishMessageCommandStep3 step3 = mock(PublishMessageCommandStep3.class);
+        PublishMessageResponse response = mock(PublishMessageResponse.class);
+        when(zeebeClient.newPublishMessageCommand()).thenReturn(step1);
+        when(step1.messageName("video-uploaded")).thenReturn(step2);
+        when(step2.correlationKey("process-456")).thenReturn(step3);
+        when(step3.variables(any(Map.class))).thenReturn(step3);
+        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
 
         mockMvc.perform(multipart("/kyc/video")
                         .file(video)
@@ -82,6 +105,15 @@ class VideoControllerTest {
         assertThat(command.videoDescriptor().filename()).isEqualTo("video_process-456");
         assertThat(command.videoDescriptor().data()).isEqualTo(video.getBytes());
         assertThat(command.inquiryToken()).isEqualTo("token-123");
+
+        ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(step1).messageName("video-uploaded");
+        verify(step2).correlationKey("process-456");
+        verify(step3).variables(variablesCaptor.capture());
+        assertThat(variablesCaptor.getValue())
+                .containsEntry("processInstanceId", "process-456")
+                .containsEntry("kycStatus", "VIDEO_UPLOADED")
+                .containsEntry("card", true);
     }
 
     @Test
@@ -107,6 +139,7 @@ class VideoControllerTest {
                 .andExpect(jsonPath("$.message.en").value("processInstanceId must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test
@@ -132,6 +165,7 @@ class VideoControllerTest {
                 .andExpect(jsonPath("$.message.en").value("video must be provided"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test
@@ -175,8 +209,9 @@ class VideoControllerTest {
                 "process-456".getBytes(StandardCharsets.UTF_8)
         );
 
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(inquiryTokenService.generateToken("process-456"))
                 .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
@@ -205,8 +240,9 @@ class VideoControllerTest {
                 "process-456".getBytes(StandardCharsets.UTF_8)
         );
 
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(inquiryTokenService.generateToken("process-456"))
                 .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
@@ -246,6 +282,7 @@ class VideoControllerTest {
                 .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test

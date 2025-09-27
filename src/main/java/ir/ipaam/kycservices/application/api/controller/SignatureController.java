@@ -1,8 +1,10 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
@@ -37,6 +40,7 @@ public class SignatureController {
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final ZeebeClient zeebeClient;
 
     @PostMapping(path = "/signature", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadSignature(
@@ -45,10 +49,11 @@ public class SignatureController {
         validateFile(signature, SIGNATURE_REQUIRED, SIGNATURE_TOO_LARGE, MAX_SIGNATURE_SIZE_BYTES);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
-        if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
-            log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
-        }
+        ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
+                .orElseThrow(() -> {
+                    log.warn("Process instance with id {} not found", normalizedProcessId);
+                    return new ResourceNotFoundException(PROCESS_NOT_FOUND);
+                });
 
         byte[] signatureBytes = readFile(signature);
 
@@ -57,12 +62,34 @@ public class SignatureController {
 
         commandGateway.sendAndWait(new UploadSignatureCommand(normalizedProcessId, descriptor));
 
+        Boolean hasNewCard = null;
+        if (processInstance.getCustomer() != null) {
+            hasNewCard = processInstance.getCustomer().getHasNewNationalCard();
+        }
+
+        publishWorkflowUpdate(normalizedProcessId, hasNewCard);
+
         Map<String, Object> body = Map.of(
                 "processInstanceId", normalizedProcessId,
                 "signatureSize", signatureBytes.length,
                 "status", "SIGNATURE_RECEIVED"
         );
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+    }
+
+    private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("processInstanceId", processInstanceId);
+        variables.put("kycStatus", "SIGNATURE_UPLOADED");
+        if (hasNewCard != null) {
+            variables.put("card", hasNewCard);
+        }
+        zeebeClient.newPublishMessageCommand()
+                .messageName("signature-uploaded")
+                .correlationKey(processInstanceId)
+                .variables(variables)
+                .send()
+                .join();
     }
 
     private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {

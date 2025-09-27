@@ -1,8 +1,10 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +44,7 @@ public class IdDocumentController {
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final ZeebeClient zeebeClient;
 
     @PostMapping(path = "/id", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadIdPages(
@@ -56,10 +60,11 @@ public class IdDocumentController {
 
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
-        if (kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId).isEmpty()) {
-            log.warn("Process instance with id {} not found", normalizedProcessId);
-            throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
-        }
+        ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
+                .orElseThrow(() -> {
+                    log.warn("Process instance with id {} not found", normalizedProcessId);
+                    return new ResourceNotFoundException(PROCESS_NOT_FOUND);
+                });
 
         List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
         List<Integer> sizes = new ArrayList<>();
@@ -75,6 +80,13 @@ public class IdDocumentController {
         UploadIdPagesCommand command = new UploadIdPagesCommand(normalizedProcessId, List.copyOf(descriptors));
         commandGateway.sendAndWait(command);
 
+        Boolean hasNewCard = null;
+        if (processInstance.getCustomer() != null) {
+            hasNewCard = processInstance.getCustomer().getHasNewNationalCard();
+        }
+
+        publishWorkflowUpdate(normalizedProcessId, hasNewCard);
+
         Map<String, Object> body = Map.of(
                 "processInstanceId", normalizedProcessId,
                 "pageCount", descriptors.size(),
@@ -82,6 +94,21 @@ public class IdDocumentController {
                 "status", "ID_PAGES_RECEIVED"
         );
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+    }
+
+    private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("processInstanceId", processInstanceId);
+        variables.put("kycStatus", "ID_PAGES_UPLOADED");
+        if (hasNewCard != null) {
+            variables.put("card", hasNewCard);
+        }
+        zeebeClient.newPublishMessageCommand()
+                .messageName("id-pages-uploaded")
+                .correlationKey(processInstanceId)
+                .variables(variables)
+                .send()
+                .join();
     }
 
     private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {

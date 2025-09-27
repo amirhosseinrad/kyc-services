@@ -1,10 +1,16 @@
 package ir.ipaam.kycservices.application.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
+import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.EnglishPersonalInfoController;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
+import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -17,7 +23,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,6 +49,9 @@ class EnglishPersonalInfoControllerTest {
     @MockBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
+    @MockBean
+    private ZeebeClient zeebeClient;
+
     @Test
     void provideEnglishInfoDispatchesCommand() throws Exception {
         EnglishPersonalInfoRequest request = new EnglishPersonalInfoRequest(
@@ -50,9 +61,23 @@ class EnglishPersonalInfoControllerTest {
                 " john.doe@example.com ",
                 " 0912 "
         );
+        Customer customer = new Customer();
+        customer.setHasNewNationalCard(true);
+        ProcessInstance processInstance = new ProcessInstance();
+        processInstance.setCustomer(customer);
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-1"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(commandGateway.sendAndWait(any(ProvideEnglishPersonalInfoCommand.class))).thenReturn(null);
+
+        PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
+        PublishMessageCommandStep2 step2 = mock(PublishMessageCommandStep2.class);
+        PublishMessageCommandStep3 step3 = mock(PublishMessageCommandStep3.class);
+        PublishMessageResponse response = mock(PublishMessageResponse.class);
+        when(zeebeClient.newPublishMessageCommand()).thenReturn(step1);
+        when(step1.messageName("english-personal-info-provided")).thenReturn(step2);
+        when(step2.correlationKey("process-1")).thenReturn(step3);
+        when(step3.variables(any(Map.class))).thenReturn(step3);
+        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
 
         mockMvc.perform(post("/kyc/english-info")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,6 +98,15 @@ class EnglishPersonalInfoControllerTest {
         assertThat(command.lastNameEn()).isEqualTo("Doe");
         assertThat(command.email()).isEqualTo("john.doe@example.com");
         assertThat(command.telephone()).isEqualTo("0912");
+
+        ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(step1).messageName("english-personal-info-provided");
+        verify(step2).correlationKey("process-1");
+        verify(step3).variables(variablesCaptor.capture());
+        assertThat(variablesCaptor.getValue())
+                .containsEntry("processInstanceId", "process-1")
+                .containsEntry("kycStatus", "ENGLISH_PERSONAL_INFO_PROVIDED")
+                .containsEntry("card", true);
     }
 
     @Test
@@ -95,6 +129,7 @@ class EnglishPersonalInfoControllerTest {
                 .andExpect(jsonPath("$.message.en").value("Process instance not found"));
 
         verify(commandGateway, never()).sendAndWait(any(ProvideEnglishPersonalInfoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test
@@ -106,8 +141,9 @@ class EnglishPersonalInfoControllerTest {
                 "john.doe@example.com",
                 "0912"
         );
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-1"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(commandGateway.sendAndWait(any(ProvideEnglishPersonalInfoCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -128,8 +164,9 @@ class EnglishPersonalInfoControllerTest {
                 "john.doe@example.com",
                 "0912"
         );
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-1"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
         when(commandGateway.sendAndWait(any(ProvideEnglishPersonalInfoCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -150,8 +187,9 @@ class EnglishPersonalInfoControllerTest {
                 "not-an-email",
                 "0912"
         );
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-1"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
 
         mockMvc.perform(post("/kyc/english-info")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -161,5 +199,6 @@ class EnglishPersonalInfoControllerTest {
                 .andExpect(jsonPath("$.message.en").value("email must be a valid email address"));
 
         verify(commandGateway, never()).sendAndWait(any(ProvideEnglishPersonalInfoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 }
