@@ -2,9 +2,6 @@ package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
-import ir.ipaam.kycservices.domain.model.entity.Customer;
-import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_ACCEPT_CONSENT_FAILED;
@@ -25,8 +23,6 @@ public class AcceptConsentWorker {
 
     private final KycUserTasks kycUserTasks;
     private final KycServiceTasks kycServiceTasks;
-    private final KycProcessInstanceRepository kycProcessInstanceRepository;
-
     @JobWorker(type = "accept-consent")
     public Map<String, Object> handle(final ActivatedJob job) {
         Map<String, Object> variables = job.getVariablesAsMap();
@@ -36,14 +32,16 @@ public class AcceptConsentWorker {
             ensureConsentPayloadPresent(variables, processInstanceId);
             String termsVersion = extractString(variables.get("termsVersion"), "termsVersion");
             boolean accepted = extractBoolean(variables.get("accepted"), "accepted");
-            boolean card = resolveCardFlag(variables, processInstanceId);
+            Boolean card = extractOptionalBoolean(variables.get("card"));
 
             kycUserTasks.acceptConsent(termsVersion, accepted, processInstanceId);
-            return Map.of(
-                    "consentAccepted", accepted,
-                    "card", card,
-                    "kycStatus", STEP_NAME
-            );
+            Map<String, Object> result = new HashMap<>();
+            result.put("consentAccepted", accepted);
+            result.put("kycStatus", STEP_NAME);
+            if (card != null) {
+                result.put("card", card);
+            }
+            return result;
         } catch (MissingConsentVariablesException e) {
             log.info("Consent payload not yet available for job {} and process {}", job.getKey(), processInstanceId);
             throw e;
@@ -88,18 +86,6 @@ public class AcceptConsentWorker {
             throw new IllegalArgumentException(fieldName + " must be provided");
         }
         throw new IllegalArgumentException(fieldName + " must be a non-empty string");
-    }
-
-    private boolean resolveCardFlag(Map<String, Object> variables, String processInstanceId) {
-        Boolean card = extractOptionalBoolean(variables.get("card"));
-        if (card != null) {
-            return card;
-        }
-
-        return kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId)
-                .map(ProcessInstance::getCustomer)
-                .map(Customer::getHasNewNationalCard)
-                .orElseThrow(() -> new MissingConsentVariablesException(processInstanceId));
     }
 
     private Boolean extractOptionalBoolean(Object value) {

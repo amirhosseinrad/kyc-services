@@ -6,6 +6,11 @@
       <zeebe:subscription correlationKey="=processInstanceId"/>
     </bpmn:extensionElements>
   </bpmn:message>
+  <bpmn:message id="Message_CardStatusRecorded" name="card-status-recorded">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=processInstanceId"/>
+    </bpmn:extensionElements>
+  </bpmn:message>
   <bpmn:process id="kyc-process" name="kyc-process" isExecutable="true">
     <bpmn:serviceTask id="check-kyc-status" name="check-kyc-status">
       <bpmn:extensionElements>
@@ -94,13 +99,15 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=kycStatus = "ENGLISH_PERSONAL_INFO_PROVIDED"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:receiveTask id="Activity_0phc2h9" name="Consent and Declarations" messageRef="Message_ConsentAccepted" />
+    <bpmn:receiveTask id="Activity_cardStatusRecorded" name="Wait for card status" messageRef="Message_CardStatusRecorded" />
     <bpmn:exclusiveGateway id="Gateway_0evrolw" name="New National Card?">
       <bpmn:incoming>Flow_0jhb3l4</bpmn:incoming>
       <bpmn:incoming>Flow_status_card_gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_0ayjnrf</bpmn:outgoing>
       <bpmn:outgoing>Flow_0prl3kq</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:sequenceFlow id="Flow_0jhb3l4" sourceRef="Activity_0phc2h9" targetRef="Gateway_0evrolw" />
+    <bpmn:sequenceFlow id="Flow_card_status_wait" sourceRef="Activity_0phc2h9" targetRef="Activity_cardStatusRecorded" />
+    <bpmn:sequenceFlow id="Flow_0jhb3l4" sourceRef="Activity_cardStatusRecorded" targetRef="Gateway_0evrolw" />
     <bpmn:sequenceFlow id="Flow_0ayjnrf" sourceRef="Gateway_0evrolw" targetRef="Activity_1lbjv3o">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=card</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
@@ -247,6 +254,10 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0phc2h9_di" bpmnElement="Activity_0phc2h9">
         <dc:Bounds x="-20" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_cardStatusRecorded_di" bpmnElement="Activity_cardStatusRecorded">
+        <dc:Bounds x="90" y="230" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_0evrolw_di" bpmnElement="Gateway_0evrolw" isMarkerVisible="true">
@@ -403,8 +414,12 @@
         <di:waypoint x="2470" y="0" />
         <di:waypoint x="2470" y="252" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0jhb3l4_di" bpmnElement="Flow_0jhb3l4">
+      <bpmndi:BPMNEdge id="Flow_card_status_wait_di" bpmnElement="Flow_card_status_wait">
         <di:waypoint x="80" y="270" />
+        <di:waypoint x="90" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jhb3l4_di" bpmnElement="Flow_0jhb3l4">
+        <di:waypoint x="190" y="270" />
         <di:waypoint x="135" y="270" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0ayjnrf_di" bpmnElement="Flow_0ayjnrf">

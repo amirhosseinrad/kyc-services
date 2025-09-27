@@ -1,7 +1,9 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.api.command.SetVariablesCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
 import ir.ipaam.kycservices.application.api.dto.CardStatusRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
@@ -53,7 +55,7 @@ public class CardStatusController {
             throw new ResourceNotFoundException(PROCESS_NOT_FOUND);
         }
 
-        long processKey = parseProcessInstanceKey(processInstanceId);
+        parseProcessInstanceKey(processInstanceId);
 
         customer.setHasNewNationalCard(hasNewNationalCard);
         customerRepository.save(customer);
@@ -64,8 +66,10 @@ public class CardStatusController {
                 "CARD_STATUS_RECORDED",
                 "PASSED"
         ));
-        SetVariablesCommandStep1 commandStep = zeebeClient.newSetVariablesCommand(processKey);
-        commandStep
+        PublishMessageCommandStep1 publishMessageCommand = zeebeClient.newPublishMessageCommand();
+        PublishMessageCommandStep2 messageNamed = publishMessageCommand.messageName("card-status-recorded");
+        PublishMessageCommandStep3 correlated = messageNamed.correlationKey(processInstanceId);
+        correlated
                 .variables(Map.of(
                         "card", hasNewNationalCard,
                         "processInstanceId", processInstanceId,

@@ -2,8 +2,10 @@ package ir.ipaam.kycservices.application.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.api.command.SetVariablesCommandStep1;
-import io.camunda.zeebe.client.api.response.SetVariablesResponse;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
+import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.CardStatusController;
 import ir.ipaam.kycservices.application.api.dto.CardStatusRequest;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
@@ -65,11 +67,15 @@ class CardStatusControllerTest {
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(commandGateway.sendAndWait(any(UpdateKycStatusCommand.class))).thenReturn(null);
 
-        SetVariablesCommandStep1 step1 = mock(SetVariablesCommandStep1.class);
-        SetVariablesResponse response = mock(SetVariablesResponse.class);
-        when(zeebeClient.newSetVariablesCommand(123456L)).thenReturn(step1);
-        when(step1.variables(any(Map.class))).thenReturn(step1);
-        when(step1.send()).thenReturn(CompletableFuture.completedFuture(response));
+        PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
+        PublishMessageCommandStep2 step2 = mock(PublishMessageCommandStep2.class);
+        PublishMessageCommandStep3 step3 = mock(PublishMessageCommandStep3.class);
+        PublishMessageResponse response = mock(PublishMessageResponse.class);
+        when(zeebeClient.newPublishMessageCommand()).thenReturn(step1);
+        when(step1.messageName("card-status-recorded")).thenReturn(step2);
+        when(step2.correlationKey("123456")).thenReturn(step3);
+        when(step3.variables(any(Map.class))).thenReturn(step3);
+        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
 
         CardStatusRequest request = new CardStatusRequest("123456", true);
 
@@ -93,7 +99,9 @@ class CardStatusControllerTest {
         assertThat(command.state()).isEqualTo("PASSED");
 
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(step1).variables(captor.capture());
+        verify(step1).messageName("card-status-recorded");
+        verify(step2).correlationKey("123456");
+        verify(step3).variables(captor.capture());
         assertThat(captor.getValue())
                 .containsEntry("card", true)
                 .containsEntry("processInstanceId", "123456")

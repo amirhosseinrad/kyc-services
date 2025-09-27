@@ -1,12 +1,8 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.api.response.ActivatedJob;
-import ir.ipaam.kycservices.domain.model.entity.Customer;
-import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
 import ir.ipaam.kycservices.infrastructure.service.KycUserTasks;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -19,13 +15,7 @@ class AcceptConsentWorkerTest {
 
     private final KycUserTasks kycUserTasks = mock(KycUserTasks.class);
     private final KycServiceTasks kycServiceTasks = mock(KycServiceTasks.class);
-    private final KycProcessInstanceRepository kycProcessInstanceRepository = mock(KycProcessInstanceRepository.class);
-    private final AcceptConsentWorker worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks, kycProcessInstanceRepository);
-
-    @BeforeEach
-    void init() {
-        when(kycProcessInstanceRepository.findByCamundaInstanceId(any())).thenReturn(java.util.Optional.empty());
-    }
+    private final AcceptConsentWorker worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks);
 
     @Test
     void handleDelegatesToService() {
@@ -151,37 +141,12 @@ class AcceptConsentWorkerTest {
         when(job.getVariablesAsMap()).thenReturn(variables);
         when(job.getKey()).thenReturn(7L);
 
-        AcceptConsentWorker.MissingConsentVariablesException exception =
-                assertThrows(AcceptConsentWorker.MissingConsentVariablesException.class, () -> worker.handle(job));
-        assertTrue(exception.getMessage().contains("proc-7"));
-        verifyNoInteractions(kycUserTasks);
-        verifyNoInteractions(kycServiceTasks);
-    }
-
-    @Test
-    void handleUsesPersistedCardFlagWhenVariableMissing() {
-        Map<String, Object> variables = Map.of(
-                "processInstanceId", "proc-8",
-                "termsVersion", "v8",
-                "accepted", true
-        );
-
-        Customer customer = new Customer();
-        customer.setHasNewNationalCard(true);
-        ProcessInstance instance = new ProcessInstance();
-        instance.setCustomer(customer);
-        doReturn(java.util.Optional.of(instance))
-                .when(kycProcessInstanceRepository)
-                .findByCamundaInstanceId("proc-8");
-
-        ActivatedJob job = mock(ActivatedJob.class);
-        when(job.getVariablesAsMap()).thenReturn(variables);
-        when(job.getKey()).thenReturn(8L);
-
         Map<String, Object> result = worker.handle(job);
 
-        verify(kycUserTasks).acceptConsent("v8", true, "proc-8");
-        assertEquals(true, result.get("card"));
+        verify(kycUserTasks).acceptConsent("v7", true, "proc-7");
+        assertEquals(true, result.get("consentAccepted"));
+        assertFalse(result.containsKey("card"));
         assertEquals(AcceptConsentWorker.STEP_NAME, result.get("kycStatus"));
+        verifyNoInteractions(kycServiceTasks);
     }
 }

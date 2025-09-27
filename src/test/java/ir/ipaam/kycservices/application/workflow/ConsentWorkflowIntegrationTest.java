@@ -1,8 +1,10 @@
 package ir.ipaam.kycservices.application.workflow;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.api.command.SetVariablesCommandStep1;
-import io.camunda.zeebe.client.api.response.SetVariablesResponse;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
+import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.ConsentController;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
@@ -45,7 +47,7 @@ class ConsentWorkflowIntegrationTest {
         consentController = new ConsentController(commandGateway, kycProcessInstanceRepository, zeebeClient);
         kycUserTasks = mock(KycUserTasks.class);
         kycServiceTasks = mock(KycServiceTasks.class);
-        worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks, kycProcessInstanceRepository);
+        worker = new AcceptConsentWorker(kycUserTasks, kycServiceTasks);
     }
 
     @Test
@@ -56,16 +58,20 @@ class ConsentWorkflowIntegrationTest {
                 .thenReturn(Optional.of(new ir.ipaam.kycservices.domain.model.entity.ProcessInstance()));
         when(commandGateway.sendAndWait(any(AcceptConsentCommand.class))).thenReturn(null);
 
-        SetVariablesCommandStep1 step1 = mock(SetVariablesCommandStep1.class);
-        SetVariablesResponse response = mock(SetVariablesResponse.class);
+        PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
+        PublishMessageCommandStep2 step2 = mock(PublishMessageCommandStep2.class);
+        PublishMessageCommandStep3 step3 = mock(PublishMessageCommandStep3.class);
+        PublishMessageResponse response = mock(PublishMessageResponse.class);
         Map<String, Object> capturedVariables = new HashMap<>();
-        when(zeebeClient.newSetVariablesCommand(Long.parseLong(processInstanceId))).thenReturn(step1);
-        when(step1.variables(any(Map.class))).thenAnswer(invocation -> {
+        when(zeebeClient.newPublishMessageCommand()).thenReturn(step1);
+        when(step1.messageName("consent-accepted")).thenReturn(step2);
+        when(step2.correlationKey(processInstanceId)).thenReturn(step3);
+        when(step3.variables(any(Map.class))).thenAnswer(invocation -> {
             capturedVariables.clear();
             capturedVariables.putAll((Map<String, Object>) invocation.getArgument(0));
-            return step1;
+            return step3;
         });
-        when(step1.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
 
         ResponseEntity<Map<String, Object>> apiResponse = consentController.acceptConsent(request);
         assertEquals(202, apiResponse.getStatusCode().value());
@@ -96,20 +102,14 @@ class ConsentWorkflowIntegrationTest {
         updatedVariables.put("processInstanceId", processInstanceId);
         jobVariables.set(updatedVariables);
 
-        AcceptConsentWorker.MissingConsentVariablesException cardMissing = assertThrows(
-                AcceptConsentWorker.MissingConsentVariablesException.class,
-                () -> worker.handle(job)
-        );
-        assertThat(cardMissing.getMessage()).contains(processInstanceId);
-        verifyNoInteractions(kycUserTasks);
-
-        updatedVariables.put("card", true);
         Map<String, Object> workerResult = worker.handle(job);
         assertThat(workerResult)
                 .containsEntry("consentAccepted", true)
-                .containsEntry("card", true)
                 .containsEntry("kycStatus", AcceptConsentWorker.STEP_NAME);
+        assertThat(workerResult).doesNotContainKey("card");
         verify(kycUserTasks).acceptConsent("v9", true, processInstanceId);
-        verify(step1).send();
+        verify(step1).messageName("consent-accepted");
+        verify(step2).correlationKey(processInstanceId);
+        verify(step3).send();
     }
 }
