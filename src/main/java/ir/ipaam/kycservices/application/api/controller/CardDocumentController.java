@@ -10,6 +10,7 @@ import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -44,8 +45,11 @@ public class CardDocumentController {
 
     public static final long MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
+    private static final String STEP_CARD_DOCUMENTS_UPLOADED = "CARD_DOCUMENTS_UPLOADED";
+
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
 
     @Operation(
@@ -67,6 +71,15 @@ public class CardDocumentController {
                     log.warn("Process instance with id {} not found", normalizedProcessId);
                     return new ResourceNotFoundException(PROCESS_NOT_FOUND);
                 });
+
+        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                normalizedProcessId,
+                STEP_CARD_DOCUMENTS_UPLOADED)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "processInstanceId", normalizedProcessId,
+                    "status", "CARD_DOCUMENTS_ALREADY_UPLOADED"
+            ));
+        }
 
         byte[] frontBytes = ensureWithinLimit(readFile(frontImage), CARD_FRONT_TOO_LARGE);
         byte[] backBytes = ensureWithinLimit(readFile(backImage), CARD_BACK_TOO_LARGE);

@@ -14,6 +14,7 @@ import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -50,6 +51,9 @@ class CardStatusControllerTest {
     private CustomerRepository customerRepository;
 
     @MockBean
+    private KycStepStatusRepository kycStepStatusRepository;
+
+    @MockBean
     private ZeebeClient zeebeClient;
 
     @MockBean
@@ -64,6 +68,9 @@ class CardStatusControllerTest {
 
         when(kycProcessInstanceRepository.findByCamundaInstanceId("123456"))
                 .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "123456", "CARD_STATUS_RECORDED"))
+                .thenReturn(false);
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(commandGateway.sendAndWait(any(UpdateKycStatusCommand.class))).thenReturn(null);
 
@@ -106,6 +113,35 @@ class CardStatusControllerTest {
                 .containsEntry("card", true)
                 .containsEntry("processInstanceId", "123456")
                 .containsEntry("kycStatus", "CARD_STATUS_RECORDED");
+    }
+
+    @Test
+    void duplicateStatusReturnsConflict() throws Exception {
+        Customer customer = new Customer();
+        customer.setHasNewNationalCard(Boolean.TRUE);
+        ProcessInstance processInstance = new ProcessInstance();
+        processInstance.setCamundaInstanceId("123456");
+        processInstance.setCustomer(customer);
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("123456"))
+                .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "123456", "CARD_STATUS_RECORDED"))
+                .thenReturn(true);
+
+        CardStatusRequest request = new CardStatusRequest("123456", true);
+
+        mockMvc.perform(post("/kyc/card/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.processInstanceId").value("123456"))
+                .andExpect(jsonPath("$.hasNewNationalCard").value(true))
+                .andExpect(jsonPath("$.status").value("CARD_STATUS_ALREADY_RECORDED"));
+
+        verifyNoInteractions(commandGateway);
+        verifyNoInteractions(zeebeClient);
+        verify(customerRepository, never()).save(any());
     }
 
     @Test
