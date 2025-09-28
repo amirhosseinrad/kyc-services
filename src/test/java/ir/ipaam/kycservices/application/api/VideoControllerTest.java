@@ -12,6 +12,7 @@ import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -326,7 +327,7 @@ class VideoControllerTest {
     }
 
     @Test
-    void tokenGenerationFailureReturnsBadGateway() throws Exception {
+    void tokenGenerationFailureMarksStepAndReturnsServiceUnavailable() throws Exception {
         MockMultipartFile video = new MockMultipartFile(
                 "video",
                 "video.mp4",
@@ -340,18 +341,70 @@ class VideoControllerTest {
                 "process-456".getBytes(StandardCharsets.UTF_8)
         );
 
+        ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
-                .thenReturn(Optional.of(new ProcessInstance()));
+                .thenReturn(Optional.of(processInstance));
+        when(inquiryTokenService.generateToken("process-456"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.processInstanceId").value("process-456"))
+                .andExpect(jsonPath("$.status").value("VIDEO_PENDING"))
+                .andExpect(jsonPath("$.message").value("Video verification is temporarily unavailable. Please try again later."));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+        verify(kycProcessInstanceRepository).save(processInstance);
+
+        assertThat(processInstance.getStatuses())
+                .singleElement()
+                .satisfies(status -> {
+                    assertThat(status.getStepName()).isEqualTo("VIDEO_UPLOADED");
+                    assertThat(status.getState()).isEqualTo(StepStatus.State.FAILED);
+                    assertThat(status.getErrorCause()).isEqualTo(INQUIRY_TOKEN_FAILED);
+                });
+    }
+
+    @Test
+    void tokenGenerationExceptionMarksStepAndReturnsServiceUnavailable() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(processInstance));
         when(inquiryTokenService.generateToken("process-456"))
                 .thenThrow(new InquiryTokenException(INQUIRY_TOKEN_FAILED));
 
         mockMvc.perform(multipart("/kyc/video")
                         .file(video)
                         .file(process))
-                .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.code").value(ErrorCode.INQUIRY_SERVICE_UNAVAILABLE.getValue()))
-                .andExpect(jsonPath("$.message.en").value("Unable to generate inquiry token"));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.processInstanceId").value("process-456"))
+                .andExpect(jsonPath("$.status").value("VIDEO_PENDING"))
+                .andExpect(jsonPath("$.message").value("Video verification is temporarily unavailable. Please try again later."));
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+        verify(kycProcessInstanceRepository).save(processInstance);
+
+        assertThat(processInstance.getStatuses())
+                .singleElement()
+                .satisfies(status -> {
+                    assertThat(status.getStepName()).isEqualTo("VIDEO_UPLOADED");
+                    assertThat(status.getState()).isEqualTo(StepStatus.State.FAILED);
+                    assertThat(status.getErrorCause()).isEqualTo(INQUIRY_TOKEN_FAILED);
+                });
     }
 }

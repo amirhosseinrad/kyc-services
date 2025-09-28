@@ -25,6 +25,8 @@ public class StepStatus {
 
     private LocalDateTime timestamp;
 
+    private String errorCause;
+
     @ManyToOne
     private ProcessInstance process;
 
