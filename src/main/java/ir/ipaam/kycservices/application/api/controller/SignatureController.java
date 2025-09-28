@@ -1,6 +1,8 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
@@ -34,6 +36,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.SIGNATURE_TOO_LARGE;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
+@Tag(name = "Signature Upload", description = "Collect handwritten signatures for contract fulfillment.")
 public class SignatureController {
 
     public static final long MAX_SIGNATURE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -42,6 +45,11 @@ public class SignatureController {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final ZeebeClient zeebeClient;
 
+    @Operation(
+            summary = "Upload a handwritten signature",
+            description = "Accepts a scanned signature image for the active process, stores it, and emits a "
+                    + "signature-uploaded workflow message. Rejects missing or oversized files."
+    )
     @PostMapping(path = "/signature", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadSignature(
             @RequestPart("signature") MultipartFile signature,

@@ -1,6 +1,8 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
@@ -33,6 +35,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.TERMS_VERSION_REQUIRE
 @RequiredArgsConstructor
 @RequestMapping("/kyc/consent")
 @Validated
+@Tag(name = "Consent", description = "Record customer approval for terms and conditions.")
 public class ConsentController {
 
     private final CommandGateway commandGateway;
@@ -40,6 +43,11 @@ public class ConsentController {
     private final ZeebeClient zeebeClient;
     private final ConsentRepository consentRepository;
 
+    @Operation(
+            summary = "Accept terms and conditions",
+            description = "Stores a customer's consent decision for a specific terms version. Prevents duplicate "
+                    + "acceptance and emits a consent-accepted message to the workflow engine."
+    )
     @PostMapping
     public ResponseEntity<Map<String, Object>> acceptConsent(@Valid @RequestBody ConsentRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());

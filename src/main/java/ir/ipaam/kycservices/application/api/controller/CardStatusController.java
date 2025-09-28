@@ -4,6 +4,8 @@ import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.CardStatusRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
@@ -34,6 +36,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @RequiredArgsConstructor
 @RequestMapping("/kyc/card")
 @Validated
+@Tag(name = "Card Status", description = "Track whether the applicant possesses a newer national card.")
 public class CardStatusController {
 
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
@@ -41,6 +44,11 @@ public class CardStatusController {
     private final ZeebeClient zeebeClient;
     private final CommandGateway commandGateway;
 
+    @Operation(
+            summary = "Record national card status",
+            description = "Registers whether the applicant holds a new national card, persists the flag, and "
+                    + "broadcasts a card-status-recorded workflow message."
+    )
     @PostMapping("/status")
     public ResponseEntity<Map<String, Object>> updateCardStatus(@Valid @RequestBody CardStatusRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());

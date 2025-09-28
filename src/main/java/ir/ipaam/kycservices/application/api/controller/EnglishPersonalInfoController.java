@@ -1,6 +1,8 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
@@ -36,6 +38,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.TELEPHONE_REQUIRED;
 @RequiredArgsConstructor
 @RequestMapping("/kyc/english-info")
 @Validated
+@Tag(name = "English Personal Info", description = "Capture Latin-script customer information required for downstream compliance.")
 public class EnglishPersonalInfoController {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
@@ -44,6 +47,11 @@ public class EnglishPersonalInfoController {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final ZeebeClient zeebeClient;
 
+    @Operation(
+            summary = "Provide English personal details",
+            description = "Validates and stores the applicant's English first name, last name, email, and telephone. "
+                    + "Publishes a workflow update after the information is accepted."
+    )
     @PostMapping
     public ResponseEntity<Map<String, Object>> provideEnglishPersonalInfo(@Valid @RequestBody EnglishPersonalInfoRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());

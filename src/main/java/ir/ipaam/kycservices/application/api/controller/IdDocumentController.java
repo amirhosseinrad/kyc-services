@@ -1,6 +1,8 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
@@ -38,6 +40,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc/documents")
+@Tag(name = "ID Document Upload", description = "Submit multi-page scans of the customer's national ID document.")
 public class IdDocumentController {
 
     public static final long MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -46,6 +49,11 @@ public class IdDocumentController {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final ZeebeClient zeebeClient;
 
+    @Operation(
+            summary = "Upload national ID pages",
+            description = "Accepts between one and four images representing the customer's national ID card. "
+                    + "Validates file size, persists the payload, and notifies the KYC workflow of the upload."
+    )
     @PostMapping(path = "/id", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadIdPages(
             @RequestPart("pages") List<MultipartFile> pages,

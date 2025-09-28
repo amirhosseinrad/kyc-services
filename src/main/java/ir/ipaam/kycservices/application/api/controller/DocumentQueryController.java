@@ -1,10 +1,13 @@
 package ir.ipaam.kycservices.application.api.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.DocumentQueryRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.common.ErrorMessageKeys;
 import ir.ipaam.kycservices.infrastructure.service.DocumentNotFoundException;
 import ir.ipaam.kycservices.infrastructure.service.DocumentRetrievalService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,15 +16,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc/documents")
+@Tag(name = "Document Retrieval", description = "Download previously uploaded KYC artifacts.")
 public class DocumentQueryController {
 
     private final DocumentRetrievalService documentRetrievalService;
 
+    @Operation(
+            summary = "Download the latest document",
+            description = "Streams the most recent stored document for the provided national code and document type. "
+                    + "Returns HTTP 404 when the requested artifact is not available."
+    )
     @PostMapping(value = "/latest", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> fetchLatestDocument(@Valid @RequestBody DocumentQueryRequest request) {

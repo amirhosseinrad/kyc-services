@@ -1,6 +1,8 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
@@ -34,6 +36,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_TOO_LARGE;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
+@Tag(name = "Selfie Upload", description = "Capture and persist the customer's selfie used for identity verification.")
 public class SelfieController {
 
     public static final long MAX_SELFIE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -42,6 +45,11 @@ public class SelfieController {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final ZeebeClient zeebeClient;
 
+    @Operation(
+            summary = "Upload a selfie",
+            description = "Receives a single selfie image for the active KYC process, enforces file size limits, and "
+                    + "publishes a SELFIE_UPLOADED message to the workflow engine."
+    )
     @PostMapping(path = "/selfie", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadSelfie(
             @RequestPart("selfie") MultipartFile selfie,
