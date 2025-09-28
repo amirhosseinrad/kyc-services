@@ -13,6 +13,7 @@ import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class VideoControllerTest {
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
     @MockBean
+    private KycStepStatusRepository kycStepStatusRepository;
+
+    @MockBean
     private InquiryTokenService inquiryTokenService;
 
     @MockBean
@@ -76,6 +80,9 @@ class VideoControllerTest {
         processInstance.setCustomer(customer);
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-456", "VIDEO_UPLOADED"))
+                .thenReturn(false);
         when(inquiryTokenService.generateToken("process-456"))
                 .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class))).thenReturn(null);
@@ -114,6 +121,39 @@ class VideoControllerTest {
                 .containsEntry("processInstanceId", "process-456")
                 .containsEntry("kycStatus", "VIDEO_UPLOADED")
                 .containsEntry("card", true);
+    }
+
+    @Test
+    void duplicateVideoReturnsConflict() throws Exception {
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "video.mp4",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "video-data".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-456".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
+                .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-456", "VIDEO_UPLOADED"))
+                .thenReturn(true);
+
+        mockMvc.perform(multipart("/kyc/video")
+                        .file(video)
+                        .file(process))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.processInstanceId").value("process-456"))
+                .andExpect(jsonPath("$.status").value("VIDEO_ALREADY_UPLOADED"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test

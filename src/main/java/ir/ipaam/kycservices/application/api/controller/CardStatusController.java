@@ -13,6 +13,7 @@ import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
@@ -39,8 +42,11 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @Tag(name = "Card Status", description = "Track whether the applicant possesses a newer national card.")
 public class CardStatusController {
 
+    private static final String STEP_CARD_STATUS_RECORDED = "CARD_STATUS_RECORDED";
+
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
+    private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
     private final CommandGateway commandGateway;
 
@@ -56,6 +62,21 @@ public class CardStatusController {
 
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId)
                 .orElseThrow(() -> new ResourceNotFoundException(PROCESS_NOT_FOUND));
+
+        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                processInstanceId,
+                STEP_CARD_STATUS_RECORDED)) {
+            Boolean recordedCardState = Optional.ofNullable(processInstance.getCustomer())
+                    .map(Customer::getHasNewNationalCard)
+                    .orElse(null);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("processInstanceId", processInstanceId);
+            if (recordedCardState != null) {
+                body.put("hasNewNationalCard", recordedCardState);
+            }
+            body.put("status", "CARD_STATUS_ALREADY_RECORDED");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
 
         Customer customer = processInstance.getCustomer();
         if (customer == null) {

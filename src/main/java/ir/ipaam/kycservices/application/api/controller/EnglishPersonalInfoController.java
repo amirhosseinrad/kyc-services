@@ -8,6 +8,7 @@ import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -43,8 +44,11 @@ public class EnglishPersonalInfoController {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
 
+    private static final String STEP_ENGLISH_PERSONAL_INFO_PROVIDED = "ENGLISH_PERSONAL_INFO_PROVIDED";
+
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
 
     @Operation(
@@ -60,6 +64,15 @@ public class EnglishPersonalInfoController {
                     log.warn("Process instance with id {} not found", processInstanceId);
                     return new ResourceNotFoundException(PROCESS_NOT_FOUND);
                 });
+
+        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                processInstanceId,
+                STEP_ENGLISH_PERSONAL_INFO_PROVIDED)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "processInstanceId", processInstanceId,
+                    "status", "ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED"
+            ));
+        }
 
         String firstNameEn = normalizeRequiredText(request.firstNameEn(), ENGLISH_FIRST_NAME_REQUIRED);
         String lastNameEn = normalizeRequiredText(request.lastNameEn(), ENGLISH_LAST_NAME_REQUIRED);

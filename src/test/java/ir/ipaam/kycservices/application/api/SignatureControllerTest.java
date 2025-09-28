@@ -11,6 +11,7 @@ import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,9 @@ class SignatureControllerTest {
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
     @MockBean
+    private KycStepStatusRepository kycStepStatusRepository;
+
+    @MockBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -70,6 +74,9 @@ class SignatureControllerTest {
         processInstance.setCustomer(customer);
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-123", "SIGNATURE_UPLOADED"))
+                .thenReturn(false);
         when(commandGateway.sendAndWait(any(UploadSignatureCommand.class))).thenReturn(null);
 
         PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
@@ -105,6 +112,39 @@ class SignatureControllerTest {
                 .containsEntry("processInstanceId", "process-123")
                 .containsEntry("kycStatus", "SIGNATURE_UPLOADED")
                 .containsEntry("card", false);
+    }
+
+    @Test
+    void duplicateSignatureReturnsConflict() throws Exception {
+        MockMultipartFile signature = new MockMultipartFile(
+                "signature",
+                "signature.png",
+                MediaType.IMAGE_PNG_VALUE,
+                "signature".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartFile process = new MockMultipartFile(
+                "processInstanceId",
+                "",
+                MediaType.TEXT_PLAIN_VALUE,
+                "process-123".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-123", "SIGNATURE_UPLOADED"))
+                .thenReturn(true);
+
+        mockMvc.perform(multipart("/kyc/signature")
+                        .file(signature)
+                        .file(process))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.processInstanceId").value("process-123"))
+                .andExpect(jsonPath("$.status").value("SIGNATURE_ALREADY_UPLOADED"));
+
+        verify(commandGateway, never()).sendAndWait(any(UploadSignatureCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test

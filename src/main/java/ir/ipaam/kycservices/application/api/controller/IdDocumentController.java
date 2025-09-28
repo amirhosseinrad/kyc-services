@@ -9,6 +9,7 @@ import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -45,8 +46,11 @@ public class IdDocumentController {
 
     public static final long MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
+    private static final String STEP_ID_PAGES_UPLOADED = "ID_PAGES_UPLOADED";
+
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
 
     @Operation(
@@ -73,6 +77,15 @@ public class IdDocumentController {
                     log.warn("Process instance with id {} not found", normalizedProcessId);
                     return new ResourceNotFoundException(PROCESS_NOT_FOUND);
                 });
+
+        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                normalizedProcessId,
+                STEP_ID_PAGES_UPLOADED)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "processInstanceId", normalizedProcessId,
+                    "status", "ID_PAGES_ALREADY_UPLOADED"
+            ));
+        }
 
         List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
         List<Integer> sizes = new ArrayList<>();

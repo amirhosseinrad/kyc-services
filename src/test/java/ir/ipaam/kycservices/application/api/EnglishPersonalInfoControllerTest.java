@@ -13,6 +13,7 @@ import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class EnglishPersonalInfoControllerTest {
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
     @MockBean
+    private KycStepStatusRepository kycStepStatusRepository;
+
+    @MockBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -67,6 +71,9 @@ class EnglishPersonalInfoControllerTest {
         processInstance.setCustomer(customer);
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-1"))
                 .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-1", "ENGLISH_PERSONAL_INFO_PROVIDED"))
+                .thenReturn(false);
         when(commandGateway.sendAndWait(any(ProvideEnglishPersonalInfoCommand.class))).thenReturn(null);
 
         PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
@@ -107,6 +114,34 @@ class EnglishPersonalInfoControllerTest {
                 .containsEntry("processInstanceId", "process-1")
                 .containsEntry("kycStatus", "ENGLISH_PERSONAL_INFO_PROVIDED")
                 .containsEntry("card", true);
+    }
+
+    @Test
+    void duplicateInfoReturnsConflict() throws Exception {
+        EnglishPersonalInfoRequest request = new EnglishPersonalInfoRequest(
+                "process-1",
+                "John",
+                "Doe",
+                "john.doe@example.com",
+                "0912"
+        );
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-1"))
+                .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-1", "ENGLISH_PERSONAL_INFO_PROVIDED"))
+                .thenReturn(true);
+
+        mockMvc.perform(post("/kyc/english-info")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.processInstanceId").value("process-1"))
+                .andExpect(jsonPath("$.status").value("ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED"));
+
+        verify(commandGateway, never()).sendAndWait(any(ProvideEnglishPersonalInfoCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test

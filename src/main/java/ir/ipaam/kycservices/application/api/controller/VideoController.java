@@ -11,6 +11,7 @@ import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -44,8 +45,11 @@ public class VideoController {
 
     public static final long MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
+    private static final String STEP_VIDEO_UPLOADED = "VIDEO_UPLOADED";
+
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final KycStepStatusRepository kycStepStatusRepository;
     private final InquiryTokenService inquiryTokenService;
     private final ZeebeClient zeebeClient;
 
@@ -66,6 +70,15 @@ public class VideoController {
                     log.warn("Process instance with id {} not found", normalizedProcessId);
                     return new ResourceNotFoundException(PROCESS_NOT_FOUND);
                 });
+
+        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                normalizedProcessId,
+                STEP_VIDEO_UPLOADED)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "processInstanceId", normalizedProcessId,
+                    "status", "VIDEO_ALREADY_UPLOADED"
+            ));
+        }
 
         byte[] videoBytes = readFile(video);
 

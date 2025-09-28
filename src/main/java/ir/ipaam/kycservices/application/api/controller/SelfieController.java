@@ -9,6 +9,7 @@ import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
+import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -41,8 +42,11 @@ public class SelfieController {
 
     public static final long MAX_SELFIE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
+    private static final String STEP_SELFIE_UPLOADED = "SELFIE_UPLOADED";
+
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
+    private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
 
     @Operation(
@@ -62,6 +66,15 @@ public class SelfieController {
                     log.warn("Process instance with id {} not found", normalizedProcessId);
                     return new ResourceNotFoundException(PROCESS_NOT_FOUND);
                 });
+
+        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                normalizedProcessId,
+                STEP_SELFIE_UPLOADED)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "processInstanceId", normalizedProcessId,
+                    "status", "SELFIE_ALREADY_UPLOADED"
+            ));
+        }
 
         byte[] selfieBytes = readFile(selfie);
 
