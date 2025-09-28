@@ -1,9 +1,6 @@
 package ir.ipaam.kycservices.domain.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -19,6 +16,7 @@ public class Customer {
     @Id
     @GeneratedValue
     private Long id;
+    @Column(unique = true, nullable = false)
     private String nationalCode;
     private String firstName;
     private String lastName;

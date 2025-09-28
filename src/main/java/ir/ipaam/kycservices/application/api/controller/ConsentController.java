@@ -4,6 +4,8 @@ import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
+import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import java.util.Map;
+import java.util.Optional;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.CONSENT_MUST_BE_TRUE;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
@@ -35,6 +38,7 @@ public class ConsentController {
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final ZeebeClient zeebeClient;
+    private final ConsentRepository consentRepository;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> acceptConsent(@Valid @RequestBody ConsentRequest request) {
@@ -43,6 +47,18 @@ public class ConsentController {
         if (!request.accepted()) {
             throw new IllegalArgumentException(CONSENT_MUST_BE_TRUE);
         }
+        ProcessInstance processInstance = kycProcessInstanceRepository
+                .findByCamundaInstanceId(processInstanceId).get();
+        // Check if already accepted
+        if (consentRepository.findByProcessAndAccepted(processInstance, true).isPresent()) {
+            log.info("Consent already accepted for process {}", processInstanceId);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "processInstanceId", processInstanceId,
+                    "termsVersion", termsVersion,
+                    "status", "CONSENT_ALREADY_ACCEPTED"
+            ));
+        }
+
 
         if (kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId).isEmpty()) {
             log.warn("Process instance with id {} not found", processInstanceId);
