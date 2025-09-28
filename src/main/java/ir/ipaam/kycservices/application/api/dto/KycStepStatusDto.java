@@ -10,7 +10,8 @@ public record KycStepStatusDto(
         Long id,
         String stepName,
         StepStatus.State state,
-        LocalDateTime timestamp
+        LocalDateTime timestamp,
+        String errorCause
 ) {
     public static KycStepStatusDto from(StepStatus status) {
         if (status == null) {
@@ -20,7 +21,8 @@ public record KycStepStatusDto(
                 status.getId(),
                 status.getStepName(),
                 status.getState(),
-                status.getTimestamp()
+                status.getTimestamp(),
+                status.getErrorCause()
         );
     }
 

@@ -123,7 +123,15 @@ public class KycProcessEventHandler {
                     stepStatus.setStepName(event.getStepName());
                     stepStatus.setTimestamp(event.getUpdatedAt());
                     if (event.getState() != null) {
-                        stepStatus.setState(StepStatus.State.valueOf(event.getState().toUpperCase(Locale.ROOT)));
+                        StepStatus.State state = StepStatus.State.valueOf(event.getState().toUpperCase(Locale.ROOT));
+                        stepStatus.setState(state);
+                        if (state == StepStatus.State.FAILED) {
+                            stepStatus.setErrorCause(event.getStatus());
+                        } else {
+                            stepStatus.setErrorCause(null);
+                        }
+                    } else {
+                        stepStatus.setErrorCause(null);
                     }
 
                     instance.getStatuses().add(stepStatus);
@@ -224,8 +232,24 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SelfieUploadedEvent event) {
-        String token = inquiryTokenService.generateToken(event.getProcessInstanceId())
-                .orElseThrow(() -> new InquiryTokenException(INQUIRY_TOKEN_FAILED));
+        Optional<String> tokenOptional;
+        try {
+            tokenOptional = inquiryTokenService.generateToken(event.getProcessInstanceId());
+        } catch (InquiryTokenException ex) {
+            log.warn("Failed to generate inquiry token for selfie step of process {}", event.getProcessInstanceId(), ex);
+            ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+            recordFailedStep(processInstance, "SELFIE_UPLOADED", event.getUploadedAt(), ex.getMessage());
+            return;
+        }
+
+        if (tokenOptional.isEmpty()) {
+            log.warn("Inquiry token service returned empty token for selfie step of process {}", event.getProcessInstanceId());
+            ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+            recordFailedStep(processInstance, "SELFIE_UPLOADED", event.getUploadedAt(), INQUIRY_TOKEN_FAILED);
+            return;
+        }
+
+        String token = tokenOptional.get();
 
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("tokenValue", token);
@@ -292,6 +316,8 @@ public class KycProcessEventHandler {
         String token = event.getInquiryToken();
         if (token == null || token.isBlank()) {
             log.warn("Skipping video upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
+            ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+            recordFailedStep(processInstance, "VIDEO_UPLOADED", event.getUploadedAt(), INQUIRY_TOKEN_FAILED);
             return;
         }
 
@@ -436,6 +462,32 @@ public class KycProcessEventHandler {
         stepStatus.setStepName(status);
         stepStatus.setTimestamp(timestamp);
         stepStatus.setState(StepStatus.State.PASSED);
+        stepStatus.setErrorCause(null);
+
+        List<StepStatus> statuses = processInstance.getStatuses();
+        if (statuses == null) {
+            statuses = new ArrayList<>();
+            processInstance.setStatuses(statuses);
+        }
+        statuses.add(stepStatus);
+
+        kycProcessInstanceRepository.save(processInstance);
+    }
+
+    private void recordFailedStep(ProcessInstance processInstance, String status, LocalDateTime timestamp, String errorCause) {
+        if (processInstance == null) {
+            return;
+        }
+
+        processInstance.setStatus(status + "_FAILED");
+
+        StepStatus stepStatus = new StepStatus();
+        stepStatus.setProcess(processInstance);
+        stepStatus.setStepName(status);
+        stepStatus.setTimestamp(timestamp != null ? timestamp : LocalDateTime.now());
+        stepStatus.setState(StepStatus.State.FAILED);
+        String cause = (errorCause != null && !errorCause.isBlank()) ? errorCause : INQUIRY_TOKEN_FAILED;
+        stepStatus.setErrorCause(cause);
 
         List<StepStatus> statuses = processInstance.getStatuses();
         if (statuses == null) {

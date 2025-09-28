@@ -53,6 +53,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -195,6 +196,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, savedStatus.getState());
         assertEquals(timestamp, savedStatus.getTimestamp());
         assertEquals(instance, savedStatus.getProcess());
+        assertNull(savedStatus.getErrorCause());
         assertTrue(instance.getStatuses().contains(savedStatus));
     }
 
@@ -227,6 +229,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.FAILED, savedStatus.getState());
         assertEquals(timestamp, savedStatus.getTimestamp());
         assertEquals(instance, savedStatus.getProcess());
+        assertEquals(errorCode, savedStatus.getErrorCause());
         assertTrue(instance.getStatuses().contains(savedStatus));
     }
 
@@ -403,6 +406,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
+        assertNull(stepStatus.getErrorCause());
         verify(stepStatusRepository, never()).save(any());
     }
 
@@ -508,6 +512,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
+        assertNull(stepStatus.getErrorCause());
         verify(stepStatusRepository, never()).save(any());
     }
 
@@ -575,6 +580,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
+        assertNull(stepStatus.getErrorCause());
         verify(stepStatusRepository, never()).save(any());
     }
 
@@ -624,6 +630,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
+        assertNull(stepStatus.getErrorCause());
         verify(stepStatusRepository, never()).save(any());
     }
 
@@ -671,12 +678,16 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
+        assertNull(stepStatus.getErrorCause());
         verify(stepStatusRepository, never()).save(any());
     }
 
     @Test
-    void onSelfieUploadedEventThrowsWhenTokenGenerationFails() {
+    void onSelfieUploadedEventRecordsFailureWhenTokenGenerationFails() {
         tokenEndpointShouldFail.set(true);
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
 
         SelfieUploadedEvent event = new SelfieUploadedEvent(
                 "proc1",
@@ -685,12 +696,50 @@ class KycProcessEventHandlerTest {
                 LocalDateTime.now()
         );
 
-        assertThrows(InquiryTokenException.class, () -> handler.on(event));
+        handler.on(event);
 
         verifyNoInteractions(storageService);
         verify(documentRepository, never()).save(any());
         assertEquals("proc1", lastTokenRequestProcessId.get());
         assertNull(lastSelfieToken.get());
+        assertEquals("SELFIE_UPLOADED_FAILED", processInstance.getStatus());
+        verify(instanceRepository).save(processInstance);
+
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
+        assertEquals("SELFIE_UPLOADED", stepStatus.getStepName());
+        assertEquals(StepStatus.State.FAILED, stepStatus.getState());
+        assertEquals(INQUIRY_TOKEN_FAILED, stepStatus.getErrorCause());
+    }
+
+    @Test
+    void onVideoUploadedEventRecordsFailureWhenTokenMissing() {
+        ProcessInstance processInstance = new ProcessInstance();
+        when(instanceRepository.findByCamundaInstanceId("proc1")).thenReturn(Optional.of(processInstance));
+
+        VideoUploadedEvent event = new VideoUploadedEvent(
+                "proc1",
+                "123",
+                null,
+                new DocumentPayloadDescriptor("video".getBytes(), "video-file"),
+                LocalDateTime.now()
+        );
+
+        handler.on(event);
+
+        verifyNoInteractions(storageService);
+        assertEquals("VIDEO_UPLOADED_FAILED", processInstance.getStatus());
+        verify(instanceRepository).save(processInstance);
+
+        List<StepStatus> statuses = processInstance.getStatuses();
+        assertNotNull(statuses);
+        assertEquals(1, statuses.size());
+        StepStatus stepStatus = statuses.get(0);
+        assertEquals("VIDEO_UPLOADED", stepStatus.getStepName());
+        assertEquals(StepStatus.State.FAILED, stepStatus.getState());
+        assertEquals(INQUIRY_TOKEN_FAILED, stepStatus.getErrorCause());
     }
 
     @Test
@@ -738,6 +787,7 @@ class KycProcessEventHandlerTest {
         assertEquals(StepStatus.State.PASSED, stepStatus.getState());
         assertEquals(uploadedAt, stepStatus.getTimestamp());
         assertEquals(processInstance, stepStatus.getProcess());
+        assertNull(stepStatus.getErrorCause());
         verify(stepStatusRepository, never()).save(any());
     }
 

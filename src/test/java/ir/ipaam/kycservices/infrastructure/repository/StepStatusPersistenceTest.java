@@ -92,6 +92,7 @@ class StepStatusPersistenceTest {
                     assertThat(status.getStepName()).isEqualTo("CARD_DOCUMENTS_UPLOADED");
                     assertThat(status.getState()).isEqualTo(StepStatus.State.PASSED);
                     assertThat(status.getProcess().getCamundaInstanceId()).isEqualTo("proc-integration");
+                    assertThat(status.getErrorCause()).isNull();
                 });
     }
 }
