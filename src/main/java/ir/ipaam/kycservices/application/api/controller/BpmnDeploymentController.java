@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.domain.model.entity.ProcessDeployment;
 import ir.ipaam.kycservices.infrastructure.service.BpmnDeploymentService;
@@ -22,11 +23,16 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
 @RestController
 @RequestMapping("/bpmn")
 @RequiredArgsConstructor
+@Tag(name = "BPMN Deployment", description = "Manage workflow definitions that power the KYC process.")
 public class BpmnDeploymentController {
 
     private final BpmnDeploymentService service;
 
-    @Operation(summary = "Deploy BPMN file")
+    @Operation(
+            summary = "Deploy BPMN file",
+            description = "Uploads a BPMN process definition and redeploys it only when the payload differs from the "
+                    + "latest deployment. Returns the resulting deployment metadata on success."
+    )
     @PostMapping(value = "/deploy", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProcessDeployment> deploy(@RequestPart("file") MultipartFile file) {
         if (file.isEmpty()) {

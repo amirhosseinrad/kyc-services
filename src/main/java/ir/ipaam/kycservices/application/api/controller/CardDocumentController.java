@@ -1,6 +1,8 @@
 package ir.ipaam.kycservices.application.api.controller;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.common.image.ImageCompressionHelper;
@@ -37,6 +39,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc/documents")
+@Tag(name = "Card Document Upload", description = "Collect front and back images of the customer's national card.")
 public class CardDocumentController {
 
     public static final long MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -45,6 +48,11 @@ public class CardDocumentController {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final ZeebeClient zeebeClient;
 
+    @Operation(
+            summary = "Upload card images",
+            description = "Receives the front and back scans of a customer's national card, compresses large images "
+                    + "when possible, persists them, and updates the workflow state."
+    )
     @PostMapping(path = "/card", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadCardDocuments(
             @RequestPart("frontImage") MultipartFile frontImage,
