@@ -41,6 +41,39 @@ Designed for integration with OCR, fraud detection, and customer information ser
 
 ---
 
+##  Containerized Deployment
+
+The repository ships with a production-oriented `Dockerfile` that builds the
+Spring Boot service and bundles a PostgreSQL instance. The container uses the
+database credentials from [`application.properties`](src/main/resources/application.properties)
+by default and provisions the database, user, and schema automatically when the
+container starts.
+
+```bash
+# Build the image
+docker build -t kyc-services .
+
+# Run the service (exposes Spring Boot on 8002 and PostgreSQL on 5432)
+docker run -p 8002:8002 -p 5432:5432 kyc-services
+```
+
+Environment variables allow you to override the defaults without editing the
+image:
+
+| Variable     | Default           | Description                                             |
+|--------------|-------------------|---------------------------------------------------------|
+| `DB_HOST`    | `localhost`       | Host name used to build the JDBC URL.                   |
+| `DB_PORT`    | `5432`            | Port exposed by the bundled PostgreSQL server.          |
+| `DB_NAME`    | `kyc_services`    | Database that will be created if it does not yet exist. |
+| `DB_USER`    | `postgres`        | Login role (created/updated during startup).            |
+| `DB_PASSWORD`| `Amir@123456`     | Password assigned to the database role.                 |
+| `DB_SCHEMA`  | `public`          | Schema ensured inside the target database.              |
+
+All PostgreSQL data lives inside the container; mount `/var/lib/postgresql` to
+persist it across restarts.
+
+---
+
 ##  Tech Stack
 
 - **Backend:** Spring Boot 3.5 (Java 21+)
