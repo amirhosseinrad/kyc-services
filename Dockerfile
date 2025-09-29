@@ -1,5 +1,5 @@
 # Multi-stage build to keep the runtime image lean while still compiling with Maven.
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
 # Cache dependencies by copying the Maven descriptor first.
@@ -14,7 +14,7 @@ COPY src src
 RUN ./mvnw -B -DskipTests clean package
 
 # Runtime image: Java + PostgreSQL server.
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Install PostgreSQL server and utilities.
