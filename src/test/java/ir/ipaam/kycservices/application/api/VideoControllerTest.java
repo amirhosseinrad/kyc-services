@@ -96,7 +96,7 @@ class VideoControllerTest {
         when(step1.messageName("video-uploaded")).thenReturn(step2);
         when(step2.correlationKey("process-456")).thenReturn(step3);
         when(step3.variables(any(Map.class))).thenReturn(step3);
-        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
         mockMvc.perform(multipart("/kyc/video")
                         .file(video)

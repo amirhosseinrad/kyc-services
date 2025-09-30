@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -40,13 +41,13 @@ class ConsentControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private CommandGateway commandGateway;
 
-    @MockBean
+    @MockitoBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
-    @MockBean
+    @MockitoBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -58,8 +59,8 @@ class ConsentControllerTest {
         SetVariablesCommandStep1 step1 = mock(SetVariablesCommandStep1.class);
         SetVariablesResponse response = mock(SetVariablesResponse.class);
         when(zeebeClient.newSetVariablesCommand(123456L)).thenReturn(step1);
-        when(step1.variables(any(Map.class))).thenReturn(step1);
-        when(step1.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step1.variables(any(Map.class))).thenReturn((SetVariablesCommandStep1.SetVariablesCommandStep2) step1);
+        when(((SetVariablesCommandStep1.SetVariablesCommandStep2) step1).send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
         mockMvc.perform(post("/kyc/consent")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -1,7 +1,7 @@
 package ir.ipaam.kycservices.application.api;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.api.command.CreateInstanceCommandStep1;
+import io.camunda.zeebe.client.api.command.CreateProcessInstanceCommandStep1;
 import io.camunda.zeebe.client.api.response.ProcessInstanceEvent;
 import ir.ipaam.kycservices.application.api.controller.KycProcessController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_STATUS_QUERY_FAILED;
@@ -37,13 +37,13 @@ class KycProcessControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private KycServiceTasks tasks;
 
-    @MockBean
+    @MockitoBean
     private CommandGateway commandGateway;
 
-    @MockBean
+    @MockitoBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -74,16 +74,16 @@ class KycProcessControllerTest {
 
         when(tasks.checkKycStatus("0024683416")).thenReturn(completedInstance);
 
-        CreateInstanceCommandStep1 step1 = mock(CreateInstanceCommandStep1.class);
-        CreateInstanceCommandStep1.CreateInstanceCommandStep2 step2 = mock(CreateInstanceCommandStep1.CreateInstanceCommandStep2.class);
-        CreateInstanceCommandStep1.CreateInstanceCommandStep3 step3 = mock(CreateInstanceCommandStep1.CreateInstanceCommandStep3.class);
+        CreateProcessInstanceCommandStep1 step1 = mock(CreateProcessInstanceCommandStep1.class);
+        CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep2 step2 = mock(CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep2.class);
+        CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3 step3 = mock(CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3.class);
         ProcessInstanceEvent event = mock(ProcessInstanceEvent.class);
 
         when(zeebeClient.newCreateInstanceCommand()).thenReturn(step1);
         when(step1.bpmnProcessId("kyc-process")).thenReturn(step2);
         when(step2.latestVersion()).thenReturn(step3);
         when(step3.variables(anyMap())).thenReturn(step3);
-        when(step3.send()).thenReturn(CompletableFuture.completedFuture(event));
+        when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(event));
         when(event.getProcessInstanceKey()).thenReturn(9876L);
         when(commandGateway.send(any(StartKycProcessCommand.class))).thenReturn(CompletableFuture.completedFuture(null));
 

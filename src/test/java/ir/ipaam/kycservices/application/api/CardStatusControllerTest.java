@@ -9,9 +9,9 @@ import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.CardStatusController;
 import ir.ipaam.kycservices.application.api.dto.CardStatusRequest;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
+import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -44,19 +44,19 @@ class CardStatusControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
-    @MockBean
+    @MockitoBean
     private CustomerRepository customerRepository;
 
-    @MockBean
+    @MockitoBean
     private KycStepStatusRepository kycStepStatusRepository;
 
-    @MockBean
+    @MockitoBean
     private ZeebeClient zeebeClient;
 
-    @MockBean
+    @MockitoBean
     private CommandGateway commandGateway;
 
     @Test
@@ -82,7 +82,7 @@ class CardStatusControllerTest {
         when(step1.messageName("card-status-recorded")).thenReturn(step2);
         when(step2.correlationKey("123456")).thenReturn(step3);
         when(step3.variables(any(Map.class))).thenReturn(step3);
-        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
         CardStatusRequest request = new CardStatusRequest("123456", true);
 

@@ -17,9 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.imageio.ImageIO;
@@ -46,16 +46,16 @@ class CardDocumentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private CommandGateway commandGateway;
 
-    @MockBean
+    @MockitoBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
-    @MockBean
+    @MockitoBean
     private KycStepStatusRepository kycStepStatusRepository;
 
-    @MockBean
+    @MockitoBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -98,7 +98,7 @@ class CardDocumentControllerTest {
         when(step1.messageName("card-documents-uploaded")).thenReturn(step2);
         when(step2.correlationKey("process-123")).thenReturn(step3);
         when(step3.variables(any(Map.class))).thenReturn(step3);
-        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
         mockMvc.perform(multipart("/kyc/documents/card")
                         .file(front)
@@ -269,7 +269,7 @@ class CardDocumentControllerTest {
         when(step1.messageName("card-documents-uploaded")).thenReturn(step2);
         when(step2.correlationKey("process-456")).thenReturn(step3);
         when(step3.variables(any(Map.class))).thenReturn(step3);
-        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
         mockMvc.perform(multipart("/kyc/documents/card")
                         .file(front)

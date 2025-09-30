@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -44,16 +45,16 @@ class EnglishPersonalInfoControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private CommandGateway commandGateway;
 
-    @MockBean
+    @MockitoBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
-    @MockBean
+    @MockitoBean
     private KycStepStatusRepository kycStepStatusRepository;
 
-    @MockBean
+    @MockitoBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -84,7 +85,7 @@ class EnglishPersonalInfoControllerTest {
         when(step1.messageName("english-personal-info-provided")).thenReturn(step2);
         when(step2.correlationKey("process-1")).thenReturn(step3);
         when(step3.variables(any(Map.class))).thenReturn(step3);
-        when(step3.send()).thenReturn(CompletableFuture.completedFuture(response));
+        when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
         mockMvc.perform(post("/kyc/english-info")
                         .contentType(MediaType.APPLICATION_JSON)
