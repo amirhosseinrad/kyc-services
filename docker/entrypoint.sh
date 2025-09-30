@@ -123,9 +123,24 @@ if [[ -n "${DB_SCHEMA}" ]]; then
   fi
 fi
 
+# --- MinIO Auto-Start ---
+echo "Checking for MinIO container..."
+if ! docker ps --format '{{.Names}}' | grep -q '^minio$'; then
+  echo "No MinIO container found. Launching one..."
+  docker run -d \
+    --name minio \
+    -p 9000:9000 -p 9001:9001 \
+    -e MINIO_ROOT_USER=${STORAGE_MINIO_ACCESS_KEY:-minioadmin} \
+    -e MINIO_ROOT_PASSWORD=${STORAGE_MINIO_SECRET_KEY:-minioadmin} \
+    quay.io/minio/minio server /data --console-address ":9001"
+else
+  echo "MinIO already running."
+fi
+
 # Launch the Spring Boot application.
 echo "Starting KYC services application ..."
 export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}}"
 export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-${DB_USER}}"
 export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-${DB_PASSWORD}}"
+
 exec java ${JAVA_OPTS:-} -jar /app/app.jar
