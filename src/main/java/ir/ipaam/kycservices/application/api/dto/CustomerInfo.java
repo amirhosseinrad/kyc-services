@@ -10,7 +10,13 @@ public record CustomerInfo(
         LocalDate birthDate,
         String mobile,
         String email,
-        Boolean hasNewNationalCard
+        Boolean hasNewNationalCard,
+        String fatherName,
+        LocalDate cardExpirationDate,
+        String cardSerialNumber,
+        String cardBarcode,
+        String cardOcrFrontTrackId,
+        String cardOcrBackTrackId
 ) {
     public static CustomerInfo from(Customer customer) {
         if (customer == null) {
@@ -23,7 +29,13 @@ public record CustomerInfo(
                 customer.getBirthDate(),
                 customer.getMobile(),
                 customer.getEmail(),
-                customer.getHasNewNationalCard()
+                customer.getHasNewNationalCard(),
+                customer.getFatherName(),
+                customer.getCardExpirationDate(),
+                customer.getCardSerialNumber(),
+                customer.getCardBarcode(),
+                customer.getCardOcrFrontTrackId(),
+                customer.getCardOcrBackTrackId()
         );
     }
 }
