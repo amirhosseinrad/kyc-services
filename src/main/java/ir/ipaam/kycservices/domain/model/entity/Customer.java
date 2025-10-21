@@ -24,4 +24,10 @@ public class Customer {
     private String mobile;
     private String email;
     private Boolean hasNewNationalCard;
+    private String fatherName;
+    private LocalDate cardExpirationDate;
+    private String cardSerialNumber;
+    private String cardBarcode;
+    private String cardOcrFrontTrackId;
+    private String cardOcrBackTrackId;
 }

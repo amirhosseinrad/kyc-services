@@ -7,10 +7,14 @@ import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMes
 import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.CardOcrClient;
 import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
+import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
+import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
+import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -56,6 +60,12 @@ class CardDocumentServiceTest {
     @Mock
     private ZeebeClient zeebeClient;
 
+    @Mock
+    private CustomerRepository customerRepository;
+
+    @Mock
+    private CardOcrClient cardOcrClient;
+
     @InjectMocks
     private CardDocumentService cardDocumentService;
 
@@ -84,6 +94,27 @@ class CardDocumentServiceTest {
                 "process-123", "CARD_DOCUMENTS_UPLOADED"))
                 .thenReturn(false);
         when(commandGateway.sendAndWait(any(UploadCardDocumentsCommand.class))).thenReturn(null);
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(cardOcrClient.extractFront(any(), any()))
+                .thenReturn(new CardOcrFrontData(
+                        "front-track",
+                        "0452711746",
+                        "امیرحسین",
+                        "جوادی راد",
+                        "1360-01-02",
+                        "مسعود",
+                        "1404-03-22",
+                        0
+                ));
+        when(cardOcrClient.extractBack(any(), any()))
+                .thenReturn(new CardOcrBackData(
+                        "back-track",
+                        "9G49488906",
+                        "0452711746",
+                        true,
+                        0
+                ));
 
         PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
         PublishMessageCommandStep2 step2 = mock(PublishMessageCommandStep2.class);
@@ -111,6 +142,18 @@ class CardDocumentServiceTest {
         assertThat(command.getBackDescriptor().filename()).isEqualTo("backImage_process-123");
         assertThat(command.getFrontDescriptor().data()).isEqualTo(front.getBytes());
         assertThat(command.getBackDescriptor().data()).isEqualTo(back.getBytes());
+
+        verify(cardOcrClient).extractFront(any(), eq("front.png"));
+        verify(cardOcrClient).extractBack(any(), eq("back.png"));
+        verify(customerRepository).save(customer);
+        assertThat(customer.getFirstName()).isEqualTo("امیرحسین");
+        assertThat(customer.getLastName()).isEqualTo("جوادی راد");
+        assertThat(customer.getFatherName()).isEqualTo("مسعود");
+        assertThat(customer.getCardSerialNumber()).isEqualTo("9G49488906");
+        assertThat(customer.getCardBarcode()).isEqualTo("0452711746");
+        assertThat(customer.getCardOcrFrontTrackId()).isEqualTo("front-track");
+        assertThat(customer.getCardOcrBackTrackId()).isEqualTo("back-track");
+        assertThat(customer.getHasNewNationalCard()).isTrue();
 
         ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
         verify(step1).messageName("card-documents-uploaded");
@@ -140,6 +183,7 @@ class CardDocumentServiceTest {
         assertThat(result.body()).containsEntry("status", "CARD_DOCUMENTS_ALREADY_UPLOADED");
         verify(commandGateway, never()).sendAndWait(any());
         verifyNoInteractions(zeebeClient);
+        verifyNoInteractions(cardOcrClient, customerRepository);
     }
 
     @Test
@@ -151,6 +195,7 @@ class CardDocumentServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("processInstanceId must be provided");
         verify(commandGateway, never()).sendAndWait(any());
+        verifyNoInteractions(cardOcrClient, customerRepository);
     }
 
     @Test
@@ -167,6 +212,7 @@ class CardDocumentServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("frontImage exceeds maximum size");
         verify(commandGateway, never()).sendAndWait(any());
+        verifyNoInteractions(cardOcrClient, customerRepository);
     }
 
     @Test
@@ -240,6 +286,7 @@ class CardDocumentServiceTest {
                 .hasMessage("Process instance not found");
         verify(commandGateway, never()).sendAndWait(any());
         verifyNoInteractions(zeebeClient);
+        verifyNoInteractions(cardOcrClient, customerRepository);
     }
 
     @Test
@@ -254,6 +301,7 @@ class CardDocumentServiceTest {
         assertThatThrownBy(() -> cardDocumentService.uploadCardDocuments(multipartFile, back, "process-123"))
                 .isInstanceOf(FileProcessingException.class)
                 .hasMessage(FILE_READ_FAILURE);
+        verifyNoInteractions(cardOcrClient, customerRepository);
     }
 
     private byte[] createNoisyPng(int width, int height) throws IOException {
