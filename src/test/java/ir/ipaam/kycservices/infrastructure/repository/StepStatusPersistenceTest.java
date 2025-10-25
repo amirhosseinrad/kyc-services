@@ -1,6 +1,5 @@
 package ir.ipaam.kycservices.infrastructure.repository;
 
-import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
@@ -12,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,8 +66,6 @@ class StepStatusPersistenceTest {
                 stepStatusRepository,
                 documentRepository,
                 mock(ConsentRepository.class),
-                WebClient.builder().baseUrl("http://localhost").build(),
-                mock(InquiryTokenService.class),
                 storageService);
 
         CardDocumentsUploadedEvent event = new CardDocumentsUploadedEvent(

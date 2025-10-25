@@ -338,13 +338,12 @@ class KycProcessAggregateTest {
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{4, 5, 6}, "video.mp4");
 
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
-                .when(new UploadVideoCommand("proc-1", descriptor, "inquiry-token"))
+                .when(new UploadVideoCommand("proc-1", descriptor))
                 .expectSuccessfulHandlerExecution()
                 .expectEventsMatching(payloadsMatching(exactSequenceOf(messageWithPayload(matches(event -> {
                     VideoUploadedEvent payload = (VideoUploadedEvent) event;
                     return payload.getProcessInstanceId().equals("proc-1")
                             && payload.getNationalCode().equals("123")
-                            && payload.getInquiryToken().equals("inquiry-token")
                             && payload.getDescriptor() != null
                             && payload.getDescriptor().filename().equals("video.mp4")
                             && Arrays.equals(payload.getDescriptor().data(), descriptor.data())
@@ -358,7 +357,7 @@ class KycProcessAggregateTest {
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{1}, "video.mp4");
 
         fixture.givenNoPriorActivity()
-                .when(new UploadVideoCommand("proc-1", descriptor, "token"))
+                .when(new UploadVideoCommand("proc-1", descriptor))
                 .expectException(IllegalStateException.class);
     }
 
@@ -367,23 +366,14 @@ class KycProcessAggregateTest {
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{1}, "video.mp4");
 
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
-                .when(new UploadVideoCommand("proc-2", descriptor, "token"))
+                .when(new UploadVideoCommand("proc-2", descriptor))
                 .expectException(IllegalArgumentException.class);
     }
 
     @Test
     void uploadVideoRequiresDescriptor() {
         fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
-                .when(new UploadVideoCommand("proc-1", null, "token"))
-                .expectException(IllegalArgumentException.class);
-    }
-
-    @Test
-    void uploadVideoRequiresToken() {
-        DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{1}, "video.mp4");
-
-        fixture.given(new KycProcessStartedEvent("proc-1", "123", LocalDateTime.now()))
-                .when(new UploadVideoCommand("proc-1", descriptor, " "))
+                .when(new UploadVideoCommand("proc-1", null))
                 .expectException(IllegalArgumentException.class);
     }
 }

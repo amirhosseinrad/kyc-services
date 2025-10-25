@@ -7,12 +7,9 @@ import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMes
 import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.VideoController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
-import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
-import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -21,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,7 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -45,19 +41,16 @@ class VideoControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private CommandGateway commandGateway;
 
-    @MockBean
+    @MockitoBean
     private KycProcessInstanceRepository kycProcessInstanceRepository;
 
-    @MockBean
+    @MockitoBean
     private KycStepStatusRepository kycStepStatusRepository;
 
-    @MockBean
-    private InquiryTokenService inquiryTokenService;
-
-    @MockBean
+    @MockitoBean
     private ZeebeClient zeebeClient;
 
     @Test
@@ -84,8 +77,6 @@ class VideoControllerTest {
         when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
                 "process-456", "VIDEO_UPLOADED"))
                 .thenReturn(false);
-        when(inquiryTokenService.generateToken("process-456"))
-                .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class))).thenReturn(null);
 
         PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
@@ -112,7 +103,6 @@ class VideoControllerTest {
         assertThat(command.processInstanceId()).isEqualTo("process-456");
         assertThat(command.videoDescriptor().filename()).isEqualTo("video_process-456");
         assertThat(command.videoDescriptor().data()).isEqualTo(video.getBytes());
-        assertThat(command.inquiryToken()).isEqualTo("token-123");
 
         ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
         verify(step1).messageName("video-uploaded");
@@ -210,32 +200,6 @@ class VideoControllerTest {
     }
 
     @Test
-    void oversizedVideoReturnsBadRequest() throws Exception {
-        byte[] large = new byte[(int) VideoController.MAX_VIDEO_SIZE_BYTES + 1];
-        MockMultipartFile video = new MockMultipartFile(
-                "video",
-                "video.mp4",
-                MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                large
-        );
-        MockMultipartFile process = new MockMultipartFile(
-                "processInstanceId",
-                "",
-                MediaType.TEXT_PLAIN_VALUE,
-                "process-456".getBytes(StandardCharsets.UTF_8)
-        );
-
-        mockMvc.perform(multipart("/kyc/video")
-                        .file(video)
-                        .file(process))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_FAILED.getValue()))
-                .andExpect(jsonPath("$.message.en").value("video exceeds maximum size"));
-
-        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
-    }
-
-    @Test
     void commandValidationErrorReturnsBadRequest() throws Exception {
         MockMultipartFile video = new MockMultipartFile(
                 "video",
@@ -253,8 +217,6 @@ class VideoControllerTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(processInstance));
-        when(inquiryTokenService.generateToken("process-456"))
-                .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -284,8 +246,6 @@ class VideoControllerTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
                 .thenReturn(Optional.of(processInstance));
-        when(inquiryTokenService.generateToken("process-456"))
-                .thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadVideoCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -324,87 +284,5 @@ class VideoControllerTest {
 
         verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
         verifyNoInteractions(zeebeClient);
-    }
-
-    @Test
-    void tokenGenerationFailureMarksStepAndReturnsServiceUnavailable() throws Exception {
-        MockMultipartFile video = new MockMultipartFile(
-                "video",
-                "video.mp4",
-                MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                "video-data".getBytes(StandardCharsets.UTF_8)
-        );
-        MockMultipartFile process = new MockMultipartFile(
-                "processInstanceId",
-                "",
-                MediaType.TEXT_PLAIN_VALUE,
-                "process-456".getBytes(StandardCharsets.UTF_8)
-        );
-
-        ProcessInstance processInstance = new ProcessInstance();
-        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
-                .thenReturn(Optional.of(processInstance));
-        when(inquiryTokenService.generateToken("process-456"))
-                .thenReturn(Optional.empty());
-
-        mockMvc.perform(multipart("/kyc/video")
-                        .file(video)
-                        .file(process))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.processInstanceId").value("process-456"))
-                .andExpect(jsonPath("$.status").value("VIDEO_PENDING"))
-                .andExpect(jsonPath("$.message").value("Video verification is temporarily unavailable. Please try again later."));
-
-        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
-        verify(kycProcessInstanceRepository).save(processInstance);
-
-        assertThat(processInstance.getStatuses())
-                .singleElement()
-                .satisfies(status -> {
-                    assertThat(status.getStepName()).isEqualTo("VIDEO_UPLOADED");
-                    assertThat(status.getState()).isEqualTo(StepStatus.State.FAILED);
-                    assertThat(status.getErrorCause()).isEqualTo(INQUIRY_TOKEN_FAILED);
-                });
-    }
-
-    @Test
-    void tokenGenerationExceptionMarksStepAndReturnsServiceUnavailable() throws Exception {
-        MockMultipartFile video = new MockMultipartFile(
-                "video",
-                "video.mp4",
-                MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                "video-data".getBytes(StandardCharsets.UTF_8)
-        );
-        MockMultipartFile process = new MockMultipartFile(
-                "processInstanceId",
-                "",
-                MediaType.TEXT_PLAIN_VALUE,
-                "process-456".getBytes(StandardCharsets.UTF_8)
-        );
-
-        ProcessInstance processInstance = new ProcessInstance();
-        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-456"))
-                .thenReturn(Optional.of(processInstance));
-        when(inquiryTokenService.generateToken("process-456"))
-                .thenThrow(new InquiryTokenException(INQUIRY_TOKEN_FAILED));
-
-        mockMvc.perform(multipart("/kyc/video")
-                        .file(video)
-                        .file(process))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.processInstanceId").value("process-456"))
-                .andExpect(jsonPath("$.status").value("VIDEO_PENDING"))
-                .andExpect(jsonPath("$.message").value("Video verification is temporarily unavailable. Please try again later."));
-
-        verify(commandGateway, never()).sendAndWait(any(UploadVideoCommand.class));
-        verify(kycProcessInstanceRepository).save(processInstance);
-
-        assertThat(processInstance.getStatuses())
-                .singleElement()
-                .satisfies(status -> {
-                    assertThat(status.getStepName()).isEqualTo("VIDEO_UPLOADED");
-                    assertThat(status.getState()).isEqualTo(StepStatus.State.FAILED);
-                    assertThat(status.getErrorCause()).isEqualTo(INQUIRY_TOKEN_FAILED);
-                });
     }
 }

@@ -5,11 +5,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
-import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
@@ -27,13 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_REQUIRED;
@@ -49,14 +43,10 @@ public class VideoController {
     public static final long MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
     private static final String STEP_VIDEO_UPLOADED = "VIDEO_UPLOADED";
-    private static final String VIDEO_PENDING_STATUS = "VIDEO_PENDING";
-    private static final String VIDEO_PENDING_MESSAGE =
-            "Video verification is temporarily unavailable. Please try again later.";
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
-    private final InquiryTokenService inquiryTokenService;
     private final ZeebeClient zeebeClient;
 
     @Operation(
@@ -88,26 +78,10 @@ public class VideoController {
 
         byte[] videoBytes = readFile(video);
 
-        Optional<String> inquiryToken;
-        try {
-            inquiryToken = inquiryTokenService.generateToken(normalizedProcessId);
-        } catch (RuntimeException ex) {
-            if (ex instanceof InquiryTokenException inquiryEx) {
-                log.warn("Unable to generate inquiry token for video step of process {}", normalizedProcessId, inquiryEx);
-                return handleTokenFailure(processInstance, normalizedProcessId, inquiryEx.getMessage());
-            }
-            throw ex;
-        }
-
-        if (inquiryToken.isEmpty()) {
-            log.warn("Inquiry token service returned empty token for video step of process {}", normalizedProcessId);
-            return handleTokenFailure(processInstance, normalizedProcessId, null);
-        }
-
         DocumentPayloadDescriptor descriptor =
                 new DocumentPayloadDescriptor(videoBytes, "video_" + normalizedProcessId);
 
-        commandGateway.sendAndWait(new UploadVideoCommand(normalizedProcessId, descriptor, inquiryToken.get()));
+        commandGateway.sendAndWait(new UploadVideoCommand(normalizedProcessId, descriptor));
 
         Boolean hasNewCard = null;
         if (processInstance.getCustomer() != null) {
@@ -122,41 +96,6 @@ public class VideoController {
                 "status", "VIDEO_RECEIVED"
         );
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
-    }
-
-    private ResponseEntity<Map<String, Object>> handleTokenFailure(
-            ProcessInstance processInstance,
-            String processInstanceId,
-            String errorCause) {
-        recordFailedStep(processInstance, STEP_VIDEO_UPLOADED, errorCause);
-        Map<String, Object> body = Map.of(
-                "processInstanceId", processInstanceId,
-                "status", VIDEO_PENDING_STATUS,
-                "message", VIDEO_PENDING_MESSAGE
-        );
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
-    }
-
-    private void recordFailedStep(ProcessInstance processInstance, String stepName, String errorCause) {
-        if (processInstance == null) {
-            return;
-        }
-
-        processInstance.setStatus(stepName + "_FAILED");
-
-        StepStatus stepStatus = new StepStatus();
-        stepStatus.setProcess(processInstance);
-        stepStatus.setStepName(stepName);
-        stepStatus.setTimestamp(LocalDateTime.now());
-        stepStatus.setState(StepStatus.State.FAILED);
-        String cause = (errorCause != null && !errorCause.isBlank()) ? errorCause : INQUIRY_TOKEN_FAILED;
-        stepStatus.setErrorCause(cause);
-
-        if (processInstance.getStatuses() == null) {
-            processInstance.setStatuses(new java.util.ArrayList<>());
-        }
-        processInstance.getStatuses().add(stepStatus);
-        kycProcessInstanceRepository.save(processInstance);
     }
 
     private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {

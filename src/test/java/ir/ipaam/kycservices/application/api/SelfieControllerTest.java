@@ -7,12 +7,9 @@ import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMes
 import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.controller.SelfieController;
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
-import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
-import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.domain.model.entity.StepStatus;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import org.axonframework.commandhandling.CommandExecutionException;
@@ -21,10 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
@@ -32,7 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -54,9 +49,6 @@ class SelfieControllerTest {
 
     @MockitoBean
     private KycStepStatusRepository kycStepStatusRepository;
-
-    @MockitoBean
-    private InquiryTokenService inquiryTokenService;
 
     @MockitoBean
     private ZeebeClient zeebeClient;
@@ -85,7 +77,6 @@ class SelfieControllerTest {
         when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
                 "process-123", "SELFIE_UPLOADED"))
                 .thenReturn(false);
-        when(inquiryTokenService.generateToken("process-123")).thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class))).thenReturn(null);
 
         PublishMessageCommandStep1 step1 = mock(PublishMessageCommandStep1.class);
@@ -226,7 +217,6 @@ class SelfieControllerTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(inquiryTokenService.generateToken("process-123")).thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class)))
                 .thenThrow(new CommandExecutionException("failed", new IllegalArgumentException("invalid"), null));
 
@@ -256,7 +246,6 @@ class SelfieControllerTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(inquiryTokenService.generateToken("process-123")).thenReturn(Optional.of("token-123"));
         when(commandGateway.sendAndWait(any(UploadSelfieCommand.class)))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -266,93 +255,6 @@ class SelfieControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.UNEXPECTED_ERROR.getValue()))
                 .andExpect(jsonPath("$.message.en").value("boom"));
-    }
-
-    @Test
-    void tokenGenerationFailureMarksStepAndReturnsServiceUnavailable() throws Exception {
-        MockMultipartFile selfie = new MockMultipartFile(
-                "selfie",
-                "selfie.png",
-                MediaType.IMAGE_PNG_VALUE,
-                "selfie".getBytes(StandardCharsets.UTF_8)
-        );
-        MockMultipartFile process = new MockMultipartFile(
-                "processInstanceId",
-                "",
-                MediaType.TEXT_PLAIN_VALUE,
-                "process-123".getBytes(StandardCharsets.UTF_8)
-        );
-
-        ProcessInstance processInstance = new ProcessInstance();
-        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
-                .thenReturn(Optional.of(processInstance));
-        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
-                "process-123", "SELFIE_UPLOADED"))
-                .thenReturn(false);
-        when(inquiryTokenService.generateToken("process-123")).thenReturn(Optional.empty());
-
-        mockMvc.perform(multipart("/kyc/selfie")
-                        .file(selfie)
-                        .file(process))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.processInstanceId").value("process-123"))
-                .andExpect(jsonPath("$.status").value("SELFIE_PENDING"))
-                .andExpect(jsonPath("$.message").value("Selfie verification is temporarily unavailable. Please try again later."));
-
-        verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
-        verify(kycProcessInstanceRepository).save(processInstance);
-
-        assertThat(processInstance.getStatuses())
-                .singleElement()
-                .satisfies(status -> {
-                    assertThat(status.getStepName()).isEqualTo("SELFIE_UPLOADED");
-                    assertThat(status.getState()).isEqualTo(StepStatus.State.FAILED);
-                    assertThat(status.getErrorCause()).isEqualTo(INQUIRY_TOKEN_FAILED);
-                });
-    }
-
-    @Test
-    void tokenGenerationExceptionMarksStepAndReturnsServiceUnavailable() throws Exception {
-        MockMultipartFile selfie = new MockMultipartFile(
-                "selfie",
-                "selfie.png",
-                MediaType.IMAGE_PNG_VALUE,
-                "selfie".getBytes(StandardCharsets.UTF_8)
-        );
-        MockMultipartFile process = new MockMultipartFile(
-                "processInstanceId",
-                "",
-                MediaType.TEXT_PLAIN_VALUE,
-                "process-123".getBytes(StandardCharsets.UTF_8)
-        );
-
-        ProcessInstance processInstance = new ProcessInstance();
-        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
-                .thenReturn(Optional.of(processInstance));
-        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
-                "process-123", "SELFIE_UPLOADED"))
-                .thenReturn(false);
-        when(inquiryTokenService.generateToken("process-123"))
-                .thenThrow(new InquiryTokenException(INQUIRY_TOKEN_FAILED));
-
-        mockMvc.perform(multipart("/kyc/selfie")
-                        .file(selfie)
-                        .file(process))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.processInstanceId").value("process-123"))
-                .andExpect(jsonPath("$.status").value("SELFIE_PENDING"))
-                .andExpect(jsonPath("$.message").value("Selfie verification is temporarily unavailable. Please try again later."));
-
-        verify(commandGateway, never()).sendAndWait(any(UploadSelfieCommand.class));
-        verify(kycProcessInstanceRepository).save(processInstance);
-
-        assertThat(processInstance.getStatuses())
-                .singleElement()
-                .satisfies(status -> {
-                    assertThat(status.getStepName()).isEqualTo("SELFIE_UPLOADED");
-                    assertThat(status.getState()).isEqualTo(StepStatus.State.FAILED);
-                    assertThat(status.getErrorCause()).isEqualTo(INQUIRY_TOKEN_FAILED);
-                });
     }
 
     @Test

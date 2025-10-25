@@ -21,10 +21,9 @@ class UploadBiometricCommandTest {
     void uploadVideoCommandExposesProvidedValues() {
         DocumentPayloadDescriptor descriptor = new DocumentPayloadDescriptor(new byte[]{4, 5, 6}, "video.mp4");
 
-        UploadVideoCommand command = new UploadVideoCommand("proc-2", descriptor, "token");
+        UploadVideoCommand command = new UploadVideoCommand("proc-2", descriptor);
 
         assertEquals("proc-2", command.processInstanceId());
         assertSame(descriptor, command.videoDescriptor());
-        assertEquals("token", command.inquiryToken());
     }
 }

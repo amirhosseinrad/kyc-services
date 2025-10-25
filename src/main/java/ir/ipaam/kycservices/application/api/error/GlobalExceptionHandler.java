@@ -4,7 +4,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
@@ -80,13 +79,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(FileProcessingException.class)
     public ResponseEntity<ErrorResponse> handleFileProcessingException(FileProcessingException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.FILE_PROCESSING_FAILED, ex.getMessage(), FILE_READ_FAILURE);
-    }
-
-    @ExceptionHandler(InquiryTokenException.class)
-    public ResponseEntity<ErrorResponse> handleInquiryTokenException(InquiryTokenException ex) {
-        log.error("Failed to acquire inquiry token: {}", ex.getMessage());
-        return buildResponse(HttpStatus.BAD_GATEWAY, ErrorCode.INQUIRY_SERVICE_UNAVAILABLE,
-                ex.getMessage(), INQUIRY_TOKEN_FAILED);
     }
 
     @ExceptionHandler(CommandExecutionException.class)

@@ -40,7 +40,6 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_FIRST_NAME_RE
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTOR_LIMIT;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTOR_NULL;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTORS_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_NOT_STARTED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_IDENTIFIER_MISMATCH;
@@ -190,14 +189,9 @@ public class KycProcessAggregate {
             throw new IllegalArgumentException(VIDEO_DESCRIPTOR_REQUIRED);
         }
 
-        if (command.inquiryToken() == null || command.inquiryToken().isBlank()) {
-            throw new IllegalArgumentException(INQUIRY_TOKEN_REQUIRED);
-        }
-
         AggregateLifecycle.apply(new VideoUploadedEvent(
                 command.processInstanceId(),
                 this.nationalCode,
-                command.inquiryToken(),
                 command.videoDescriptor(),
                 LocalDateTime.now()));
     }

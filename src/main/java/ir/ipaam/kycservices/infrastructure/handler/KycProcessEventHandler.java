@@ -1,8 +1,5 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.INQUIRY_TOKEN_FAILED;
-
-import ir.ipaam.kycservices.application.service.InquiryTokenService;
 import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
 import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
 import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
@@ -12,7 +9,6 @@ import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
 import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
 import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
 import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
-import ir.ipaam.kycservices.domain.exception.InquiryTokenException;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.Consent;
 import ir.ipaam.kycservices.domain.model.entity.Document;
@@ -24,28 +20,16 @@ import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
-import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
-import ir.ipaam.kycservices.infrastructure.service.dto.InquiryUploadResponse;
-import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentRequest;
-import ir.ipaam.kycservices.infrastructure.service.dto.SavePersonDocumentResponse;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.queryhandling.QueryHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -61,36 +45,22 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_VIDEO = "VIDEO";
     private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
     private static final String DOCUMENT_TYPE_ID_PAGE_PREFIX = "ID_PAGE_";
-    private static final String DEFAULT_THRESHOLD = "-1";
-    private static final String DEFAULT_RANDOM_TEXT = "";
-    private static final String FILE_DATA_PART_NAME = "FileData";
-    private static final int INQUIRY_DOCUMENT_TYPE_ID_PAGE_BASE = 201;
-
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
-    private final KycStepStatusRepository kycStepStatusRepository;
     private final DocumentRepository documentRepository;
     private final ConsentRepository consentRepository;
-    private final WebClient inquiryWebClient;
-    private final InquiryTokenService inquiryTokenService;
     private final MinioStorageService storageService;
 
     public KycProcessEventHandler(
             KycProcessInstanceRepository kycProcessInstanceRepository,
             CustomerRepository customerRepository,
-            KycStepStatusRepository kycStepStatusRepository,
             DocumentRepository documentRepository,
             ConsentRepository consentRepository,
-            @Qualifier("inquiryWebClient") WebClient inquiryWebClient,
-            InquiryTokenService inquiryTokenService,
             MinioStorageService storageService) {
         this.kycProcessInstanceRepository = kycProcessInstanceRepository;
         this.customerRepository = customerRepository;
-        this.kycStepStatusRepository = kycStepStatusRepository;
         this.documentRepository = documentRepository;
         this.consentRepository = consentRepository;
-        this.inquiryWebClient = inquiryWebClient;
-        this.inquiryTokenService = inquiryTokenService;
         this.storageService = storageService;
     }
 
@@ -232,45 +202,14 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(SelfieUploadedEvent event) {
-        Optional<String> tokenOptional;
-        try {
-            tokenOptional = inquiryTokenService.generateToken(event.getProcessInstanceId());
-        } catch (InquiryTokenException ex) {
-            log.warn("Failed to generate inquiry token for selfie step of process {}", event.getProcessInstanceId(), ex);
-            ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-            recordFailedStep(processInstance, "SELFIE_UPLOADED", event.getUploadedAt(), ex.getMessage());
-            return;
-        }
-
-        if (tokenOptional.isEmpty()) {
-            log.warn("Inquiry token service returned empty token for selfie step of process {}", event.getProcessInstanceId());
-            ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-            recordFailedStep(processInstance, "SELFIE_UPLOADED", event.getUploadedAt(), INQUIRY_TOKEN_FAILED);
-            return;
-        }
-
-        String token = tokenOptional.get();
-
-        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("tokenValue", token);
-        bodyBuilder.part("faceThreshold", DEFAULT_THRESHOLD);
-        bodyBuilder.part("fileData", asResource(event.getDescriptor().data(), event.getDescriptor().filename()))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
-
-        DocumentMetadata metadata = uploadInquiryDocument(
-                "/api/Inquiry/SendProbImageByToken",
-                bodyBuilder,
-                event.getProcessInstanceId(),
-                "selfie");
-
-        if (metadata == null) {
-            return;
-        }
-
         DocumentMetadata storageMetadata = storageService.upload(
                 event.getDescriptor(),
                 DOCUMENT_TYPE_SELFIE,
                 event.getProcessInstanceId());
+
+        if (storageMetadata != null) {
+            storageMetadata.setInquiryDocumentId(null);
+        }
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         persistMetadata(storageMetadata, DOCUMENT_TYPE_SELFIE, event.getProcessInstanceId(), processInstance);
@@ -313,36 +252,14 @@ public class KycProcessEventHandler {
 
     @EventHandler
     public void on(VideoUploadedEvent event) {
-        String token = event.getInquiryToken();
-        if (token == null || token.isBlank()) {
-            log.warn("Skipping video upload for process {} because inquiry token could not be generated", event.getProcessInstanceId());
-            ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
-            recordFailedStep(processInstance, "VIDEO_UPLOADED", event.getUploadedAt(), INQUIRY_TOKEN_FAILED);
-            return;
-        }
-
-        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("tokenValue", token);
-        bodyBuilder.part("randomText", DEFAULT_RANDOM_TEXT);
-        bodyBuilder.part("faceThreshold", DEFAULT_THRESHOLD);
-        bodyBuilder.part("voiceThreshold", DEFAULT_THRESHOLD);
-        bodyBuilder.part("fileData", asResource(event.getDescriptor().data(), event.getDescriptor().filename()))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
-
-        DocumentMetadata metadata = uploadInquiryDocument(
-                "/api/Inquiry/SendProbVideoByToken",
-                bodyBuilder,
-                event.getProcessInstanceId(),
-                "video");
-
-        if (metadata == null) {
-            return;
-        }
-
         DocumentMetadata storageMetadata = storageService.upload(
                 event.getDescriptor(),
                 DOCUMENT_TYPE_VIDEO,
                 event.getProcessInstanceId());
+
+        if (storageMetadata != null) {
+            storageMetadata.setInquiryDocumentId(null);
+        }
 
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         persistMetadata(storageMetadata, DOCUMENT_TYPE_VIDEO, event.getProcessInstanceId(), processInstance);
@@ -378,39 +295,6 @@ public class KycProcessEventHandler {
                     instance.setStatus("UNKNOWN");
                     return instance;
                 });
-    }
-
-    private DocumentMetadata uploadInquiryDocument(String uri, MultipartBodyBuilder bodyBuilder,
-                                                   String processInstanceId, String logContext) {
-        InquiryUploadResponse response = inquiryWebClient.post()
-                .uri(uri)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                .retrieve()
-                .bodyToMono(InquiryUploadResponse.class)
-                .onErrorResume(throwable -> {
-                    log.error("Failed to upload {} document for process {}", logContext, processInstanceId, throwable);
-                    return Mono.error(throwable);
-                })
-                .block();
-
-        if (response == null) {
-            log.warn("Inquiry service returned empty response for process {} when uploading {}", processInstanceId, logContext);
-            return null;
-        }
-
-        Integer responseCode = response.getResponseCode();
-        if (responseCode != null && responseCode != 0) {
-            String message = response.getResponseMessage();
-            if (response.getException() != null && response.getException().getErrorMessage() != null) {
-                message = response.getException().getErrorMessage();
-            }
-            log.error("Inquiry service reported error code {} for process {} when uploading {}: {}",
-                    responseCode, processInstanceId, logContext, message);
-            return null;
-        }
-
-        return response.getResult();
     }
 
     private ProcessInstance findProcessInstance(String processInstanceId) {
@@ -472,50 +356,5 @@ public class KycProcessEventHandler {
         statuses.add(stepStatus);
 
         kycProcessInstanceRepository.save(processInstance);
-    }
-
-    private void recordFailedStep(ProcessInstance processInstance, String status, LocalDateTime timestamp, String errorCause) {
-        if (processInstance == null) {
-            return;
-        }
-
-        processInstance.setStatus(status + "_FAILED");
-
-        StepStatus stepStatus = new StepStatus();
-        stepStatus.setProcess(processInstance);
-        stepStatus.setStepName(status);
-        stepStatus.setTimestamp(timestamp != null ? timestamp : LocalDateTime.now());
-        stepStatus.setState(StepStatus.State.FAILED);
-        String cause = (errorCause != null && !errorCause.isBlank()) ? errorCause : INQUIRY_TOKEN_FAILED;
-        stepStatus.setErrorCause(cause);
-
-        List<StepStatus> statuses = processInstance.getStatuses();
-        if (statuses == null) {
-            statuses = new ArrayList<>();
-            processInstance.setStatuses(statuses);
-        }
-        statuses.add(stepStatus);
-
-        kycProcessInstanceRepository.save(processInstance);
-    }
-
-    private String extractResultId(String resultMessage) {
-        if (resultMessage == null) {
-            return null;
-        }
-        int index = resultMessage.lastIndexOf(':');
-        if (index >= 0 && index < resultMessage.length() - 1) {
-            return resultMessage.substring(index + 1).trim();
-        }
-        return resultMessage.trim();
-    }
-
-    private ByteArrayResource asResource(byte[] data, String filename) {
-        return new ByteArrayResource(data) {
-            @Override
-            public String getFilename() {
-                return filename;
-            }
-        };
     }
 }
