@@ -35,9 +35,9 @@ RUN mkdir -p /var/run/postgresql && chown postgres:postgres /var/run/postgresql
 
 # Copy the built application and the bootstrap script.
 COPY --from=build /workspace/target/*.jar /app/app.jar
-COPY docker/entrypoint.sh /app/entrypoint.sh
+COPY docker/docker-dev.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8002 5432
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/deploy-dev.sh"]

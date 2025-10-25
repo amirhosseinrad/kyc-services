@@ -1,3 +1,4 @@
+/*
 package ir.ipaam.kycservices.infrastructure.service;
 
 import ir.ipaam.kycservices.infrastructure.service.dto.PostalCodeRange;
@@ -67,3 +68,4 @@ public class PostalCodeValidatorService {
                 ));
     }
 }
+*/

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
@@ -35,6 +36,7 @@ public class OcrClientConfig {
 
     @Bean
     @Qualifier("ocrAuthWebClient")
+    @Primary
     public WebClient ocrAuthWebClient(WebClient.Builder builder) {
         return builder.build();
     }

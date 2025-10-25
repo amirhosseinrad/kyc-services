@@ -5,10 +5,12 @@ import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
 import ir.ipaam.kycservices.infrastructure.service.dto.CardOcrBackResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.CardOcrFrontResponse;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,6 @@ import java.time.Duration;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class CardOcrClientImpl implements CardOcrClient {
 
     private static final String FRONT_SIDE = "front";
@@ -29,8 +30,22 @@ public class CardOcrClientImpl implements CardOcrClient {
     private static final String ID_CARD_PART_NAME = "idcard";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
 
-    @Qualifier("cardOcrWebClient")
     private final WebClient cardOcrWebClient;
+
+    public CardOcrClientImpl(@Qualifier("cardOcrWebClient") WebClient cardOcrWebClient) {
+        this.cardOcrWebClient = cardOcrWebClient;
+    }
+
+    @PostConstruct
+    public void logWebClient() {
+        log.info("🛰️ Card OCR WebClient details: {}", cardOcrWebClient);
+    }
+
+
+    @PostConstruct
+    public void testWebClient() {
+        log.info("WebClient default URL: {}", cardOcrWebClient);
+    }
 
     @Override
     public CardOcrFrontData extractFront(byte[] content, String filename) {
@@ -40,7 +55,7 @@ public class CardOcrClientImpl implements CardOcrClient {
                 .body(BodyInserters.fromMultipartData(createMultipart(content, filename)))
                 .retrieve()
                 .bodyToMono(CardOcrFrontResponse.class)
-                .block(DEFAULT_TIMEOUT);
+                .block();
 
         if (response == null || response.result() == null) {
             throw new IllegalStateException("Empty response from front OCR service");
@@ -64,7 +79,8 @@ public class CardOcrClientImpl implements CardOcrClient {
         return response.result().data();
     }
 
-    private MultiValueMap<String, Object> createMultipart(byte[] content, String filename) {
+
+    private MultiValueMap<String, HttpEntity<?>> createMultipart(byte[] content, String filename) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part(ID_CARD_PART_NAME, new ByteArrayResource(content) {
             @Override
