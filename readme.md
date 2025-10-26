@@ -96,7 +96,7 @@ persist it across restarts.
 | POST  | `/kyc/selfie`         | Upload a selfie image for biometric checks       |
 | POST  | `/kyc/signature`      | Upload a handwritten signature image             |
 | POST  | `/kyc/video`          | Upload a recorded customer video                 |
-| POST  | `/kyc/documents/id`   | Upload 1–4 ID document pages                     |
+| POST  | `/kyc/booklets`       | Upload 1–4 ID booklet pages                     |
 | POST  | `/kyc/documents/card` | Upload front/back images of the national card    |
 | POST  | `/bpmn/deploy`        | Deploy a BPMN file (multipart upload)            |
 
@@ -153,11 +153,11 @@ Controllers no longer craft ad-hoc error bodies. They throw meaningful exception
   - `404 Not Found` when the process instance cannot be located
   - `500 Internal Server Error` for unexpected command failures
 
-### ID Page Upload
+### Booklet Page Upload
 
-> **Prerequisite for uploads:** All document-upload endpoints (`/kyc/documents/id`, `/kyc/documents/card`, `/kyc/selfie`, `/kyc/signature`, `/kyc/video`) require the referenced `processInstanceId` to exist. Requests referencing an unknown instance return `404 Not Found`.
+> **Prerequisite for uploads:** All document-upload endpoints (`/kyc/booklets`, `/kyc/documents/card`, `/kyc/selfie`, `/kyc/signature`, `/kyc/video`) require the referenced `processInstanceId` to exist. Requests referencing an unknown instance return `404 Not Found`.
 
-`POST /kyc/documents/id` accepts up to **four multipart files** named `pages` plus a `processInstanceId` field. Each file must contain the binary payload for a booklet page (≤2 MB).
+`POST /kyc/booklets` accepts up to **four multipart files** named `pages` plus a `processInstanceId` field. Each file must contain the binary payload for a booklet page (≤2 MB).
 
 - The controller validates the number of pages (1–4) and enforces the 2 MB per-page limit. Missing pages or oversized files return `400 Bad Request`.
 - The service verifies the process instance before queuing an `UploadIdPagesCommand`; unknown IDs result in `404 Not Found`.
