@@ -24,7 +24,7 @@ public class OcrClientConfig {
 
     @Bean
     @Qualifier("bookletValidationWebClient")
-    public WebClient bookletValidationWebClient(@Value("${ocr.booklet.base-url}") String baseUrl,
+    public WebClient bookletValidationWebClient(@Value("${ocr.booklet.base-url:${ocr.card.base-url}}") String baseUrl,
                                                 WebClient.Builder builder,
                                                 OcrTokenProvider tokenProvider) {
         return buildAuthorizedClient(baseUrl, builder, tokenProvider);

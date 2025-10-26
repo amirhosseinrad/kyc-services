@@ -31,12 +31,12 @@ public class BookletValidationClientImpl implements BookletValidationClient {
     private final WebClient bookletWebClient;
 
     @Override
-    public BookletValidationData validate(byte[] content, String filename) {
+    public BookletValidationData validate(byte[] content, String filename, MediaType contentType) {
         try {
             BookletValidationResponse response = bookletWebClient.post()
                     .uri("/api/kyc/v0.1/booklets/validate")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(createMultipart(content, filename)))
+                    .body(BodyInserters.fromMultipartData(createMultipart(content, filename, contentType)))
                     .retrieve()
                     .bodyToMono(BookletValidationResponse.class)
                     .block(DEFAULT_TIMEOUT);
@@ -74,7 +74,7 @@ public class BookletValidationClientImpl implements BookletValidationClient {
         }
     }
 
-    private MultiValueMap<String, Object> createMultipart(byte[] content, String filename) {
+    private MultiValueMap<String, Object> createMultipart(byte[] content, String filename, MediaType contentType) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part(BOOKLET_PART_NAME, new ByteArrayResource(content) {
                     @Override
@@ -86,7 +86,7 @@ public class BookletValidationClientImpl implements BookletValidationClient {
                     }
                 })
                 .filename(StringUtils.hasText(filename) ? filename : BOOKLET_PART_NAME + ".jpg")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+                .contentType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM);
         return builder.build();
     }
 }

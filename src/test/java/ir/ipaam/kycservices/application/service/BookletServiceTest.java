@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -117,9 +118,9 @@ class BookletServiceTest {
         when(publishMessageStep2.correlationKey("process-123")).thenReturn(publishMessageStep3);
         when(publishMessageStep3.variables(any(Map.class))).thenReturn(publishMessageStep3);
         when(publishMessageStep3.send()).thenReturn(CompletableFuture.completedFuture(publishMessageResponse));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), eq(MediaType.IMAGE_PNG)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page2.png")))
+        when(bookletValidationClient.validate(any(byte[].class), eq("page2.png"), eq(MediaType.IMAGE_PNG)))
                 .thenReturn(new BookletValidationData("track-2", "smart", 0));
 
         ResponseEntity<Map<String, Object>> response = bookletService.uploadBookletPages(
@@ -159,8 +160,40 @@ class BookletServiceTest {
                 .containsEntry("kycStatus", "ID_PAGES_UPLOADED")
                 .containsEntry("card", false);
 
-        verify(bookletValidationClient).validate(any(byte[].class), eq("page1.png"));
-        verify(bookletValidationClient).validate(any(byte[].class), eq("page2.png"));
+        verify(bookletValidationClient).validate(any(byte[].class), eq("page1.png"), eq(MediaType.IMAGE_PNG));
+        verify(bookletValidationClient).validate(any(byte[].class), eq("page2.png"), eq(MediaType.IMAGE_PNG));
+    }
+
+    @Test
+    void resolvesContentTypeFromFilenameWhenNotProvided() {
+        MockMultipartFile page = new MockMultipartFile(
+                "pages",
+                "page1.jpg",
+                null,
+                "page1".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ProcessInstance processInstance = new ProcessInstance();
+
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(processInstance));
+        when(kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
+                "process-123",
+                "ID_PAGES_UPLOADED"))
+                .thenReturn(false);
+        when(zeebeClient.newPublishMessageCommand()).thenReturn(publishMessageStep1);
+        when(publishMessageStep1.messageName("id-pages-uploaded")).thenReturn(publishMessageStep2);
+        when(publishMessageStep2.correlationKey("process-123")).thenReturn(publishMessageStep3);
+        when(publishMessageStep3.variables(any(Map.class))).thenReturn(publishMessageStep3);
+        when(publishMessageStep3.send()).thenReturn(CompletableFuture.completedFuture(publishMessageResponse));
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.jpg"), any(MediaType.class)))
+                .thenReturn(new BookletValidationData("track-1", "smart", 0));
+
+        bookletService.uploadBookletPages(List.of(page), "process-123");
+
+        ArgumentCaptor<MediaType> mediaTypeCaptor = ArgumentCaptor.forClass(MediaType.class);
+        verify(bookletValidationClient).validate(any(byte[].class), eq("page1.jpg"), mediaTypeCaptor.capture());
+        assertThat(mediaTypeCaptor.getValue()).isEqualTo(MediaType.IMAGE_JPEG);
     }
 
     @Test
@@ -250,7 +283,7 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
         when(commandGateway.sendAndWait(any(UploadIdPagesCommand.class)))
                 .thenThrow(new CommandExecutionException("rejected", new IllegalArgumentException("bad input")));
@@ -272,7 +305,7 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
         when(commandGateway.sendAndWait(any(UploadIdPagesCommand.class)))
                 .thenThrow(new RuntimeException("gateway failure"));
@@ -294,7 +327,7 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
                 .thenThrow(new IllegalArgumentException("error.workflow.bookletValidation.failed"));
 
         assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
