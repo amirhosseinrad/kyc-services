@@ -6,6 +6,8 @@ import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMes
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
 import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.BookletValidationClient;
+import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -35,6 +37,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_R
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -67,6 +70,9 @@ class BookletServiceTest {
     @Mock
     private PublishMessageResponse publishMessageResponse;
 
+    @Mock
+    private BookletValidationClient bookletValidationClient;
+
     private BookletService bookletService;
 
     @BeforeEach
@@ -75,7 +81,8 @@ class BookletServiceTest {
                 commandGateway,
                 kycProcessInstanceRepository,
                 kycStepStatusRepository,
-                zeebeClient
+                zeebeClient,
+                bookletValidationClient
         );
     }
 
@@ -110,6 +117,10 @@ class BookletServiceTest {
         when(publishMessageStep2.correlationKey("process-123")).thenReturn(publishMessageStep3);
         when(publishMessageStep3.variables(any(Map.class))).thenReturn(publishMessageStep3);
         when(publishMessageStep3.send()).thenReturn(CompletableFuture.completedFuture(publishMessageResponse));
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+                .thenReturn(new BookletValidationData("track-1", "smart", 0));
+        when(bookletValidationClient.validate(any(byte[].class), eq("page2.png")))
+                .thenReturn(new BookletValidationData("track-2", "smart", 0));
 
         ResponseEntity<Map<String, Object>> response = bookletService.uploadBookletPages(
                 List.of(page1, page2),
@@ -125,6 +136,10 @@ class BookletServiceTest {
                 page2.getBytes().length
         );
         assertThat(response.getBody()).containsEntry("status", "ID_PAGES_RECEIVED");
+        List<?> validationResults = (List<?>) response.getBody().get("validationResults");
+        assertThat(validationResults).hasSize(2);
+        assertThat((Map<?, ?>) validationResults.get(0)).containsEntry("trackId", "track-1");
+        assertThat((Map<?, ?>) validationResults.get(1)).containsEntry("trackId", "track-2");
 
         ArgumentCaptor<UploadIdPagesCommand> commandCaptor = ArgumentCaptor.forClass(UploadIdPagesCommand.class);
         verify(commandGateway).sendAndWait(commandCaptor.capture());
@@ -143,6 +158,9 @@ class BookletServiceTest {
                 .containsEntry("processInstanceId", "process-123")
                 .containsEntry("kycStatus", "ID_PAGES_UPLOADED")
                 .containsEntry("card", false);
+
+        verify(bookletValidationClient).validate(any(byte[].class), eq("page1.png"));
+        verify(bookletValidationClient).validate(any(byte[].class), eq("page2.png"));
     }
 
     @Test
@@ -172,6 +190,7 @@ class BookletServiceTest {
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
         verifyNoInteractions(zeebeClient);
+        verifyNoInteractions(bookletValidationClient);
     }
 
     @Test
@@ -231,6 +250,8 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+                .thenReturn(new BookletValidationData("track-1", "smart", 0));
         when(commandGateway.sendAndWait(any(UploadIdPagesCommand.class)))
                 .thenThrow(new CommandExecutionException("rejected", new IllegalArgumentException("bad input")));
 
@@ -251,12 +272,37 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+                .thenReturn(new BookletValidationData("track-1", "smart", 0));
         when(commandGateway.sendAndWait(any(UploadIdPagesCommand.class)))
                 .thenThrow(new RuntimeException("gateway failure"));
 
         assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("gateway failure");
+    }
+
+    @Test
+    void validationFailurePreventsUpload() {
+        MockMultipartFile page = new MockMultipartFile(
+                "pages",
+                "page1.png",
+                "image/png",
+                "page1".getBytes(StandardCharsets.UTF_8)
+        );
+
+        ProcessInstance processInstance = new ProcessInstance();
+        when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
+                .thenReturn(Optional.of(processInstance));
+        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png")))
+                .thenThrow(new IllegalArgumentException("error.workflow.bookletValidation.failed"));
+
+        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("error.workflow.bookletValidation.failed");
+
+        verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
+        verifyNoInteractions(zeebeClient);
     }
 
     @Test

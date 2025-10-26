@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
@@ -20,6 +19,26 @@ public class OcrClientConfig {
     public WebClient cardOcrWebClient(@Value("${ocr.card.base-url}") String baseUrl,
                                       WebClient.Builder builder,
                                       OcrTokenProvider tokenProvider) {
+        return buildAuthorizedClient(baseUrl, builder, tokenProvider);
+    }
+
+    @Bean
+    @Qualifier("bookletValidationWebClient")
+    public WebClient bookletValidationWebClient(@Value("${ocr.booklet.base-url}") String baseUrl,
+                                                WebClient.Builder builder,
+                                                OcrTokenProvider tokenProvider) {
+        return buildAuthorizedClient(baseUrl, builder, tokenProvider);
+    }
+
+    @Bean
+    @Qualifier("ocrAuthWebClient")
+    public WebClient ocrAuthWebClient(WebClient.Builder builder) {
+        return builder.build();
+    }
+
+    private WebClient buildAuthorizedClient(String baseUrl,
+                                            WebClient.Builder builder,
+                                            OcrTokenProvider tokenProvider) {
         ExchangeFilterFunction authorizationFilter = (request, next) -> Mono.defer(() -> {
             String accessToken = tokenProvider.getAccessToken();
             ClientRequest authenticatedRequest = ClientRequest.from(request)
@@ -32,12 +51,5 @@ public class OcrClientConfig {
                 .baseUrl(baseUrl)
                 .filter(authorizationFilter)
                 .build();
-    }
-
-    @Bean
-    @Qualifier("ocrAuthWebClient")
-    @Primary
-    public WebClient ocrAuthWebClient(WebClient.Builder builder) {
-        return builder.build();
     }
 }
