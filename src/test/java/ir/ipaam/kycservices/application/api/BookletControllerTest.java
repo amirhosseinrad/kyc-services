@@ -62,6 +62,7 @@ class BookletControllerTest {
                 "processInstanceId", "process-123",
                 "pageCount", 2,
                 "pageSizes", List.of(page1.getBytes().length, page2.getBytes().length),
+                "validationResults", List.of(Map.of("trackId", "track-1"), Map.of("trackId", "track-2")),
                 "status", "ID_PAGES_RECEIVED"
         );
         when(bookletService.uploadBookletPages(any(), eq("process-123")))
@@ -76,6 +77,8 @@ class BookletControllerTest {
                 .andExpect(jsonPath("$.pageCount").value(2))
                 .andExpect(jsonPath("$.pageSizes[0]").value(page1.getBytes().length))
                 .andExpect(jsonPath("$.pageSizes[1]").value(page2.getBytes().length))
+                .andExpect(jsonPath("$.validationResults[0].trackId").value("track-1"))
+                .andExpect(jsonPath("$.validationResults[1].trackId").value("track-2"))
                 .andExpect(jsonPath("$.status").value("ID_PAGES_RECEIVED"));
 
         ArgumentCaptor<List<MultipartFile>> captor = ArgumentCaptor.forClass(List.class);

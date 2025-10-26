@@ -107,6 +107,10 @@
     "en": "Unable to upload signature image",
     "fa": "بارگذاری تصویر امضا امکان‌پذیر نیست"
   },
+  "error.workflow.bookletValidation.failed": {
+    "en": "Booklet pages were rejected by the validation service",
+    "fa": "اعتبارسنجی صفحات شناسنامه توسط سرویس تایید نشد"
+  },
   "error.workflow.idUpload.failed": {
     "en": "Unable to upload ID pages",
     "fa": "بارگذاری صفحات شناسنامه امکان‌پذیر نیست"

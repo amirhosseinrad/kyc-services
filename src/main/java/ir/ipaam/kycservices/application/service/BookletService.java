@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.application.service;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -12,6 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +49,7 @@ public class BookletService {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
+    private final BookletValidationClient bookletValidationClient;
 
     public ResponseEntity<Map<String, Object>> uploadBookletPages(List<MultipartFile> pages, String processInstanceId) {
         List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
@@ -73,6 +79,7 @@ public class BookletService {
 
         List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
         List<Integer> sizes = new ArrayList<>();
+        List<BookletValidationData> validationResults = new ArrayList<>();
         for (int i = 0; i < normalizedPages.size(); i++) {
             MultipartFile page = normalizedPages.get(i);
             validateFile(page, ID_PAGE_REQUIRED, ID_PAGE_TOO_LARGE, MAX_PAGE_SIZE_BYTES);
@@ -80,6 +87,9 @@ public class BookletService {
             sizes.add(pageBytes.length);
             String filename = resolveFilename(page, i);
             descriptors.add(new DocumentPayloadDescriptor(pageBytes, filename));
+            MediaType contentType = resolveContentType(page, filename);
+            BookletValidationData validationData = bookletValidationClient.validate(pageBytes, filename, contentType);
+            validationResults.add(validationData);
         }
 
         UploadIdPagesCommand command = new UploadIdPagesCommand(normalizedProcessId, List.copyOf(descriptors));
@@ -92,13 +102,23 @@ public class BookletService {
 
         publishWorkflowUpdate(normalizedProcessId, hasNewCard);
 
-        Map<String, Object> body = Map.of(
-                "processInstanceId", normalizedProcessId,
-                "pageCount", descriptors.size(),
-                "pageSizes", List.copyOf(sizes),
-                "status", "ID_PAGES_RECEIVED"
-        );
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("processInstanceId", normalizedProcessId);
+        body.put("pageCount", descriptors.size());
+        body.put("pageSizes", List.copyOf(sizes));
+        body.put("validationResults", validationResults.stream()
+                .map(BookletService::toValidationResult)
+                .toList());
+        body.put("status", "ID_PAGES_RECEIVED");
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+    }
+
+    private static Map<String, Object> toValidationResult(BookletValidationData data) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("trackId", data.trackId());
+        map.put("type", data.type());
+        map.put("rotation", data.rotation());
+        return map;
     }
 
     private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
@@ -131,6 +151,19 @@ public class BookletService {
             return original;
         }
         return "page-" + (index + 1);
+    }
+
+    private MediaType resolveContentType(MultipartFile file, String filename) {
+        String provided = file.getContentType();
+        if (StringUtils.hasText(provided)) {
+            try {
+                return MediaType.parseMediaType(provided);
+            } catch (InvalidMediaTypeException ex) {
+                log.debug("Ignoring invalid content type '{}' for booklet page {}", provided, filename, ex);
+            }
+        }
+        return MediaTypeFactory.getMediaType(filename)
+                .orElse(MediaType.APPLICATION_OCTET_STREAM);
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {
