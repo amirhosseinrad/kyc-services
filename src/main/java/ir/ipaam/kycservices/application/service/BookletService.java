@@ -41,7 +41,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @RequiredArgsConstructor
 public class BookletService {
 
-    public static final long MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+    public static final long MAX_PAGE_SIZE_BYTES = 20 * 1024 * 1024; // 2 MB
 
     private static final String STEP_ID_PAGES_UPLOADED = "ID_PAGES_UPLOADED";
 

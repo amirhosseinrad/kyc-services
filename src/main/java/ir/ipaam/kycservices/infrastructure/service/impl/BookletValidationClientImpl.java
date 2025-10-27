@@ -4,10 +4,10 @@ import ir.ipaam.kycservices.application.service.BookletValidationClient;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
 import ir.ipaam.kycservices.common.ErrorMessageKeys;
 import ir.ipaam.kycservices.infrastructure.service.dto.BookletValidationResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
@@ -21,14 +21,17 @@ import java.time.Duration;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class BookletValidationClientImpl implements BookletValidationClient {
 
     private static final String BOOKLET_PART_NAME = "image";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
 
-    @Qualifier("bookletValidationWebClient")
     private final WebClient bookletWebClient;
+
+    public BookletValidationClientImpl(
+            @Qualifier("bookletValidationWebClient") WebClient bookletWebClient) {
+        this.bookletWebClient = bookletWebClient;
+    }
 
     @Override
     public BookletValidationData validate(byte[] content, String filename, MediaType contentType) {
@@ -74,7 +77,7 @@ public class BookletValidationClientImpl implements BookletValidationClient {
         }
     }
 
-    private MultiValueMap<String, Object> createMultipart(byte[] content, String filename, MediaType contentType) {
+    private MultiValueMap<String, HttpEntity<?>> createMultipart(byte[] content, String filename, MediaType contentType) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part(BOOKLET_PART_NAME, new ByteArrayResource(content) {
                     @Override

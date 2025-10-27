@@ -79,14 +79,6 @@
     "en": "video exceeds maximum size",
     "fa": "حجم ویدئو بیشتر از حد مجاز است"
   },
-  "error.inquiry.token.failed": {
-    "en": "Unable to generate inquiry token",
-    "fa": "امکان دریافت توکن استعلام وجود ندارد"
-  },
-  "error.inquiry.token.required": {
-    "en": "Inquiry token must be provided",
-    "fa": "توکن استعلام باید فراهم شود"
-  },
   "error.workflow.acceptConsent.failed": {
     "en": "Unable to record consent decision",
     "fa": "ثبت وضعیت موافقت با شرایط امکان‌پذیر نیست"

@@ -285,6 +285,7 @@ public class KycProcessAggregate {
 
     @EventSourcingHandler
     public void on(IdPagesUploadedEvent event) {
+        this.processInstanceId = event.processInstanceId();
         this.status = "ID_PAGES_UPLOADED";
     }
 

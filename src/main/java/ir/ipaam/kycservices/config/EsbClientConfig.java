@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.config;
 
-import ir.ipaam.kycservices.infrastructure.service.security.OcrTokenProvider;
+import ir.ipaam.kycservices.infrastructure.service.security.EsbTokenProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -12,33 +12,33 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Configuration
-public class OcrClientConfig {
+public class EsbClientConfig {
 
     @Bean
     @Qualifier("cardOcrWebClient")
     public WebClient cardOcrWebClient(@Value("${ocr.card.base-url}") String baseUrl,
                                       WebClient.Builder builder,
-                                      OcrTokenProvider tokenProvider) {
+                                      EsbTokenProvider tokenProvider) {
         return buildAuthorizedClient(baseUrl, builder, tokenProvider);
     }
-
     @Bean
     @Qualifier("bookletValidationWebClient")
-    public WebClient bookletValidationWebClient(@Value("${ocr.booklet.base-url:${ocr.card.base-url}}") String baseUrl,
-                                                WebClient.Builder builder,
-                                                OcrTokenProvider tokenProvider) {
+    public WebClient bookletValidationWebClient(
+            @Value("${ocr.booklet.base-url}") String baseUrl,
+            WebClient.Builder builder,
+            EsbTokenProvider tokenProvider) {
         return buildAuthorizedClient(baseUrl, builder, tokenProvider);
     }
 
     @Bean
-    @Qualifier("ocrAuthWebClient")
-    public WebClient ocrAuthWebClient(WebClient.Builder builder) {
+    @Qualifier("esbAuthWebClient")
+    public WebClient esbAuthWebClient(WebClient.Builder builder) {
         return builder.build();
     }
 
     private WebClient buildAuthorizedClient(String baseUrl,
                                             WebClient.Builder builder,
-                                            OcrTokenProvider tokenProvider) {
+                                            EsbTokenProvider tokenProvider) {
         ExchangeFilterFunction authorizationFilter = (request, next) -> Mono.defer(() -> {
             String accessToken = tokenProvider.getAccessToken();
             ClientRequest authenticatedRequest = ClientRequest.from(request)

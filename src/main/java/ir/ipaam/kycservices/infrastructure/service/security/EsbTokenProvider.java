@@ -24,18 +24,21 @@ import java.time.Instant;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
-public class OcrTokenProvider {
+public class EsbTokenProvider {
 
-    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration EXPIRY_SAFETY_WINDOW = Duration.ofSeconds(30);
-
     private final OcrOAuthProperties properties;
-
-    @Qualifier("ocrAuthWebClient")
     private final WebClient authWebClient;
 
     private volatile TokenState cachedToken;
+
+    public EsbTokenProvider(OcrOAuthProperties properties,
+                            @Qualifier("esbAuthWebClient")
+                            WebClient authWebClient) {
+        this.properties = properties;
+        this.authWebClient = authWebClient;
+    }
 
     public String getAccessToken() {
         TokenState tokenState = cachedToken;
