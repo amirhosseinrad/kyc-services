@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import ir.ipaam.kycservices.application.api.error.ErrorCode;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.CardDocumentService;
+import ir.ipaam.kycservices.application.service.impl.CardValidationServiceImpl;
 import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ class CardDocumentControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CardDocumentService cardDocumentService;
+    private CardValidationServiceImpl cardValidationServiceImpl;
 
     @Test
     void delegatesToServiceAndReturnsResponse() throws Exception {
@@ -60,7 +60,7 @@ class CardDocumentControllerTest {
                 "backImageSize", back.getSize(),
                 "status", "CARD_DOCUMENTS_RECEIVED"
         );
-        when(cardDocumentService.uploadCardDocuments(any(), any(), any()))
+        when(cardValidationServiceImpl.uploadCardDocuments(any(), any(), any()))
                 .thenReturn(CardDocumentUploadResult.of(HttpStatus.ACCEPTED, body));
 
         mockMvc.perform(multipart("/kyc/documents/card")
@@ -89,7 +89,7 @@ class CardDocumentControllerTest {
                 "processInstanceId", "process-123",
                 "status", "CARD_DOCUMENTS_ALREADY_UPLOADED"
         );
-        when(cardDocumentService.uploadCardDocuments(any(), any(), any()))
+        when(cardValidationServiceImpl.uploadCardDocuments(any(), any(), any()))
                 .thenReturn(CardDocumentUploadResult.of(HttpStatus.CONFLICT, body));
 
         mockMvc.perform(multipart("/kyc/documents/card")
@@ -113,7 +113,7 @@ class CardDocumentControllerTest {
         );
 
         doThrow(new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED))
-                .when(cardDocumentService).uploadCardDocuments(any(), any(), any());
+                .when(cardValidationServiceImpl).uploadCardDocuments(any(), any(), any());
 
         mockMvc.perform(multipart("/kyc/documents/card")
                         .file(front)
@@ -136,7 +136,7 @@ class CardDocumentControllerTest {
         );
 
         doThrow(new ResourceNotFoundException("Process instance not found"))
-                .when(cardDocumentService).uploadCardDocuments(any(), any(), any());
+                .when(cardValidationServiceImpl).uploadCardDocuments(any(), any(), any());
 
         mockMvc.perform(multipart("/kyc/documents/card")
                         .file(front)
@@ -159,7 +159,7 @@ class CardDocumentControllerTest {
         );
 
         doThrow(new RuntimeException("gateway failure"))
-                .when(cardDocumentService).uploadCardDocuments(any(), any(), any());
+                .when(cardValidationServiceImpl).uploadCardDocuments(any(), any(), any());
 
         mockMvc.perform(multipart("/kyc/documents/card")
                         .file(front)

@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 /**
  * Validates uploaded booklet pages via the external OCR/validation service.
  */
-public interface BookletValidationClient {
+public interface BookletValidationService {
 
     /**
      * Validates the provided booklet page.

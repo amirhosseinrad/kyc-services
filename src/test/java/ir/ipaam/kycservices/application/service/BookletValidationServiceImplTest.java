@@ -1,13 +1,14 @@
 package ir.ipaam.kycservices.application.service;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.ZeebeFuture;
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1;
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep2;
 import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3;
 import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.BookletValidationClient;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
+import ir.ipaam.kycservices.application.service.impl.BookletValidationServiceImpl;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -45,7 +46,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class BookletServiceTest {
+class BookletValidationServiceImplTest {
 
     @Mock
     private CommandGateway commandGateway;
@@ -72,18 +73,18 @@ class BookletServiceTest {
     private PublishMessageResponse publishMessageResponse;
 
     @Mock
-    private BookletValidationClient bookletValidationClient;
+    private BookletValidationService bookletValidationService;
 
-    private BookletService bookletService;
+    private BookletValidationServiceImpl bookletValidationServiceImpl;
 
     @BeforeEach
     void setUp() {
-        bookletService = new BookletService(
+        bookletValidationServiceImpl = new BookletValidationServiceImpl(
                 commandGateway,
                 kycProcessInstanceRepository,
                 kycStepStatusRepository,
                 zeebeClient,
-                bookletValidationClient
+                bookletValidationService
         );
     }
 
@@ -117,13 +118,13 @@ class BookletServiceTest {
         when(publishMessageStep1.messageName("id-pages-uploaded")).thenReturn(publishMessageStep2);
         when(publishMessageStep2.correlationKey("process-123")).thenReturn(publishMessageStep3);
         when(publishMessageStep3.variables(any(Map.class))).thenReturn(publishMessageStep3);
-        when(publishMessageStep3.send()).thenReturn(CompletableFuture.completedFuture(publishMessageResponse));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), eq(MediaType.IMAGE_PNG)))
+        when(publishMessageStep3.send()).thenReturn((ZeebeFuture<PublishMessageResponse>) CompletableFuture.completedFuture(publishMessageResponse));
+        when(bookletValidationService.validate(any(byte[].class), eq("page1.png"), eq(MediaType.IMAGE_PNG)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page2.png"), eq(MediaType.IMAGE_PNG)))
+        when(bookletValidationService.validate(any(byte[].class), eq("page2.png"), eq(MediaType.IMAGE_PNG)))
                 .thenReturn(new BookletValidationData("track-2", "smart", 0));
 
-        ResponseEntity<Map<String, Object>> response = bookletService.uploadBookletPages(
+        ResponseEntity<Map<String, Object>> response = bookletValidationServiceImpl.uploadBookletPages(
                 List.of(page1, page2),
                 "process-123"
         );
@@ -160,8 +161,8 @@ class BookletServiceTest {
                 .containsEntry("kycStatus", "ID_PAGES_UPLOADED")
                 .containsEntry("card", false);
 
-        verify(bookletValidationClient).validate(any(byte[].class), eq("page1.png"), eq(MediaType.IMAGE_PNG));
-        verify(bookletValidationClient).validate(any(byte[].class), eq("page2.png"), eq(MediaType.IMAGE_PNG));
+        verify(bookletValidationService).validate(any(byte[].class), eq("page1.png"), eq(MediaType.IMAGE_PNG));
+        verify(bookletValidationService).validate(any(byte[].class), eq("page2.png"), eq(MediaType.IMAGE_PNG));
     }
 
     @Test
@@ -186,13 +187,13 @@ class BookletServiceTest {
         when(publishMessageStep2.correlationKey("process-123")).thenReturn(publishMessageStep3);
         when(publishMessageStep3.variables(any(Map.class))).thenReturn(publishMessageStep3);
         when(publishMessageStep3.send()).thenReturn(CompletableFuture.completedFuture(publishMessageResponse));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.jpg"), any(MediaType.class)))
+        when(bookletValidationService.validate(any(byte[].class), eq("page1.jpg"), any(MediaType.class)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
 
-        bookletService.uploadBookletPages(List.of(page), "process-123");
+        bookletValidationServiceImpl.uploadBookletPages(List.of(page), "process-123");
 
         ArgumentCaptor<MediaType> mediaTypeCaptor = ArgumentCaptor.forClass(MediaType.class);
-        verify(bookletValidationClient).validate(any(byte[].class), eq("page1.jpg"), mediaTypeCaptor.capture());
+        verify(bookletValidationService).validate(any(byte[].class), eq("page1.jpg"), mediaTypeCaptor.capture());
         assertThat(mediaTypeCaptor.getValue()).isEqualTo(MediaType.IMAGE_JPEG);
     }
 
@@ -213,7 +214,7 @@ class BookletServiceTest {
                 "ID_PAGES_UPLOADED"))
                 .thenReturn(true);
 
-        ResponseEntity<Map<String, Object>> response = bookletService.uploadBookletPages(
+        ResponseEntity<Map<String, Object>> response = bookletValidationServiceImpl.uploadBookletPages(
                 List.of(page),
                 "process-123"
         );
@@ -223,7 +224,7 @@ class BookletServiceTest {
 
         verify(commandGateway, never()).sendAndWait(any(UploadIdPagesCommand.class));
         verifyNoInteractions(zeebeClient);
-        verifyNoInteractions(bookletValidationClient);
+        verifyNoInteractions(bookletValidationService);
     }
 
     @Test
@@ -235,14 +236,14 @@ class BookletServiceTest {
                 "page1".getBytes(StandardCharsets.UTF_8)
         );
 
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "   "))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(page), "   "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(PROCESS_INSTANCE_ID_REQUIRED);
     }
 
     @Test
     void oversizedPageThrowsIllegalArgumentException() {
-        byte[] large = new byte[(int) BookletService.MAX_PAGE_SIZE_BYTES + 1];
+        byte[] large = new byte[(int) BookletValidationServiceImpl.MAX_PAGE_SIZE_BYTES + 1];
         MockMultipartFile page = new MockMultipartFile(
                 "pages",
                 "page1.png",
@@ -250,7 +251,7 @@ class BookletServiceTest {
                 large
         );
 
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(page), "process-123"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(ID_PAGE_TOO_LARGE);
     }
@@ -267,7 +268,7 @@ class BookletServiceTest {
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(page), "process-123"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -283,12 +284,12 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
+        when(bookletValidationService.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
         when(commandGateway.sendAndWait(any(UploadIdPagesCommand.class)))
                 .thenThrow(new CommandExecutionException("rejected", new IllegalArgumentException("bad input")));
 
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(page), "process-123"))
                 .isInstanceOf(CommandExecutionException.class)
                 .hasMessageContaining("rejected");
     }
@@ -305,12 +306,12 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
+        when(bookletValidationService.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
                 .thenReturn(new BookletValidationData("track-1", "smart", 0));
         when(commandGateway.sendAndWait(any(UploadIdPagesCommand.class)))
                 .thenThrow(new RuntimeException("gateway failure"));
 
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(page), "process-123"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("gateway failure");
     }
@@ -327,10 +328,10 @@ class BookletServiceTest {
         ProcessInstance processInstance = new ProcessInstance();
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
-        when(bookletValidationClient.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
+        when(bookletValidationService.validate(any(byte[].class), eq("page1.png"), any(MediaType.class)))
                 .thenThrow(new IllegalArgumentException("error.workflow.bookletValidation.failed"));
 
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(page), "process-123"))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(page), "process-123"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("error.workflow.bookletValidation.failed");
 
@@ -340,7 +341,7 @@ class BookletServiceTest {
 
     @Test
     void missingPagesThrowsIllegalArgumentException() {
-        assertThatThrownBy(() -> bookletService.uploadBookletPages(List.of(), "process-123"))
+        assertThatThrownBy(() -> bookletValidationServiceImpl.uploadBookletPages(List.of(), "process-123"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(ID_PAGES_REQUIRED);
     }

@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.service.BookletService;
+import ir.ipaam.kycservices.application.service.impl.BookletValidationServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +21,9 @@ import java.util.Map;
 @Tag(name = "Booklet Upload", description = "Submit multi-page scans of the customer's national ID booklet.")
 public class BookletController {
 
-    public static final long MAX_PAGE_SIZE_BYTES = BookletService.MAX_PAGE_SIZE_BYTES;
+    public static final long MAX_PAGE_SIZE_BYTES = BookletValidationServiceImpl.MAX_PAGE_SIZE_BYTES;
 
-    private final BookletService bookletService;
+    private final BookletValidationServiceImpl bookletValidationServiceImpl;
 
     @Operation(
             summary = "Upload national ID booklet pages",
@@ -34,6 +34,6 @@ public class BookletController {
     public ResponseEntity<Map<String, Object>> uploadBookletPages(
             @RequestPart("pages") List<MultipartFile> pages,
             @RequestPart("processInstanceId") String processInstanceId) {
-        return bookletService.uploadBookletPages(pages, processInstanceId);
+        return bookletValidationServiceImpl.uploadBookletPages(pages, processInstanceId);
     }
 }

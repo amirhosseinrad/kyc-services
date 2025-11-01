@@ -7,7 +7,7 @@ import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
  * Client abstraction responsible for interacting with the external OCR service that extracts
  * textual information from national ID card images.
  */
-public interface CardOcrClient {
+public interface CardValidationService {
 
     /**
      * Performs OCR on the front side of the ID card image.

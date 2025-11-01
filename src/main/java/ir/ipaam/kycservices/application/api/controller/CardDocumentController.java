@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.service.CardDocumentService;
+import ir.ipaam.kycservices.application.service.impl.CardValidationServiceImpl;
 import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +23,9 @@ import java.util.Map;
 @Tag(name = "Card Document Upload", description = "Collect front and back images of the customer's national card.")
 public class CardDocumentController {
 
-    public static final long MAX_IMAGE_SIZE_BYTES = CardDocumentService.MAX_IMAGE_SIZE_BYTES;
+    public static final long MAX_IMAGE_SIZE_BYTES = CardValidationServiceImpl.MAX_IMAGE_SIZE_BYTES;
 
-    private final CardDocumentService cardDocumentService;
+    private final CardValidationServiceImpl cardValidationServiceImpl;
 
     @Operation(
             summary = "Upload card images",
@@ -37,7 +37,7 @@ public class CardDocumentController {
             @RequestPart("frontImage") MultipartFile frontImage,
             @RequestPart("backImage") MultipartFile backImage,
             @RequestPart("processInstanceId") String processInstanceId) {
-        CardDocumentUploadResult result = cardDocumentService.uploadCardDocuments(frontImage, backImage, processInstanceId);
+        CardDocumentUploadResult result = cardValidationServiceImpl.uploadCardDocuments(frontImage, backImage, processInstanceId);
         return ResponseEntity.status(result.status()).body(result.body());
     }
 }

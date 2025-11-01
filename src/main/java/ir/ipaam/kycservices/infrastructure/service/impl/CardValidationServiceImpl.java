@@ -1,12 +1,11 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
-import ir.ipaam.kycservices.application.service.CardOcrClient;
+import ir.ipaam.kycservices.application.service.CardValidationService;
 import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
 import ir.ipaam.kycservices.infrastructure.service.dto.CardOcrBackResponse;
 import ir.ipaam.kycservices.infrastructure.service.dto.CardOcrFrontResponse;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ByteArrayResource;
@@ -23,7 +22,7 @@ import java.time.Duration;
 
 @Slf4j
 @Service
-public class CardOcrClientImpl implements CardOcrClient {
+public class CardValidationServiceImpl implements CardValidationService {
 
     private static final String FRONT_SIDE = "front";
     private static final String BACK_SIDE = "back";
@@ -32,7 +31,7 @@ public class CardOcrClientImpl implements CardOcrClient {
 
     private final WebClient cardOcrWebClient;
 
-    public CardOcrClientImpl(@Qualifier("cardOcrWebClient") WebClient cardOcrWebClient) {
+    public CardValidationServiceImpl(@Qualifier("cardOcrWebClient") WebClient cardOcrWebClient) {
         this.cardOcrWebClient = cardOcrWebClient;
     }
 

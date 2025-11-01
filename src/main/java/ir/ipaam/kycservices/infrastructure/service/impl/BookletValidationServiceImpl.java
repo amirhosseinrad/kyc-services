@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
-import ir.ipaam.kycservices.application.service.BookletValidationClient;
+import ir.ipaam.kycservices.application.service.BookletValidationService;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
 import ir.ipaam.kycservices.common.ErrorMessageKeys;
 import ir.ipaam.kycservices.infrastructure.service.dto.BookletValidationResponse;
@@ -21,14 +21,14 @@ import java.time.Duration;
 
 @Slf4j
 @Service
-public class BookletValidationClientImpl implements BookletValidationClient {
+public class BookletValidationServiceImpl implements BookletValidationService {
 
     private static final String BOOKLET_PART_NAME = "image";
-    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(600);
 
     private final WebClient bookletWebClient;
 
-    public BookletValidationClientImpl(
+    public BookletValidationServiceImpl(
             @Qualifier("bookletValidationWebClient") WebClient bookletWebClient) {
         this.bookletWebClient = bookletWebClient;
     }

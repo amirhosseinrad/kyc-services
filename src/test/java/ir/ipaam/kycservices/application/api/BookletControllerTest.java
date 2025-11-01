@@ -1,16 +1,16 @@
 package ir.ipaam.kycservices.application.api;
 
 import ir.ipaam.kycservices.application.api.controller.BookletController;
-import ir.ipaam.kycservices.application.service.BookletService;
+import ir.ipaam.kycservices.application.service.impl.BookletValidationServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,8 +34,8 @@ class BookletControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private BookletService bookletService;
+    @MockitoBean
+    private BookletValidationServiceImpl bookletValidationServiceImpl;
 
     @Test
     void uploadBookletPagesDelegatesToService() throws Exception {
@@ -65,7 +65,7 @@ class BookletControllerTest {
                 "validationResults", List.of(Map.of("trackId", "track-1"), Map.of("trackId", "track-2")),
                 "status", "ID_PAGES_RECEIVED"
         );
-        when(bookletService.uploadBookletPages(any(), eq("process-123")))
+        when(bookletValidationServiceImpl.uploadBookletPages(any(), eq("process-123")))
                 .thenReturn(ResponseEntity.status(HttpStatus.ACCEPTED).body(body));
 
         mockMvc.perform(multipart("/kyc/booklets")
@@ -82,7 +82,7 @@ class BookletControllerTest {
                 .andExpect(jsonPath("$.status").value("ID_PAGES_RECEIVED"));
 
         ArgumentCaptor<List<MultipartFile>> captor = ArgumentCaptor.forClass(List.class);
-        verify(bookletService).uploadBookletPages(captor.capture(), eq("process-123"));
+        verify(bookletValidationServiceImpl).uploadBookletPages(captor.capture(), eq("process-123"));
         List<MultipartFile> captured = captor.getValue();
         assertThat(captured).hasSize(2);
         assertThat(captured.get(0).getOriginalFilename()).isEqualTo("page1.png");
@@ -98,7 +98,7 @@ class BookletControllerTest {
                 "process-123".getBytes(StandardCharsets.UTF_8)
         );
 
-        when(bookletService.uploadBookletPages(any(), any()))
+        when(bookletValidationServiceImpl.uploadBookletPages(any(), any()))
                 .thenThrow(new IllegalArgumentException(ID_PAGES_REQUIRED));
 
         mockMvc.perform(multipart("/kyc/booklets")

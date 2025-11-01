@@ -1,8 +1,9 @@
-package ir.ipaam.kycservices.application.service;
+package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.BookletValidationService;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
 import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -39,7 +40,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BookletService {
+public class BookletValidationServiceImpl {
 
     public static final long MAX_PAGE_SIZE_BYTES = 20 * 1024 * 1024; // 2 MB
 
@@ -49,7 +50,7 @@ public class BookletService {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
-    private final BookletValidationClient bookletValidationClient;
+    private final BookletValidationService bookletValidationService;
 
     public ResponseEntity<Map<String, Object>> uploadBookletPages(List<MultipartFile> pages, String processInstanceId) {
         List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
@@ -88,7 +89,7 @@ public class BookletService {
             String filename = resolveFilename(page, i);
             descriptors.add(new DocumentPayloadDescriptor(pageBytes, filename));
             MediaType contentType = resolveContentType(page, filename);
-            BookletValidationData validationData = bookletValidationClient.validate(pageBytes, filename, contentType);
+            BookletValidationData validationData = bookletValidationService.validate(pageBytes, filename, contentType);
             validationResults.add(validationData);
         }
 
@@ -107,7 +108,7 @@ public class BookletService {
         body.put("pageCount", descriptors.size());
         body.put("pageSizes", List.copyOf(sizes));
         body.put("validationResults", validationResults.stream()
-                .map(BookletService::toValidationResult)
+                .map(BookletValidationServiceImpl::toValidationResult)
                 .toList());
         body.put("status", "ID_PAGES_RECEIVED");
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);

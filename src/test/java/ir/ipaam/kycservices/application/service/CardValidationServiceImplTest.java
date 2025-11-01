@@ -7,10 +7,10 @@ import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMes
 import io.camunda.zeebe.client.api.response.PublishMessageResponse;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.CardOcrClient;
 import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
 import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
+import ir.ipaam.kycservices.application.service.impl.CardValidationServiceImpl;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.entity.Customer;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -46,7 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CardDocumentServiceTest {
+class CardValidationServiceImplTest {
 
     @Mock
     private CommandGateway commandGateway;
@@ -64,10 +64,10 @@ class CardDocumentServiceTest {
     private CustomerRepository customerRepository;
 
     @Mock
-    private CardOcrClient cardOcrClient;
+    private CardValidationService cardValidationService;
 
     @InjectMocks
-    private CardDocumentService cardDocumentService;
+    private CardValidationServiceImpl cardValidationServiceImpl;
 
     @Test
     void uploadCardDocumentsDispatchesCommand() throws Exception {
@@ -96,7 +96,7 @@ class CardDocumentServiceTest {
         when(commandGateway.sendAndWait(any(UploadCardDocumentsCommand.class))).thenReturn(null);
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(cardOcrClient.extractFront(any(), any()))
+        when(cardValidationService.extractFront(any(), any()))
                 .thenReturn(new CardOcrFrontData(
                         "front-track",
                         "0452711746",
@@ -107,7 +107,7 @@ class CardDocumentServiceTest {
                         "1404-03-22",
                         0
                 ));
-        when(cardOcrClient.extractBack(any(), any()))
+        when(cardValidationService.extractBack(any(), any()))
                 .thenReturn(new CardOcrBackData(
                         "back-track",
                         "9G49488906",
@@ -126,7 +126,7 @@ class CardDocumentServiceTest {
         when(step3.variables(any(Map.class))).thenReturn(step3);
         when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
-        CardDocumentUploadResult result = cardDocumentService.uploadCardDocuments(front, back, "process-123");
+        CardDocumentUploadResult result = cardValidationServiceImpl.uploadCardDocuments(front, back, "process-123");
 
         assertThat(result.status()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(result.body()).containsEntry("processInstanceId", "process-123")
@@ -143,8 +143,8 @@ class CardDocumentServiceTest {
         assertThat(command.getFrontDescriptor().data()).isEqualTo(front.getBytes());
         assertThat(command.getBackDescriptor().data()).isEqualTo(back.getBytes());
 
-        verify(cardOcrClient).extractFront(any(), eq("front.png"));
-        verify(cardOcrClient).extractBack(any(), eq("back.png"));
+        verify(cardValidationService).extractFront(any(), eq("front.png"));
+        verify(cardValidationService).extractBack(any(), eq("back.png"));
         verify(customerRepository).save(customer);
         assertThat(customer.getFirstName()).isEqualTo("امیرحسین");
         assertThat(customer.getLastName()).isEqualTo("جوادی راد");
@@ -177,13 +177,13 @@ class CardDocumentServiceTest {
                 "process-123", "CARD_DOCUMENTS_UPLOADED"))
                 .thenReturn(true);
 
-        CardDocumentUploadResult result = cardDocumentService.uploadCardDocuments(front, back, "process-123");
+        CardDocumentUploadResult result = cardValidationServiceImpl.uploadCardDocuments(front, back, "process-123");
 
         assertThat(result.status()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(result.body()).containsEntry("status", "CARD_DOCUMENTS_ALREADY_UPLOADED");
         verify(commandGateway, never()).sendAndWait(any());
         verifyNoInteractions(zeebeClient);
-        verifyNoInteractions(cardOcrClient, customerRepository);
+        verifyNoInteractions(cardValidationService, customerRepository);
     }
 
     @Test
@@ -191,16 +191,16 @@ class CardDocumentServiceTest {
         MockMultipartFile front = new MockMultipartFile("frontImage", "front.png", MediaType.IMAGE_PNG_VALUE, "front".getBytes());
         MockMultipartFile back = new MockMultipartFile("backImage", "back.png", MediaType.IMAGE_PNG_VALUE, "back".getBytes());
 
-        assertThatThrownBy(() -> cardDocumentService.uploadCardDocuments(front, back, "   "))
+        assertThatThrownBy(() -> cardValidationServiceImpl.uploadCardDocuments(front, back, "   "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("processInstanceId must be provided");
         verify(commandGateway, never()).sendAndWait(any());
-        verifyNoInteractions(cardOcrClient, customerRepository);
+        verifyNoInteractions(cardValidationService, customerRepository);
     }
 
     @Test
     void oversizedFileThrowsIllegalArgumentException() {
-        byte[] large = new byte[(int) CardDocumentService.MAX_IMAGE_SIZE_BYTES + 1];
+        byte[] large = new byte[(int) CardValidationServiceImpl.MAX_IMAGE_SIZE_BYTES + 1];
         MockMultipartFile front = new MockMultipartFile("frontImage", "front.png", MediaType.IMAGE_PNG_VALUE, large);
         MockMultipartFile back = new MockMultipartFile("backImage", "back.png", MediaType.IMAGE_PNG_VALUE, "back".getBytes());
 
@@ -208,11 +208,11 @@ class CardDocumentServiceTest {
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
 
-        assertThatThrownBy(() -> cardDocumentService.uploadCardDocuments(front, back, "process-123"))
+        assertThatThrownBy(() -> cardValidationServiceImpl.uploadCardDocuments(front, back, "process-123"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("frontImage exceeds maximum size");
         verify(commandGateway, never()).sendAndWait(any());
-        verifyNoInteractions(cardOcrClient, customerRepository);
+        verifyNoInteractions(cardValidationService, customerRepository);
     }
 
     @Test
@@ -236,24 +236,24 @@ class CardDocumentServiceTest {
         when(step3.variables(any(Map.class))).thenReturn(step3);
         when(step3.send()).thenAnswer(i -> CompletableFuture.completedFuture(response));
 
-        CardDocumentUploadResult result = cardDocumentService.uploadCardDocuments(front, back, "process-456");
+        CardDocumentUploadResult result = cardValidationServiceImpl.uploadCardDocuments(front, back, "process-456");
 
         assertThat(result.status()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat((Integer) result.body().get("frontImageSize"))
-                .isLessThanOrEqualTo((int) CardDocumentService.MAX_IMAGE_SIZE_BYTES)
+                .isLessThanOrEqualTo((int) CardValidationServiceImpl.MAX_IMAGE_SIZE_BYTES)
                 .isLessThan(large.length);
         assertThat((Integer) result.body().get("backImageSize"))
-                .isLessThanOrEqualTo((int) CardDocumentService.MAX_IMAGE_SIZE_BYTES)
+                .isLessThanOrEqualTo((int) CardValidationServiceImpl.MAX_IMAGE_SIZE_BYTES)
                 .isLessThan(large.length);
 
         ArgumentCaptor<UploadCardDocumentsCommand> captor = ArgumentCaptor.forClass(UploadCardDocumentsCommand.class);
         verify(commandGateway).sendAndWait(captor.capture());
         UploadCardDocumentsCommand command = captor.getValue();
         assertThat(command.getFrontDescriptor().data().length)
-                .isLessThanOrEqualTo((int) CardDocumentService.MAX_IMAGE_SIZE_BYTES)
+                .isLessThanOrEqualTo((int) CardValidationServiceImpl.MAX_IMAGE_SIZE_BYTES)
                 .isLessThan(large.length);
         assertThat(command.getBackDescriptor().data().length)
-                .isLessThanOrEqualTo((int) CardDocumentService.MAX_IMAGE_SIZE_BYTES)
+                .isLessThanOrEqualTo((int) CardValidationServiceImpl.MAX_IMAGE_SIZE_BYTES)
                 .isLessThan(large.length);
     }
 
@@ -268,7 +268,7 @@ class CardDocumentServiceTest {
         when(commandGateway.sendAndWait(any(UploadCardDocumentsCommand.class)))
                 .thenThrow(new RuntimeException("gateway failure"));
 
-        assertThatThrownBy(() -> cardDocumentService.uploadCardDocuments(front, back, "process-123"))
+        assertThatThrownBy(() -> cardValidationServiceImpl.uploadCardDocuments(front, back, "process-123"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("gateway failure");
     }
@@ -281,12 +281,12 @@ class CardDocumentServiceTest {
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> cardDocumentService.uploadCardDocuments(front, back, "process-123"))
+        assertThatThrownBy(() -> cardValidationServiceImpl.uploadCardDocuments(front, back, "process-123"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Process instance not found");
         verify(commandGateway, never()).sendAndWait(any());
         verifyNoInteractions(zeebeClient);
-        verifyNoInteractions(cardOcrClient, customerRepository);
+        verifyNoInteractions(cardValidationService, customerRepository);
     }
 
     @Test
@@ -298,10 +298,10 @@ class CardDocumentServiceTest {
         when(kycProcessInstanceRepository.findByCamundaInstanceId("process-123"))
                 .thenReturn(Optional.of(processInstance));
 
-        assertThatThrownBy(() -> cardDocumentService.uploadCardDocuments(multipartFile, back, "process-123"))
+        assertThatThrownBy(() -> cardValidationServiceImpl.uploadCardDocuments(multipartFile, back, "process-123"))
                 .isInstanceOf(FileProcessingException.class)
                 .hasMessage(FILE_READ_FAILURE);
-        verifyNoInteractions(cardOcrClient, customerRepository);
+        verifyNoInteractions(cardValidationService, customerRepository);
     }
 
     private byte[] createNoisyPng(int width, int height) throws IOException {

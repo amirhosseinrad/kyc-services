@@ -1,12 +1,12 @@
-package ir.ipaam.kycservices.application.service;
+package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.CardValidationService;
 import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
 import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
-import ir.ipaam.kycservices.application.service.CardOcrClient;
 import ir.ipaam.kycservices.common.image.ImageCompressionHelper;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -37,7 +37,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CardDocumentService {
+public class CardValidationServiceImpl {
 
     public static final long MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
@@ -48,7 +48,7 @@ public class CardDocumentService {
     private final CustomerRepository customerRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
-    private final CardOcrClient cardOcrClient;
+    private final CardValidationService cardValidationService;
 
     public CardDocumentUploadResult uploadCardDocuments(MultipartFile frontImage,
                                                         MultipartFile backImage,
@@ -78,8 +78,8 @@ public class CardDocumentService {
         CardOcrFrontData frontData = null;
         CardOcrBackData backData = null;
         try {
-            frontData = cardOcrClient.extractFront(frontBytes, frontImage.getOriginalFilename());
-            backData = cardOcrClient.extractBack(backBytes, backImage.getOriginalFilename());
+            frontData = cardValidationService.extractFront(frontBytes, frontImage.getOriginalFilename());
+            backData = cardValidationService.extractBack(backBytes, backImage.getOriginalFilename());
         } catch (RuntimeException ex) {
             log.error("Failed to extract OCR data for process {}", normalizedProcessId, ex);
             throw ex;
