@@ -121,8 +121,8 @@ public class KycProcessAggregate {
     }
 
     @CommandHandler
-    public void handle(SaveTrackingNumberCommand command){
-        AggregateLifecycle.apply(new SaveTrackingNumberEvent(command.getProcessInstanceId(),
+    public void handle(RecordTrackingNumberCommand command){
+        AggregateLifecycle.apply(new RecordTrackingNumberEvent(command.getProcessInstanceId(),
                 command.getTrackingNumber(),
                 LocalDateTime.now()));
     }
@@ -283,7 +283,7 @@ public class KycProcessAggregate {
     }
 
     @EventSourcingHandler
-    public void on(SaveTrackingNumberEvent event) {
+    public void on(RecordTrackingNumberEvent event) {
         this.status = "SAVE_TRACKING_NUMBER";
     }
 

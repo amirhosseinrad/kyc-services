@@ -6,7 +6,7 @@ import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.EsbBookletValidation;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
-import ir.ipaam.kycservices.domain.command.SaveTrackingNumberCommand;
+import ir.ipaam.kycservices.domain.command.RecordTrackingNumberCommand;
 import ir.ipaam.kycservices.domain.command.UploadBookletPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -185,17 +185,17 @@ public class BookletValidationServiceImpl {
         }
     }
 
-    public ResponseEntity<Map<String, Object>> validateTrackingNumber(ValidateTrackingNumberRequest request) {
+    public ResponseEntity<Map<String, Object>> recordTrackingNumber(ValidateTrackingNumberRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.getProcessInstanceNumber());
         String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
         Map<String, Object> variables = new HashMap<>();
         variables.put("processInstanceId", processInstanceId);
         variables.put("trackingNumber", trackingNumber);
-        variables.put("status", "SAVE_NATIONAL_CARD_TRACKING_NUMBER");
-        SaveTrackingNumberCommand command = new SaveTrackingNumberCommand(trackingNumber, processInstanceId);
+        variables.put("status", "RECORD_NATIONAL_CARD_TRACKING_NUMBER");
+        RecordTrackingNumberCommand command = new RecordTrackingNumberCommand(trackingNumber, processInstanceId);
         commandGateway.sendAndWait(command);
         zeebeClient.newPublishMessageCommand()
-                .messageName("save-national-card-tracking-number")
+                .messageName("record-national-card-tracking-number")
                 .correlationKey(processInstanceId)
                 .variables(variables)
                 .send()

@@ -186,7 +186,7 @@ public class KycProcessEventHandler {
     }
 
     @EventHandler
-    public void on(SaveTrackingNumberEvent event) {
+    public void on(RecordTrackingNumberEvent event) {
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         if (processInstance != null) {
             processInstance.setStatus("SAVE_NATIONAL_CARD_TRACKING_NUMBER");

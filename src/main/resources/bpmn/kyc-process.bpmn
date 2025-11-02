@@ -15,7 +15,7 @@
       <zeebe:subscription correlationKey="=processInstanceId" />
     </bpmn:extensionElements>
   </bpmn:message>
-  <bpmn:message id="Message_SaveNationalCardTrackingNumber" name="save-national-card-tracking-number">
+  <bpmn:message id="Message_RecordNationalCardTrackingNumber" name="record-national-card-tracking-number">
     <bpmn:extensionElements>
       <zeebe:subscription correlationKey="=processInstanceId" />
     </bpmn:extensionElements>
@@ -171,7 +171,7 @@
     <bpmn:sequenceFlow id="Flow_0bsxg6p" sourceRef="Activity_070byyo" targetRef="Event_1oraag3" />
     <bpmn:sequenceFlow id="Flow_0rcryas" sourceRef="Activity_0h6mzvy" targetRef="Activity_1j0wll2" />
     <bpmn:sequenceFlow id="Flow_1e5xyln" sourceRef="Activity_uploadVideoCard" targetRef="Gateway_039mf43" />
-    <bpmn:receiveTask id="Activity_0h6mzvy" name="store tracking number for new Card" messageRef="Message_SaveNationalCardTrackingNumber">
+    <bpmn:receiveTask id="Activity_0h6mzvy" name="record tracking number for new Card" messageRef="Message_RecordNationalCardTrackingNumber">
       <bpmn:incoming>Flow_0prl3kq</bpmn:incoming>
       <bpmn:outgoing>Flow_0rcryas</bpmn:outgoing>
     </bpmn:receiveTask>

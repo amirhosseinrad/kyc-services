@@ -7,13 +7,13 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(force = true)
-public class SaveTrackingNumberEvent {
+public class RecordTrackingNumberEvent {
 
     private final String processInstanceId;
     private final String trackingNumber;
     private final LocalDateTime date;
 
-    public SaveTrackingNumberEvent(String processInstanceId, String trackingNumber, LocalDateTime now) {
+    public RecordTrackingNumberEvent(String processInstanceId, String trackingNumber, LocalDateTime now) {
         this.processInstanceId = processInstanceId;
         this.trackingNumber = trackingNumber;
         this.date = now;

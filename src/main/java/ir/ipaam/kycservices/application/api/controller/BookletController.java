@@ -25,9 +25,9 @@ public class BookletController {
 
 
     @PostMapping("/validate-tracking-national-card-number")
-    public ResponseEntity<Map<String, Object>> validateTrackingNumber(
+    public ResponseEntity<Map<String, Object>> recordTrackingNumber(
             @RequestBody ValidateTrackingNumberRequest request) {
-        ResponseEntity<Map<String, Object>> response = bookletValidationServiceImpl.validateTrackingNumber(request);
+        ResponseEntity<Map<String, Object>> response = bookletValidationServiceImpl.recordTrackingNumber(request);
         return response;
     }
 

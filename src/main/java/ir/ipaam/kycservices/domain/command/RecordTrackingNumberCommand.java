@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SaveTrackingNumberCommand {
+public class RecordTrackingNumberCommand {
     private String trackingNumber;
     private String processInstanceId;
     }
