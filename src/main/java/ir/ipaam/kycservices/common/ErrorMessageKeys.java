@@ -53,6 +53,8 @@ public final class ErrorMessageKeys {
     public static final String ENGLISH_LAST_NAME_REQUIRED = "error.englishInfo.lastName.required";
     public static final String TELEPHONE_REQUIRED = "error.englishInfo.telephone.required";
 
+    public static final String TRACKING_NUMBER_REQUIRED = "error.trackingNumber.required";
+
     public static final String KYC_NOT_STARTED = "error.kyc.notStarted";
     public static final String KYC_STATUS_QUERY_FAILED = "error.kyc.status.queryFailed";
     public static final String CARD_DESCRIPTORS_REQUIRED = "error.kyc.card.descriptorsRequired";

@@ -38,6 +38,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGES_LIMIT;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGES_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.TRACKING_NUMBER_REQUIRED;
 
 @Slf4j
 @Service
@@ -186,11 +187,12 @@ public class BookletValidationServiceImpl {
 
     public ResponseEntity<Map<String, Object>> validateTrackingNumber(ValidateTrackingNumberRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.getProcessInstanceNumber());
+        String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
         Map<String, Object> variables = new HashMap<>();
         variables.put("processInstanceId", processInstanceId);
-        variables.put("trackingNumber", request.getTrackingNumber());
+        variables.put("trackingNumber", trackingNumber);
         variables.put("status", "SAVE_NATIONAL_CARD_TRACKING_NUMBER");
-        SaveTrackingNumberCommand command = new SaveTrackingNumberCommand(request.getTrackingNumber(), request.getProcessInstanceNumber());
+        SaveTrackingNumberCommand command = new SaveTrackingNumberCommand(trackingNumber, processInstanceId);
         commandGateway.sendAndWait(command);
         zeebeClient.newPublishMessageCommand()
                 .messageName("save-national-card-tracking-number")
@@ -200,5 +202,12 @@ public class BookletValidationServiceImpl {
                 .join();
 
         return ResponseEntity.ok(variables);
+    }
+
+    private String normalizeTrackingNumber(String trackingNumber) {
+        if (!StringUtils.hasText(trackingNumber)) {
+            throw new IllegalArgumentException(TRACKING_NUMBER_REQUIRED);
+        }
+        return trackingNumber.trim();
     }
 }
