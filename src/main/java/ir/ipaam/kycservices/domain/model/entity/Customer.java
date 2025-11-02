@@ -30,4 +30,5 @@ public class Customer {
     private String cardBarcode;
     private String cardOcrFrontTrackId;
     private String cardOcrBackTrackId;
+    private String NationalCardTrackingNumber;
 }

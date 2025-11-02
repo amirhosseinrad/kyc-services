@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.infrastructure.service.impl;
 
-import ir.ipaam.kycservices.application.service.CardValidationService;
+import ir.ipaam.kycservices.application.service.EsbNationalCardValidation;
 import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
 import ir.ipaam.kycservices.infrastructure.service.dto.CardOcrBackResponse;
@@ -22,7 +22,7 @@ import java.time.Duration;
 
 @Slf4j
 @Service
-public class CardValidationServiceImpl implements CardValidationService {
+public class EsbNationalCardValidationImpl implements EsbNationalCardValidation {
 
     private static final String FRONT_SIDE = "front";
     private static final String BACK_SIDE = "back";
@@ -31,7 +31,7 @@ public class CardValidationServiceImpl implements CardValidationService {
 
     private final WebClient cardOcrWebClient;
 
-    public CardValidationServiceImpl(@Qualifier("cardOcrWebClient") WebClient cardOcrWebClient) {
+    public EsbNationalCardValidationImpl(@Qualifier("cardOcrWebClient") WebClient cardOcrWebClient) {
         this.cardOcrWebClient = cardOcrWebClient;
     }
 

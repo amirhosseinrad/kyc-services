@@ -1,19 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.handler;
 
-import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
-import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
-import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
-import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
-import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
-import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
-import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
-import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
-import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
-import ir.ipaam.kycservices.domain.model.entity.Customer;
-import ir.ipaam.kycservices.domain.model.entity.Consent;
-import ir.ipaam.kycservices.domain.model.entity.Document;
-import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
-import ir.ipaam.kycservices.domain.model.entity.StepStatus;
+import ir.ipaam.kycservices.domain.event.*;
+import ir.ipaam.kycservices.domain.model.entity.*;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
 import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
@@ -29,11 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 @Component
 public class KycProcessEventHandler {
@@ -44,7 +28,7 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_SELFIE = "PHOTO";
     private static final String DOCUMENT_TYPE_VIDEO = "VIDEO";
     private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
-    private static final String DOCUMENT_TYPE_ID_PAGE_PREFIX = "ID_PAGE_";
+    private static final String DOCUMENT_TYPE_BOOKLET = "BOOKLET";
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
     private final DocumentRepository documentRepository;
@@ -169,7 +153,8 @@ public class KycProcessEventHandler {
     }
 
     @EventHandler
-    public void on(IdPagesUploadedEvent event) {
+    public void on(BookletPagesUploadedEvent event) {
+        log.info("Received BookletPagesUploadedEvent for {}", event.processInstanceId());
         List<DocumentPayloadDescriptor> descriptors = event.pageDescriptors();
         if (descriptors == null || descriptors.isEmpty()) {
             log.warn("Received ID pages event without descriptors for process {}", event.processInstanceId());
@@ -181,7 +166,7 @@ public class KycProcessEventHandler {
         for (int i = 0; i < descriptors.size(); i++) {
             DocumentMetadata metadata = storageService.upload(
                     descriptors.get(i),
-                    DOCUMENT_TYPE_ID_PAGE_PREFIX + (i + 1),
+                    DOCUMENT_TYPE_BOOKLET + (i + 1),
                     event.processInstanceId());
             metadataList.add(metadata);
         }
@@ -192,13 +177,47 @@ public class KycProcessEventHandler {
             }
             persistMetadata(
                     metadata,
-                    DOCUMENT_TYPE_ID_PAGE_PREFIX + (i + 1),
+                    DOCUMENT_TYPE_BOOKLET + (i + 1),
                     event.processInstanceId(),
                     processInstance);
         }
 
-        recordSuccessfulStep(processInstance, "ID_PAGES_UPLOADED", event.uploadedAt());
+        recordSuccessfulStep(processInstance, "BOOKLET_PAGES_UPLOADED", event.uploadedAt());
     }
+
+    @EventHandler
+    public void on(SaveTrackingNumberEvent event) {
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        if (processInstance != null) {
+            processInstance.setStatus("SAVE_NATIONAL_CARD_TRACKING_NUMBER");
+            StepStatus stepStatus = new StepStatus();
+            stepStatus.setProcess(processInstance);
+            stepStatus.setStepName("SAVE_NATIONAL_CARD_TRACKING_NUMBER");
+            stepStatus.setTimestamp(event.getDate());
+            stepStatus.setState(StepStatus.State.PASSED);
+            List<StepStatus> statuses = processInstance.getStatuses();
+            if (statuses == null) {
+                statuses = new ArrayList<>();
+                processInstance.setStatuses(statuses);
+            }
+            statuses.add(stepStatus);
+            kycProcessInstanceRepository.save(processInstance);
+        }
+        assert processInstance != null;
+        updateCustomerWithTrackingNumber(processInstance,event.getTrackingNumber());
+    }
+
+
+    private void updateCustomerWithTrackingNumber(ProcessInstance processInstance, String trackingNumber) {
+        if (processInstance.getCustomer() == null) {
+            log.warn("Process instance {} has no associated customer to update with OCR data", processInstance.getCamundaInstanceId());
+            return;
+        }
+        var customer = processInstance.getCustomer();
+        customer.setNationalCardTrackingNumber(trackingNumber);
+        customerRepository.save(customer);
+    }
+
 
     @EventHandler
     public void on(SelfieUploadedEvent event) {

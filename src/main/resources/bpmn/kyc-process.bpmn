@@ -15,7 +15,12 @@
       <zeebe:subscription correlationKey="=processInstanceId" />
     </bpmn:extensionElements>
   </bpmn:message>
-  <bpmn:message id="Message_IdPagesUploaded" name="id-pages-uploaded">
+  <bpmn:message id="Message_SaveNationalCardTrackingNumber" name="save-national-card-tracking-number">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=processInstanceId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_BookletPagesUploaded" name="booklet-pages-uploaded">
     <bpmn:extensionElements>
       <zeebe:subscription correlationKey="=processInstanceId" />
     </bpmn:extensionElements>
@@ -127,14 +132,10 @@
     <bpmn:intermediateThrowEvent id="Event_0m1cck6">
       <bpmn:incoming>Flow_1180tca</bpmn:incoming>
     </bpmn:intermediateThrowEvent>
-    <bpmn:task id="Activity_0h6mzvy" name="store tracking number for new Card">
-      <bpmn:incoming>Flow_0prl3kq</bpmn:incoming>
-      <bpmn:outgoing>Flow_0rcryas</bpmn:outgoing>
-    </bpmn:task>
     <bpmn:sequenceFlow id="Flow_0prl3kq" sourceRef="Gateway_0evrolw" targetRef="Activity_0h6mzvy">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(card)</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:receiveTask id="Activity_1j0wll2" name="save 1-4 pages ID pages" messageRef="Message_IdPagesUploaded">
+    <bpmn:receiveTask id="Activity_1j0wll2" name="save 1-4 pages ID pages" messageRef="Message_BookletPagesUploaded">
       <bpmn:incoming>Flow_0rcryas</bpmn:incoming>
       <bpmn:outgoing>Flow_197j0mu</bpmn:outgoing>
     </bpmn:receiveTask>
@@ -170,6 +171,10 @@
     <bpmn:sequenceFlow id="Flow_0bsxg6p" sourceRef="Activity_070byyo" targetRef="Event_1oraag3" />
     <bpmn:sequenceFlow id="Flow_0rcryas" sourceRef="Activity_0h6mzvy" targetRef="Activity_1j0wll2" />
     <bpmn:sequenceFlow id="Flow_1e5xyln" sourceRef="Activity_uploadVideoCard" targetRef="Gateway_039mf43" />
+    <bpmn:receiveTask id="Activity_0h6mzvy" name="store tracking number for new Card" messageRef="Message_SaveNationalCardTrackingNumber">
+      <bpmn:incoming>Flow_0prl3kq</bpmn:incoming>
+      <bpmn:outgoing>Flow_0rcryas</bpmn:outgoing>
+    </bpmn:receiveTask>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_kyc-process">
     <bpmndi:BPMNPlane id="BPMNPlane_kyc-process" bpmnElement="kyc-process">
@@ -208,7 +213,7 @@
       <bpmndi:BPMNShape id="Gateway_0evrolw_di" bpmnElement="Gateway_0evrolw" isMarkerVisible="true">
         <dc:Bounds x="145" y="245" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="137" y="304.5" width="66" height="27" />
+          <dc:Bounds x="137" y="207.5" width="66" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0qyvwow_di" bpmnElement="Activity_0qyvwow">
@@ -244,10 +249,6 @@
       <bpmndi:BPMNShape id="Event_0m1cck6_di" bpmnElement="Event_0m1cck6">
         <dc:Bounds x="1902" y="252" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_0h6mzvy_di" bpmnElement="Activity_0h6mzvy">
-        <dc:Bounds x="230" y="400" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_1j0wll2_di" bpmnElement="Activity_1j0wll2">
         <dc:Bounds x="380" y="400" width="100" height="80" />
         <bpmndi:BPMNLabel />
@@ -272,6 +273,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_1oraag3_di" bpmnElement="Event_1oraag3">
         <dc:Bounds x="1362" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_14eqatz_di" bpmnElement="Activity_0h6mzvy">
+        <dc:Bounds x="230" y="400" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_08qkrgn_di" bpmnElement="Flow_08qkrgn">
         <di:waypoint x="710" y="245" />

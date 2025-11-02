@@ -11,7 +11,7 @@ import java.util.Locale;
 public enum DocumentType {
     CARD_BACK,
     CARD_FRONT,
-    ID_BOOKLET,
+    BOOKLET,
     PHOTO,
     VIDEO,
     SIGNATURE;

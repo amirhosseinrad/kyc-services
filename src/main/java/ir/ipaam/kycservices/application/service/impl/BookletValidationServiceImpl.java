@@ -1,11 +1,13 @@
 package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import ir.ipaam.kycservices.application.api.dto.ValidateTrackingNumberRequest;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.BookletValidationService;
+import ir.ipaam.kycservices.application.service.EsbBookletValidation;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
-import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
+import ir.ipaam.kycservices.domain.command.SaveTrackingNumberCommand;
+import ir.ipaam.kycservices.domain.command.UploadBookletPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -50,7 +52,7 @@ public class BookletValidationServiceImpl {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
-    private final BookletValidationService bookletValidationService;
+    private final EsbBookletValidation esbBookletValidation;
 
     public ResponseEntity<Map<String, Object>> uploadBookletPages(List<MultipartFile> pages, String processInstanceId) {
         List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
@@ -89,11 +91,11 @@ public class BookletValidationServiceImpl {
             String filename = resolveFilename(page, i);
             descriptors.add(new DocumentPayloadDescriptor(pageBytes, filename));
             MediaType contentType = resolveContentType(page, filename);
-            BookletValidationData validationData = bookletValidationService.validate(pageBytes, filename, contentType);
+            BookletValidationData validationData = esbBookletValidation.validate(pageBytes, filename, contentType);
             validationResults.add(validationData);
         }
 
-        UploadIdPagesCommand command = new UploadIdPagesCommand(normalizedProcessId, List.copyOf(descriptors));
+        UploadBookletPagesCommand command = new UploadBookletPagesCommand(normalizedProcessId, List.copyOf(descriptors));
         commandGateway.sendAndWait(command);
 
         Boolean hasNewCard = null;
@@ -125,12 +127,12 @@ public class BookletValidationServiceImpl {
     private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("processInstanceId", processInstanceId);
-        variables.put("kycStatus", "ID_PAGES_UPLOADED");
+        variables.put("kycStatus", "BOOKLET_PAGES_UPLOADED");
         if (hasNewCard != null) {
             variables.put("card", hasNewCard);
         }
         zeebeClient.newPublishMessageCommand()
-                .messageName("id-pages-uploaded")
+                .messageName("booklet-pages-uploaded")
                 .correlationKey(processInstanceId)
                 .variables(variables)
                 .send()
@@ -180,5 +182,23 @@ public class BookletValidationServiceImpl {
         } catch (IOException e) {
             throw new FileProcessingException(FILE_READ_FAILURE, e);
         }
+    }
+
+    public ResponseEntity<Map<String, Object>> validateTrackingNumber(ValidateTrackingNumberRequest request) {
+        String processInstanceId = normalizeProcessInstanceId(request.getProcessInstanceNumber());
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("processInstanceId", processInstanceId);
+        variables.put("trackingNumber", request.getTrackingNumber());
+        variables.put("status", "SAVE_NATIONAL_CARD_TRACKING_NUMBER");
+        SaveTrackingNumberCommand command = new SaveTrackingNumberCommand(request.getTrackingNumber(), request.getProcessInstanceNumber());
+        commandGateway.sendAndWait(command);
+        zeebeClient.newPublishMessageCommand()
+                .messageName("save-national-card-tracking-number")
+                .correlationKey(processInstanceId)
+                .variables(variables)
+                .send()
+                .join();
+
+        return ResponseEntity.ok(variables);
     }
 }

@@ -1,31 +1,16 @@
 package ir.ipaam.kycservices.domain.model.aggregate;
 
-import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
-import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
-import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
-import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
-import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
-import ir.ipaam.kycservices.domain.command.UploadIdPagesCommand;
-import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
-import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
-import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
+import ir.ipaam.kycservices.domain.command.*;
+import ir.ipaam.kycservices.domain.event.*;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
-import ir.ipaam.kycservices.domain.event.CardDocumentsUploadedEvent;
-import ir.ipaam.kycservices.domain.event.ConsentAcceptedEvent;
-import ir.ipaam.kycservices.domain.event.EnglishPersonalInfoProvidedEvent;
-import ir.ipaam.kycservices.domain.event.IdPagesUploadedEvent;
-import ir.ipaam.kycservices.domain.event.KycProcessStartedEvent;
-import ir.ipaam.kycservices.domain.event.KycStatusUpdatedEvent;
-import ir.ipaam.kycservices.domain.event.SelfieUploadedEvent;
-import ir.ipaam.kycservices.domain.event.SignatureUploadedEvent;
-import ir.ipaam.kycservices.domain.event.VideoUploadedEvent;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.axonframework.commandhandling.CommandHandler;
+import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
-import org.axonframework.commandhandling.CommandHandler;
-import org.axonframework.eventsourcing.EventSourcingHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,6 +36,8 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_DESCRIPTOR_REQU
 
 @Aggregate
 @NoArgsConstructor
+@Setter
+@Getter
 public class KycProcessAggregate {
 
     @AggregateIdentifier
@@ -106,7 +93,7 @@ public class KycProcessAggregate {
     }
 
     @CommandHandler
-    public void handle(UploadIdPagesCommand command) {
+    public void handle(UploadBookletPagesCommand command) {
         if (this.processInstanceId == null) {
             throw new IllegalStateException(KYC_NOT_STARTED);
         }
@@ -126,10 +113,17 @@ public class KycProcessAggregate {
             throw new IllegalArgumentException(ID_DESCRIPTOR_NULL);
         }
 
-        AggregateLifecycle.apply(new IdPagesUploadedEvent(
+        AggregateLifecycle.apply(new BookletPagesUploadedEvent(
                 command.processInstanceId(),
                 this.nationalCode,
                 List.copyOf(descriptors),
+                LocalDateTime.now()));
+    }
+
+    @CommandHandler
+    public void handle(SaveTrackingNumberCommand command){
+        AggregateLifecycle.apply(new SaveTrackingNumberEvent(command.getProcessInstanceId(),
+                command.getTrackingNumber(),
                 LocalDateTime.now()));
     }
 
@@ -284,9 +278,13 @@ public class KycProcessAggregate {
     }
 
     @EventSourcingHandler
-    public void on(IdPagesUploadedEvent event) {
-        this.processInstanceId = event.processInstanceId();
-        this.status = "ID_PAGES_UPLOADED";
+    public void on(BookletPagesUploadedEvent event) {
+        this.status = "BOOKLET_PAGES_UPLOADED";
+    }
+
+    @EventSourcingHandler
+    public void on(SaveTrackingNumberEvent event) {
+        this.status = "SAVE_TRACKING_NUMBER";
     }
 
     @EventSourcingHandler

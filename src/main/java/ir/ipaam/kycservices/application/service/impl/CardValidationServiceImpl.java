@@ -3,7 +3,7 @@ package ir.ipaam.kycservices.application.service.impl;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.CardValidationService;
+import ir.ipaam.kycservices.application.service.EsbNationalCardValidation;
 import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
 import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
@@ -48,7 +48,7 @@ public class CardValidationServiceImpl {
     private final CustomerRepository customerRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
-    private final CardValidationService cardValidationService;
+    private final EsbNationalCardValidation esbNationalCardValidation;
 
     public CardDocumentUploadResult uploadCardDocuments(MultipartFile frontImage,
                                                         MultipartFile backImage,
@@ -78,8 +78,8 @@ public class CardValidationServiceImpl {
         CardOcrFrontData frontData = null;
         CardOcrBackData backData = null;
         try {
-            frontData = cardValidationService.extractFront(frontBytes, frontImage.getOriginalFilename());
-            backData = cardValidationService.extractBack(backBytes, backImage.getOriginalFilename());
+            frontData = esbNationalCardValidation.extractFront(frontBytes, frontImage.getOriginalFilename());
+            backData = esbNationalCardValidation.extractBack(backBytes, backImage.getOriginalFilename());
         } catch (RuntimeException ex) {
             log.error("Failed to extract OCR data for process {}", normalizedProcessId, ex);
             throw ex;

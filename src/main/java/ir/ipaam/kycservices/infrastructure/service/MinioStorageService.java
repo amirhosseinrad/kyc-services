@@ -34,6 +34,7 @@ public class MinioStorageService {
 
     private final MinioClient minioClient;
     private final String cardBucket;
+    private final String bookletBucket;
     private final String idBucket;
     private final String biometricBucket;
     private final String signatureBucket;
@@ -45,6 +46,7 @@ public class MinioStorageService {
             MinioClient minioClient,
             @Value("${storage.minio.bucket.card}") String cardBucket,
             @Value("${storage.minio.bucket.id}") String idBucket,
+            @Value("${storage.minio.bucket.booklet}") String bookletBucket,
             @Value("${storage.minio.bucket.biometric}") String biometricBucket,
             @Value("${storage.minio.bucket.signature}") String signatureBucket,
             ImageBrandingService imageBrandingService,
@@ -52,6 +54,7 @@ public class MinioStorageService {
         this.minioClient = minioClient;
         this.cardBucket = cardBucket;
         this.idBucket = idBucket;
+        this.bookletBucket = bookletBucket;
         this.biometricBucket = biometricBucket;
         this.signatureBucket = signatureBucket;
         this.imageBrandingService = imageBrandingService;
@@ -179,8 +182,8 @@ public class MinioStorageService {
         if ("SIGNATURE".equals(documentType)) {
             return signatureBucket;
         }
-        if (documentType.startsWith("ID_PAGE_")) {
-            return idBucket;
+        if (documentType.startsWith("BOOKLET_")) {
+            return bookletBucket;
         }
         if ("PHOTO".equals(documentType) || "VIDEO".equals(documentType)) {
             return biometricBucket;
@@ -193,6 +196,7 @@ public class MinioStorageService {
             return false;
         }
         return documentType.startsWith("CARD_")
+                || documentType.startsWith("BOOKLET_")
                 || documentType.startsWith("ID_PAGE_")
                 || "PHOTO".equals(documentType)
                 || "SIGNATURE".equals(documentType);

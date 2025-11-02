@@ -5,7 +5,7 @@ import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
 import java.util.List;
 
-public record UploadIdPagesCommand(
+public record UploadBookletPagesCommand(
         @TargetAggregateIdentifier String processInstanceId,
         List<DocumentPayloadDescriptor> pageDescriptors
 ) {
