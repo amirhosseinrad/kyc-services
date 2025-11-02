@@ -1,14 +1,21 @@
 package ir.ipaam.kycservices.domain.event;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-@Data
+
+@Getter
+@NoArgsConstructor(force = true)
 public class SaveTrackingNumberEvent {
 
-    private String processInstanceId;
-    private String trackingNumber;
-    private LocalDateTime date;
+    private final String processInstanceId;
+    private final String trackingNumber;
+    private final LocalDateTime date;
+
     public SaveTrackingNumberEvent(String processInstanceId, String trackingNumber, LocalDateTime now) {
+        this.processInstanceId = processInstanceId;
+        this.trackingNumber = trackingNumber;
+        this.date = now;
     }
 }
