@@ -1,7 +1,7 @@
 package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import ir.ipaam.kycservices.application.api.dto.ValidateTrackingNumberRequest;
+import ir.ipaam.kycservices.application.api.dto.RecordTrackingNumberRequest;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.EsbBookletValidation;
@@ -96,9 +96,7 @@ public class BookletValidationServiceImpl {
             validationResults.add(validationData);
         }
 
-        UploadBookletPagesCommand command = new UploadBookletPagesCommand(
-                normalizedProcessId,
-                new ArrayList<>(descriptors));
+        UploadBookletPagesCommand command = new UploadBookletPagesCommand(normalizedProcessId, List.copyOf(descriptors));
         commandGateway.sendAndWait(command);
 
         Boolean hasNewCard = null;
@@ -187,7 +185,7 @@ public class BookletValidationServiceImpl {
         }
     }
 
-    public ResponseEntity<Map<String, Object>> recordTrackingNumber(ValidateTrackingNumberRequest request) {
+    public ResponseEntity<Map<String, Object>> recordTrackingNumber(RecordTrackingNumberRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.getProcessInstanceNumber());
         String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
         Map<String, Object> variables = new HashMap<>();

@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.api.dto.ValidateTrackingNumberRequest;
+import ir.ipaam.kycservices.application.api.dto.RecordTrackingNumberRequest;
 import ir.ipaam.kycservices.application.service.impl.BookletValidationServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -24,9 +24,9 @@ public class BookletController {
     private final BookletValidationServiceImpl bookletValidationServiceImpl;
 
 
-    @PostMapping("/validate-tracking-national-card-number")
+    @PostMapping("/record-tracking-national-card-number")
     public ResponseEntity<Map<String, Object>> recordTrackingNumber(
-            @RequestBody ValidateTrackingNumberRequest request) {
+            @RequestBody RecordTrackingNumberRequest request) {
         ResponseEntity<Map<String, Object>> response = bookletValidationServiceImpl.recordTrackingNumber(request);
         return response;
     }

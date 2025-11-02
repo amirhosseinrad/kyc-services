@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ValidateTrackingNumberRequest {
+public class RecordTrackingNumberRequest {
     private String trackingNumber;
     private String processInstanceNumber;
 }
