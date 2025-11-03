@@ -4,6 +4,7 @@ import ir.ipaam.kycservices.domain.event.*;
 import ir.ipaam.kycservices.domain.model.entity.*;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.domain.query.FindKycStatusQuery;
+import ir.ipaam.kycservices.infrastructure.repository.AddressVerificationRepository;
 import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;
@@ -32,6 +33,7 @@ public class KycProcessEventHandler {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
     private final DocumentRepository documentRepository;
+    private final AddressVerificationRepository addressVerificationRepository;
     private final ConsentRepository consentRepository;
     private final MinioStorageService storageService;
 
@@ -40,12 +42,14 @@ public class KycProcessEventHandler {
             CustomerRepository customerRepository,
             DocumentRepository documentRepository,
             ConsentRepository consentRepository,
-            MinioStorageService storageService) {
+            MinioStorageService storageService,
+            AddressVerificationRepository addressVerificationRepository) {
         this.kycProcessInstanceRepository = kycProcessInstanceRepository;
         this.customerRepository = customerRepository;
         this.documentRepository = documentRepository;
         this.consentRepository = consentRepository;
         this.storageService = storageService;
+        this.addressVerificationRepository = addressVerificationRepository;
     }
 
     @EventHandler
@@ -143,6 +147,30 @@ public class KycProcessEventHandler {
             recordSuccessfulStep(processInstance.get(), "ENGLISH_PERSONAL_INFO_PROVIDED", event.getProvidedAt());
             kycProcessInstanceRepository.save(instance);
         });
+    }
+
+    @EventHandler
+    public void on(AddressAndZipCodeCollectedEvent event) {
+        ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
+        if (processInstance == null) {
+            return;
+        }
+
+        AddressVerification verification = new AddressVerification();
+        verification.setProcess(processInstance);
+        verification.setAddress(event.getAddress());
+        verification.setZipCode(event.getPostalCode());
+        verification.setZipValid(false);
+        addressVerificationRepository.save(verification);
+
+        List<AddressVerification> addresses = processInstance.getAddresses();
+        if (addresses == null) {
+            addresses = new ArrayList<>();
+            processInstance.setAddresses(addresses);
+        }
+        addresses.add(verification);
+
+        recordSuccessfulStep(processInstance, "ADDRESS_AND_ZIPCODE_COLLECTED", event.getCollectedAt());
     }
 
     private void updateCustomerInfo(Customer customer, EnglishPersonalInfoProvidedEvent event) {
