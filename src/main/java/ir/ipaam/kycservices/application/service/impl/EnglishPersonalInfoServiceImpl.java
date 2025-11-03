@@ -1,9 +1,9 @@
-package ir.ipaam.kycservices.application.api.service.impl;
+package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.api.service.EnglishPersonalInfoService;
+import ir.ipaam.kycservices.application.service.EnglishPersonalInfoService;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -20,13 +20,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_INVALID;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_FIRST_NAME_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.TELEPHONE_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.EMAIL_INVALID;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.EMAIL_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ENGLISH_FIRST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TELEPHONE_REQUIRED;
 
 @Slf4j
 @Service

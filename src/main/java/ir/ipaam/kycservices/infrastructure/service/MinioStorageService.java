@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
-import ir.ipaam.kycservices.common.ErrorMessageKeys;
+import ir.ipaam.kycservices.application.api.error.ErrorMessageKeys;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 

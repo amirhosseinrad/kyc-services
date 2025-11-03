@@ -1,6 +1,7 @@
 package ir.ipaam.kycservices.infrastructure.service;
 
-import ir.ipaam.kycservices.common.ErrorMessageKeys;
+import ir.ipaam.kycservices.application.api.error.DocumentNotFoundException;
+import ir.ipaam.kycservices.application.api.error.ErrorMessageKeys;
 import ir.ipaam.kycservices.domain.model.entity.Document;
 import ir.ipaam.kycservices.domain.model.DocumentType;
 import ir.ipaam.kycservices.infrastructure.repository.DocumentRepository;

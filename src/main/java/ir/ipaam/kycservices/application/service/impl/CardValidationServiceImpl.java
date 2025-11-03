@@ -26,13 +26,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_BACK_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_BACK_TOO_LARGE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_FRONT_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_FRONT_TOO_LARGE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_BACK_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_BACK_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_FRONT_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_FRONT_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
 
 @Slf4j
 @Service

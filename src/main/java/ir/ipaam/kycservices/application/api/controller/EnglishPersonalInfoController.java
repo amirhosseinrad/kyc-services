@@ -3,7 +3,7 @@ package ir.ipaam.kycservices.application.api.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
-import ir.ipaam.kycservices.application.api.service.EnglishPersonalInfoService;
+import ir.ipaam.kycservices.application.service.EnglishPersonalInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

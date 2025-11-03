@@ -1,9 +1,9 @@
-package ir.ipaam.kycservices.application.api.service.impl;
+package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.api.service.VideoService;
+import ir.ipaam.kycservices.application.service.VideoService;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_TOO_LARGE;
 
 @Slf4j
 @Service

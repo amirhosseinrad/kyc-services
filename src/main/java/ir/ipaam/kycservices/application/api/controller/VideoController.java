@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.api.service.VideoService;
+import ir.ipaam.kycservices.application.service.VideoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

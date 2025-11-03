@@ -18,22 +18,22 @@ import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CARD_DESCRIPTORS_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CONSENT_NOT_ACCEPTED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_INVALID;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.EMAIL_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_FIRST_NAME_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTOR_LIMIT;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTOR_NULL;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_DESCRIPTORS_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_NOT_STARTED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_IDENTIFIER_MISMATCH;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_DESCRIPTOR_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.SIGNATURE_DESCRIPTOR_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.TELEPHONE_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.TERMS_VERSION_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.VIDEO_DESCRIPTOR_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_DESCRIPTORS_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CONSENT_NOT_ACCEPTED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.EMAIL_INVALID;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.EMAIL_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ENGLISH_FIRST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ENGLISH_LAST_NAME_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_DESCRIPTOR_LIMIT;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_DESCRIPTOR_NULL;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_DESCRIPTORS_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.KYC_NOT_STARTED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_IDENTIFIER_MISMATCH;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_DESCRIPTOR_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SIGNATURE_DESCRIPTOR_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TELEPHONE_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TERMS_VERSION_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_DESCRIPTOR_REQUIRED;
 
 @Aggregate
 @NoArgsConstructor

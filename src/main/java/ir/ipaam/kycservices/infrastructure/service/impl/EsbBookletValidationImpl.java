@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.application.service.EsbBookletValidation;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
-import ir.ipaam.kycservices.common.ErrorMessageKeys;
+import ir.ipaam.kycservices.application.api.error.ErrorMessageKeys;
 import ir.ipaam.kycservices.infrastructure.service.dto.BookletValidationResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

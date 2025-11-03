@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.infrastructure.service;
+package ir.ipaam.kycservices.application.api.error;
 
 public class DocumentNotFoundException extends RuntimeException {
 

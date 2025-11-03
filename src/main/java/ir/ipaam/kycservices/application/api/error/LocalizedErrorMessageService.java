@@ -1,7 +1,5 @@
 package ir.ipaam.kycservices.application.api.error;
 
-import ir.ipaam.kycservices.common.ErrorMessageKeys;
-import ir.ipaam.kycservices.config.ErrorMessageConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.common;
+package ir.ipaam.kycservices.application.api.error;
 
 public final class ErrorMessageKeys {
 

@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.infrastructure.service.impl;
 
 import ir.ipaam.kycservices.application.service.EsbFaceDetection;
 import ir.ipaam.kycservices.application.service.dto.FaceDetectionData;
-import ir.ipaam.kycservices.common.ErrorMessageKeys;
+import ir.ipaam.kycservices.application.api.error.ErrorMessageKeys;
 import ir.ipaam.kycservices.infrastructure.service.dto.FaceDetectionResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

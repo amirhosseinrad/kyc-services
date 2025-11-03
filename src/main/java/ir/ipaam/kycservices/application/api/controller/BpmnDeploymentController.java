@@ -17,8 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.BPMN_FILE_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.BPMN_FILE_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
 
 @RestController
 @RequestMapping("/bpmn")

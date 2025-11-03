@@ -1,8 +1,7 @@
-package ir.ipaam.kycservices.config;
+package ir.ipaam.kycservices.application.api.error;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ir.ipaam.kycservices.application.api.error.LocalizedMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

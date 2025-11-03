@@ -1,4 +1,4 @@
-package ir.ipaam.kycservices.application.api.service;
+package ir.ipaam.kycservices.application.service;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;

@@ -18,10 +18,10 @@ import org.springframework.util.StringUtils;
 
 import java.util.Map;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.CONSENT_MUST_BE_TRUE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.TERMS_VERSION_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CONSENT_MUST_BE_TRUE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TERMS_VERSION_REQUIRED;
 
 @Slf4j
 @Service

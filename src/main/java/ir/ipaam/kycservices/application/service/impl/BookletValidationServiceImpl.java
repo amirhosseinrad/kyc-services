@@ -31,14 +31,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.FILE_READ_FAILURE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGE_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGE_TOO_LARGE;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGES_LIMIT;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.ID_PAGES_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.TRACKING_NUMBER_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGE_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGE_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGES_LIMIT;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGES_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TRACKING_NUMBER_REQUIRED;
 
 @Slf4j
 @Service

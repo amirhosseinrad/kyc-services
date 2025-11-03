@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import org.springframework.context.annotation.Import;
-import ir.ipaam.kycservices.config.ErrorMessageConfig;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.*;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.*;
 
 @Slf4j
 @RestControllerAdvice

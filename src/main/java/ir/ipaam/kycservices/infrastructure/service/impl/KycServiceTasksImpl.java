@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import static ir.ipaam.kycservices.common.ErrorMessageKeys.KYC_STATUS_QUERY_FAILED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.KYC_STATUS_QUERY_FAILED;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
