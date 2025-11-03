@@ -78,7 +78,7 @@ public class AddressVerificationServiceImpl implements AddressVerificationServic
         commandGateway.sendAndWait(command);
 
         publishWorkflowUpdate(
-                "address-and-zipcode-collected",
+                "zip-code-and-address-collected",
                 processInstanceId,
                 postalCode,
                 address,
