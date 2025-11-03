@@ -139,6 +139,18 @@
     "en": "email must be a valid email address",
     "fa": "ایمیل باید معتبر باشد"
   },
+  "error.address.required": {
+    "en": "address must be provided",
+    "fa": "نشانی پستی باید وارد شود"
+  },
+  "error.postalCode.required": {
+    "en": "postalCode must be provided",
+    "fa": "کد پستی باید وارد شود"
+  },
+  "error.postalCode.invalid": {
+    "en": "postalCode must contain exactly 10 digits",
+    "fa": "کد پستی باید دقیقا ده رقم باشد"
+  },
   "error.englishInfo.firstName.required": {
     "en": "firstNameEn must be provided",
     "fa": "نام انگلیسی باید وارد شود"

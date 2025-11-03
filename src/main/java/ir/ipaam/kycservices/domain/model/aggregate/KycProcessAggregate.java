@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ADDRESS_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_DESCRIPTORS_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CONSENT_NOT_ACCEPTED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.EMAIL_INVALID;
@@ -28,6 +29,8 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_DES
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_DESCRIPTOR_NULL;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_DESCRIPTORS_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.KYC_NOT_STARTED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.POSTAL_CODE_INVALID;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.POSTAL_CODE_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_IDENTIFIER_MISMATCH;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_DESCRIPTOR_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SIGNATURE_DESCRIPTOR_REQUIRED;
@@ -49,6 +52,8 @@ public class KycProcessAggregate {
     private String lastNameEn;
     private String email;
     private String telephone;
+    private String postalCode;
+    private String address;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
 
@@ -242,6 +247,28 @@ public class KycProcessAggregate {
                 LocalDateTime.now()));
     }
 
+    @CommandHandler
+    public void handle(CollectAddressCommand command) {
+        if (this.processInstanceId == null) {
+            throw new IllegalStateException(KYC_NOT_STARTED);
+        }
+
+        if (!command.processInstanceId().equals(this.processInstanceId)) {
+            throw new IllegalArgumentException(PROCESS_IDENTIFIER_MISMATCH);
+        }
+
+        String normalizedPostalCode = normalizePostalCode(command.postalCode());
+        String normalizedAddress = normalizeRequiredText(command.address(), ADDRESS_REQUIRED);
+
+        AggregateLifecycle.apply(new AddressAndZipCodeCollectedEvent(
+                this.processInstanceId,
+                this.nationalCode,
+                normalizedPostalCode,
+                normalizedAddress,
+                LocalDateTime.now()
+        ));
+    }
+
     private String normalizeRequiredText(String value, String messageKey) {
         if (value == null) {
             throw new IllegalArgumentException(messageKey);
@@ -259,6 +286,17 @@ public class KycProcessAggregate {
             throw new IllegalArgumentException(EMAIL_INVALID);
         }
         return trimmed;
+    }
+
+    private String normalizePostalCode(String postalCode) {
+        if (postalCode == null) {
+            throw new IllegalArgumentException(POSTAL_CODE_REQUIRED);
+        }
+        String normalized = postalCode.replaceAll("[^0-9]", "").trim();
+        if (normalized.length() != 10) {
+            throw new IllegalArgumentException(POSTAL_CODE_INVALID);
+        }
+        return normalized;
     }
 
     @EventSourcingHandler
@@ -315,5 +353,12 @@ public class KycProcessAggregate {
         this.email = event.getEmail();
         this.telephone = event.getTelephone();
         this.status = "ENGLISH_PERSONAL_INFO_PROVIDED";
+    }
+
+    @EventSourcingHandler
+    public void on(AddressAndZipCodeCollectedEvent event) {
+        this.postalCode = event.getPostalCode();
+        this.address = event.getAddress();
+        this.status = "ADDRESS_AND_ZIPCODE_COLLECTED";
     }
 }

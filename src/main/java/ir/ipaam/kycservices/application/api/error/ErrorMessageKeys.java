@@ -54,6 +54,10 @@ public final class ErrorMessageKeys {
     public static final String ENGLISH_LAST_NAME_REQUIRED = "error.englishInfo.lastName.required";
     public static final String TELEPHONE_REQUIRED = "error.englishInfo.telephone.required";
 
+    public static final String ADDRESS_REQUIRED = "error.address.required";
+    public static final String POSTAL_CODE_REQUIRED = "error.postalCode.required";
+    public static final String POSTAL_CODE_INVALID = "error.postalCode.invalid";
+
     public static final String TRACKING_NUMBER_REQUIRED = "error.trackingNumber.required";
 
     public static final String KYC_NOT_STARTED = "error.kyc.notStarted";

@@ -30,4 +30,8 @@ public class ProcessInstance {
     @OneToMany(mappedBy = "process", cascade = CascadeType.ALL)
     @ToString.Exclude
     private List<StepStatus> statuses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "process", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<AddressVerification> addresses = new ArrayList<>();
 }
