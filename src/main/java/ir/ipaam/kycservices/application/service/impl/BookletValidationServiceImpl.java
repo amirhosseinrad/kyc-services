@@ -96,9 +96,10 @@ public class BookletValidationServiceImpl {
             validationResults.add(validationData);
         }
 
-        UploadBookletPagesCommand command = new UploadBookletPagesCommand(normalizedProcessId, List.copyOf(descriptors));
+        UploadBookletPagesCommand command = new UploadBookletPagesCommand(
+                normalizedProcessId,
+                new ArrayList<>(descriptors));
         commandGateway.sendAndWait(command);
-
         Boolean hasNewCard = null;
         if (processInstance.getCustomer() != null) {
             hasNewCard = processInstance.getCustomer().getHasNewNationalCard();
