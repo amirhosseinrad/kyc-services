@@ -285,7 +285,7 @@ public class KycProcessAggregate {
 
     @EventSourcingHandler
     public void on(RecordTrackingNumberEvent event) {
-        this.status = "SAVE_TRACKING_NUMBER";
+        this.status = "RECORD_NATIONAL_CARD_TRACKING_NUMBER";
     }
 
     @EventSourcingHandler

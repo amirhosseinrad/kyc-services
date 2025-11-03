@@ -195,7 +195,7 @@ public class BookletValidationServiceImpl {
         RecordTrackingNumberCommand command = new RecordTrackingNumberCommand(trackingNumber, processInstanceId);
         commandGateway.sendAndWait(command);
         zeebeClient.newPublishMessageCommand()
-                .messageName("record-national-card-tracking-number")
+                .messageName("save-national-card-tracking-number")
                 .correlationKey(processInstanceId)
                 .variables(variables)
                 .send()

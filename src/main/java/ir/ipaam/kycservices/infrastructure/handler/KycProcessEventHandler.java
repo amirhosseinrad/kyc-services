@@ -189,10 +189,10 @@ public class KycProcessEventHandler {
     public void on(RecordTrackingNumberEvent event) {
         ProcessInstance processInstance = findProcessInstance(event.getProcessInstanceId());
         if (processInstance != null) {
-            processInstance.setStatus("SAVE_NATIONAL_CARD_TRACKING_NUMBER");
+            processInstance.setStatus("RECORD_NATIONAL_CARD_TRACKING_NUMBER");
             StepStatus stepStatus = new StepStatus();
             stepStatus.setProcess(processInstance);
-            stepStatus.setStepName("SAVE_NATIONAL_CARD_TRACKING_NUMBER");
+            stepStatus.setStepName("RECORD_NATIONAL_CARD_TRACKING_NUMBER");
             stepStatus.setTimestamp(event.getDate());
             stepStatus.setState(StepStatus.State.PASSED);
             List<StepStatus> statuses = processInstance.getStatuses();
