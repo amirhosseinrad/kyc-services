@@ -3,7 +3,9 @@ package ir.ipaam.kycservices.application.service.impl;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.EsbFaceDetection;
 import ir.ipaam.kycservices.application.service.SelfieService;
+import ir.ipaam.kycservices.application.service.dto.FaceDetectionData;
 import ir.ipaam.kycservices.application.service.dto.SelfieUploadResult;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -14,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +31,7 @@ import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_INSTANCE_ID_R
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_REQUIRED;
 import static ir.ipaam.kycservices.common.ErrorMessageKeys.SELFIE_TOO_LARGE;
+import static ir.ipaam.kycservices.common.ErrorMessageKeys.WORKFLOW_SELFIE_VALIDATION_FAILED;
 
 @Slf4j
 @Service
@@ -37,10 +42,13 @@ public class SelfieServiceImpl implements SelfieService {
 
     private static final String STEP_SELFIE_UPLOADED = "SELFIE_UPLOADED";
 
+    private static final double FACE_CONFIDENCE_THRESHOLD = 0.9d;
+
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
+    private final EsbFaceDetection faceDetection;
 
     @Override
     public SelfieUploadResult uploadSelfie(MultipartFile selfie, String processInstanceId) {
@@ -64,6 +72,20 @@ public class SelfieServiceImpl implements SelfieService {
 
         byte[] selfieBytes = readFile(selfie);
 
+        MediaType contentType = resolveContentType(selfie);
+        FaceDetectionData detectionData = faceDetection.detect(
+                selfieBytes,
+                selfie.getOriginalFilename(),
+                contentType,
+                normalizedProcessId);
+
+        if (detectionData.highestConfidence() == null
+                || detectionData.highestConfidence() < FACE_CONFIDENCE_THRESHOLD) {
+            log.warn("Selfie validation failed for process {} with confidence {}",
+                    normalizedProcessId, detectionData.highestConfidence());
+            throw new IllegalArgumentException(WORKFLOW_SELFIE_VALIDATION_FAILED);
+        }
+
         DocumentPayloadDescriptor descriptor =
                 new DocumentPayloadDescriptor(selfieBytes, "selfie_" + normalizedProcessId);
 
@@ -76,12 +98,26 @@ public class SelfieServiceImpl implements SelfieService {
 
         publishWorkflowUpdate(normalizedProcessId, hasNewCard);
 
-        Map<String, Object> body = Map.of(
-                "processInstanceId", normalizedProcessId,
-                "selfieSize", selfieBytes.length,
-                "status", "SELFIE_RECEIVED"
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("processInstanceId", normalizedProcessId);
+        body.put("selfieSize", selfieBytes.length);
+        body.put("status", "SELFIE_RECEIVED");
+        body.put("faceConfidence", detectionData.highestConfidence());
+        body.put("faceTrackId", detectionData.trackId());
         return SelfieUploadResult.of(HttpStatus.ACCEPTED, body);
+    }
+
+    private MediaType resolveContentType(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (!StringUtils.hasText(contentType)) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(contentType);
+        } catch (InvalidMediaTypeException ex) {
+            log.warn("Invalid selfie content type '{}', defaulting to application/octet-stream", contentType);
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {

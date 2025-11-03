@@ -111,6 +111,10 @@
     "en": "Unable to upload selfie photo",
     "fa": "بارگذاری تصویر سلفی امکان‌پذیر نیست"
   },
+  "error.workflow.selfieValidation.failed": {
+    "en": "Selfie image failed biometric validation",
+    "fa": "اعتبارسنجی بیومتریک تصویر سلفی با شکست مواجه شد"
+  },
   "error.id.pages.required": {
     "en": "At least one ID page must be provided",
     "fa": "حداقل یک صفحه شناسنامه باید بارگذاری شود"

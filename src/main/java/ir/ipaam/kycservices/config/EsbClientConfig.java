@@ -31,6 +31,15 @@ public class EsbClientConfig {
     }
 
     @Bean
+    @Qualifier("faceDetectionWebClient")
+    public WebClient faceDetectionWebClient(
+            @Value("${ocr.face.base-url}") String baseUrl,
+            WebClient.Builder builder,
+            EsbTokenProvider tokenProvider) {
+        return buildAuthorizedClient(baseUrl, builder, tokenProvider);
+    }
+
+    @Bean
     @Qualifier("esbAuthWebClient")
     public WebClient esbAuthWebClient(WebClient.Builder builder) {
         return builder.build();
