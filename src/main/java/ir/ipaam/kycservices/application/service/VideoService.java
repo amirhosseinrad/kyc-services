@@ -7,5 +7,5 @@ import java.util.Map;
 
 public interface VideoService {
 
-    ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, String processInstanceId);
+    ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, MultipartFile image, String processInstanceId);
 }
