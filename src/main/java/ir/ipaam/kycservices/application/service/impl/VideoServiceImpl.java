@@ -29,6 +29,8 @@ import java.util.Map;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_REQUIRED;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_TOO_LARGE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_TOO_LARGE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.WORKFLOW_VIDEO_UPLOAD_FAILED;
@@ -39,7 +41,8 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.WORKFL
 public class VideoServiceImpl implements VideoService {
 
     private static final long MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
-    private static final double LIVENESS_THRESHOLD = 0.6d;
+    private static final long MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+    private static final double LIVENESS_THRESHOLD = 0.8d;
     private static final String STEP_VIDEO_UPLOADED = "VIDEO_UPLOADED";
 
     private final CommandGateway commandGateway;
@@ -49,8 +52,9 @@ public class VideoServiceImpl implements VideoService {
     private final EsbLivenessDetection livenessDetection;
 
     @Override
-    public ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, String processInstanceId) {
+    public ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, MultipartFile image, String processInstanceId) {
         validateFile(video, VIDEO_REQUIRED, VIDEO_TOO_LARGE, MAX_VIDEO_SIZE_BYTES);
+        validateFile(image, SELFIE_REQUIRED, SELFIE_TOO_LARGE, MAX_IMAGE_SIZE_BYTES);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
@@ -69,12 +73,17 @@ public class VideoServiceImpl implements VideoService {
         }
 
         byte[] videoBytes = readFile(video);
+        byte[] imageBytes = readFile(image);
 
-        MediaType contentType = resolveContentType(video);
+        MediaType videoContentType = resolveContentType(video);
+        MediaType imageContentType = resolveContentType(image);
         LivenessCheckData livenessData = livenessDetection.check(
                 videoBytes,
                 video.getOriginalFilename(),
-                contentType,
+                videoContentType,
+                imageBytes,
+                image.getOriginalFilename(),
+                imageContentType,
                 normalizedProcessId);
 
         boolean match = isMatch(livenessData);
@@ -146,10 +155,8 @@ public class VideoServiceImpl implements VideoService {
         if (livenessData == null) {
             throw new IllegalArgumentException(WORKFLOW_VIDEO_UPLOAD_FAILED);
         }
-        Boolean isReal = livenessData.isReal();
         Double livenessScore = livenessData.livenessScore();
-        return Boolean.TRUE.equals(isReal)
-                && livenessScore != null
+        return livenessScore != null
                 && livenessScore >= LIVENESS_THRESHOLD;
     }
 

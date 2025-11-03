@@ -24,6 +24,7 @@ import java.time.Duration;
 public class EsbLivenessDetectionImpl implements EsbLivenessDetection {
 
     private static final String VIDEO_PART_NAME = "video";
+    private static final String IMAGE_PART_NAME = "image1";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
 
     private final WebClient faceDetectionWebClient;
@@ -33,12 +34,27 @@ public class EsbLivenessDetectionImpl implements EsbLivenessDetection {
     }
 
     @Override
-    public LivenessCheckData check(byte[] content, String filename, MediaType contentType, String referenceId) {
+    public LivenessCheckData check(byte[] videoContent,
+                                   String videoFilename,
+                                   MediaType videoContentType,
+                                   byte[] imageContent,
+                                   String imageFilename,
+                                   MediaType imageContentType,
+                                   String referenceId) {
         try {
             LivenessResponse response = faceDetectionWebClient.post()
-                    .uri("/api/kyc/v0.1/faces/liveness")
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/kyc/v0.1/faces/authenticate")
+                            .queryParam("referenceid", referenceId)
+                            .build())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(createMultipart(content, filename, contentType)))
+                    .body(BodyInserters.fromMultipartData(createMultipart(
+                            videoContent,
+                            videoFilename,
+                            videoContentType,
+                            imageContent,
+                            imageFilename,
+                            imageContentType)))
                     .retrieve()
                     .bodyToMono(LivenessResponse.class)
                     .block(DEFAULT_TIMEOUT);
@@ -78,19 +94,35 @@ public class EsbLivenessDetectionImpl implements EsbLivenessDetection {
         }
     }
 
-    private MultiValueMap<String, HttpEntity<?>> createMultipart(byte[] content, String filename, MediaType contentType) {
+    private MultiValueMap<String, HttpEntity<?>> createMultipart(byte[] videoContent,
+                                                                String videoFilename,
+                                                                MediaType videoContentType,
+                                                                byte[] imageContent,
+                                                                String imageFilename,
+                                                                MediaType imageContentType) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part(VIDEO_PART_NAME, new ByteArrayResource(content) {
+        builder.part(VIDEO_PART_NAME, new ByteArrayResource(videoContent) {
                     @Override
                     public String getFilename() {
-                        if (StringUtils.hasText(filename)) {
-                            return filename;
+                        if (StringUtils.hasText(videoFilename)) {
+                            return videoFilename;
                         }
                         return VIDEO_PART_NAME + ".mp4";
                     }
                 })
-                .filename(StringUtils.hasText(filename) ? filename : VIDEO_PART_NAME + ".mp4")
-                .contentType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM);
+                .filename(StringUtils.hasText(videoFilename) ? videoFilename : VIDEO_PART_NAME + ".mp4")
+                .contentType(videoContentType != null ? videoContentType : MediaType.APPLICATION_OCTET_STREAM);
+        builder.part(IMAGE_PART_NAME, new ByteArrayResource(imageContent) {
+                    @Override
+                    public String getFilename() {
+                        if (StringUtils.hasText(imageFilename)) {
+                            return imageFilename;
+                        }
+                        return IMAGE_PART_NAME + ".jpg";
+                    }
+                })
+                .filename(StringUtils.hasText(imageFilename) ? imageFilename : IMAGE_PART_NAME + ".jpg")
+                .contentType(imageContentType != null ? imageContentType : MediaType.APPLICATION_OCTET_STREAM);
         return builder.build();
     }
 }

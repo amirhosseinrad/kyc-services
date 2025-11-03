@@ -5,5 +5,11 @@ import org.springframework.http.MediaType;
 
 public interface EsbLivenessDetection {
 
-    LivenessCheckData check(byte[] content, String filename, MediaType contentType, String referenceId);
+    LivenessCheckData check(byte[] videoContent,
+                            String videoFilename,
+                            MediaType videoContentType,
+                            byte[] imageContent,
+                            String imageFilename,
+                            MediaType imageContentType,
+                            String referenceId);
 }

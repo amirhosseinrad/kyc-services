@@ -30,7 +30,8 @@ public class VideoController {
     @PostMapping(path = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadVideo(
             @RequestPart("video") MultipartFile video,
+            @RequestPart("image1") MultipartFile image,
             @RequestPart("processInstanceId") String processInstanceId) {
-        return videoService.uploadVideo(video, processInstanceId);
+        return videoService.uploadVideo(video, image, processInstanceId);
     }
 }
