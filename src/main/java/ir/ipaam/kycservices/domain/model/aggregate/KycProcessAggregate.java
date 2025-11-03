@@ -13,6 +13,7 @@ import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -116,7 +117,7 @@ public class KycProcessAggregate {
         AggregateLifecycle.apply(new BookletPagesUploadedEvent(
                 command.processInstanceId(),
                 this.nationalCode,
-                List.copyOf(descriptors),
+                new ArrayList<>(descriptors),
                 LocalDateTime.now()));
     }
 
