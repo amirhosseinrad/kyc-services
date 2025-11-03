@@ -3,7 +3,9 @@ package ir.ipaam.kycservices.application.service.impl;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
+import ir.ipaam.kycservices.application.service.EsbLivenessDetection;
 import ir.ipaam.kycservices.application.service.VideoService;
+import ir.ipaam.kycservices.application.service.dto.LivenessCheckData;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -13,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -27,6 +31,7 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCES
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.WORKFLOW_VIDEO_UPLOAD_FAILED;
 
 @Slf4j
 @Service
@@ -34,12 +39,14 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.VIDEO_
 public class VideoServiceImpl implements VideoService {
 
     private static final long MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+    private static final double LIVENESS_THRESHOLD = 0.6d;
     private static final String STEP_VIDEO_UPLOADED = "VIDEO_UPLOADED";
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
+    private final EsbLivenessDetection livenessDetection;
 
     @Override
     public ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, String processInstanceId) {
@@ -63,6 +70,15 @@ public class VideoServiceImpl implements VideoService {
 
         byte[] videoBytes = readFile(video);
 
+        MediaType contentType = resolveContentType(video);
+        LivenessCheckData livenessData = livenessDetection.check(
+                videoBytes,
+                video.getOriginalFilename(),
+                contentType,
+                normalizedProcessId);
+
+        boolean match = isMatch(livenessData);
+
         DocumentPayloadDescriptor descriptor =
                 new DocumentPayloadDescriptor(videoBytes, "video_" + normalizedProcessId);
 
@@ -73,22 +89,50 @@ public class VideoServiceImpl implements VideoService {
             hasNewCard = processInstance.getCustomer().getHasNewNationalCard();
         }
 
-        publishWorkflowUpdate(normalizedProcessId, hasNewCard);
+        publishWorkflowUpdate(normalizedProcessId, hasNewCard, match, livenessData);
 
-        Map<String, Object> body = Map.of(
-                "processInstanceId", normalizedProcessId,
-                "videoSize", videoBytes.length,
-                "status", "VIDEO_RECEIVED"
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("processInstanceId", normalizedProcessId);
+        body.put("videoSize", videoBytes.length);
+        body.put("status", "VIDEO_RECEIVED");
+        body.put("match", match);
+        if (livenessData.livenessScore() != null) {
+            body.put("livenessScore", livenessData.livenessScore());
+        }
+        if (livenessData.isReal() != null) {
+            body.put("isReal", livenessData.isReal());
+        }
+        if (StringUtils.hasText(livenessData.trackId())) {
+            body.put("livenessTrackId", livenessData.trackId());
+        }
+        if (livenessData.framesCount() != null) {
+            body.put("framesCount", livenessData.framesCount());
+        }
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
-    private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
+    private void publishWorkflowUpdate(String processInstanceId,
+                                       Boolean hasNewCard,
+                                       boolean match,
+                                       LivenessCheckData livenessData) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("processInstanceId", processInstanceId);
         variables.put("kycStatus", "VIDEO_UPLOADED");
+        variables.put("match", match);
         if (hasNewCard != null) {
             variables.put("card", hasNewCard);
+        }
+        if (livenessData.livenessScore() != null) {
+            variables.put("livenessScore", livenessData.livenessScore());
+        }
+        if (livenessData.isReal() != null) {
+            variables.put("isReal", livenessData.isReal());
+        }
+        if (StringUtils.hasText(livenessData.trackId())) {
+            variables.put("livenessTrackId", livenessData.trackId());
+        }
+        if (livenessData.framesCount() != null) {
+            variables.put("framesCount", livenessData.framesCount());
         }
         zeebeClient.newPublishMessageCommand()
                 .messageName("video-uploaded")
@@ -96,6 +140,17 @@ public class VideoServiceImpl implements VideoService {
                 .variables(variables)
                 .send()
                 .join();
+    }
+
+    private boolean isMatch(LivenessCheckData livenessData) {
+        if (livenessData == null) {
+            throw new IllegalArgumentException(WORKFLOW_VIDEO_UPLOAD_FAILED);
+        }
+        Boolean isReal = livenessData.isReal();
+        Double livenessScore = livenessData.livenessScore();
+        return Boolean.TRUE.equals(isReal)
+                && livenessScore != null
+                && livenessScore >= LIVENESS_THRESHOLD;
     }
 
     private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
@@ -112,6 +167,19 @@ public class VideoServiceImpl implements VideoService {
             throw new IllegalArgumentException(PROCESS_INSTANCE_ID_REQUIRED);
         }
         return processInstanceId.trim();
+    }
+
+    private MediaType resolveContentType(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (!StringUtils.hasText(contentType)) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(contentType);
+        } catch (InvalidMediaTypeException ex) {
+            log.warn("Invalid video content type '{}', defaulting to application/octet-stream", contentType);
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     private byte[] readFile(MultipartFile file) {
