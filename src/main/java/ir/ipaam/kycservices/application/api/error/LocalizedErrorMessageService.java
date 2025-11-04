@@ -42,6 +42,10 @@ public class LocalizedErrorMessageService {
         return new LocalizedMessage("Unexpected error", "خطای غیرمنتظره");
     }
 
+    public Optional<LocalizedMessage> findMessage(String key) {
+        return lookup(key);
+    }
+
     private Optional<LocalizedMessage> lookup(String key) {
         if (!StringUtils.hasText(key)) {
             return Optional.empty();

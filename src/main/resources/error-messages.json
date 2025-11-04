@@ -3,6 +3,10 @@
     "en": "Validation failed",
     "fa": "اعتبارسنجی ناموفق بود"
   },
+  "error.nationalCode.invalid": {
+    "en": "nationalCode must be a valid Iranian national code",
+    "fa": "کد ملی وارد شده معتبر نیست"
+  },
   "error.command.execution": {
     "en": "Command execution failed",
     "fa": "اجرای فرمان ناموفق بود"
