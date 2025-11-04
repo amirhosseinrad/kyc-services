@@ -30,6 +30,7 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_VIDEO = "VIDEO";
     private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
     private static final String DOCUMENT_TYPE_BOOKLET = "BOOKLET";
+    private static final String STATUS_PROCESS_CANCELLED = "PROCESS_CANCELLED";
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
     private final DocumentRepository documentRepository;
@@ -88,8 +89,15 @@ public class KycProcessEventHandler {
                         } else {
                             stepStatus.setErrorCause(null);
                         }
+                        if (state == StepStatus.State.CANCELLED) {
+                            instance.setCompletedAt(event.getUpdatedAt());
+                        }
                     } else {
                         stepStatus.setErrorCause(null);
+                    }
+
+                    if (STATUS_PROCESS_CANCELLED.equalsIgnoreCase(event.getStatus())) {
+                        instance.setCompletedAt(event.getUpdatedAt());
                     }
 
                     instance.getStatuses().add(stepStatus);

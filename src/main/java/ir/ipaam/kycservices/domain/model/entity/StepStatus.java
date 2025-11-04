@@ -33,6 +33,7 @@ public class StepStatus {
     public enum State {
         STARTED,
         PASSED,
-        FAILED
+        FAILED,
+        CANCELLED
     }
 }

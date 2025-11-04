@@ -7,6 +7,7 @@ import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
 import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
 import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
 import ir.ipaam.kycservices.application.api.dto.StartKycResponse;
+import ir.ipaam.kycservices.application.service.KycProcessTerminationService;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
@@ -16,6 +17,8 @@ import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +36,7 @@ public class KycProcessController {
     private final KycServiceTasks kycServiceTasks;
     private final CommandGateway commandGateway;
     private final ZeebeClient zeebeClient;
+    private final KycProcessTerminationService kycProcessTerminationService;
 
     @Operation(
             summary = "▶ Start a new KYC process",
@@ -76,5 +80,15 @@ public class KycProcessController {
     public ResponseEntity<KycStatusResponse> getStatus(@Valid @RequestBody KycStatusRequest request) {
         ProcessInstance instance = kycServiceTasks.checkKycStatus(request.nationalCode());
         return ResponseEntity.ok(KycStatusResponse.success(instance));
+    }
+
+    @Operation(
+            summary = "■ Cancel an active KYC process",
+            description = "Stops the running Camunda workflow associated with the supplied process instance identifier, "
+                    + "marks the process as cancelled, and records the termination timestamp."
+    )
+    @DeleteMapping("/process/{processInstanceId}")
+    public ResponseEntity<Map<String, Object>> cancelProcess(@PathVariable String processInstanceId) {
+        return kycProcessTerminationService.cancelProcess(processInstanceId);
     }
 }
