@@ -31,6 +31,7 @@ public class KycProcessEventHandler {
     private static final String DOCUMENT_TYPE_SIGNATURE = "SIGNATURE";
     private static final String DOCUMENT_TYPE_BOOKLET = "BOOKLET";
     private static final String STATUS_PROCESS_CANCELLED = "PROCESS_CANCELLED";
+    private static final String STATUS_PROCESS_COMPLETED = "COMPLETED";
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final CustomerRepository customerRepository;
     private final DocumentRepository documentRepository;
@@ -65,7 +66,8 @@ public class KycProcessEventHandler {
         ProcessInstance instance = new ProcessInstance();
         instance.setCamundaInstanceId(event.getProcessInstanceId());
         instance.setStatus("STARTED");
-        instance.setStartedAt(LocalDateTime.now());
+        LocalDateTime startedAt = Optional.ofNullable(event.getStartedAt()).orElseGet(LocalDateTime::now);
+        instance.setStartedAt(startedAt);
         instance.setCustomer(customer);
 
                     kycProcessInstanceRepository.save(instance);
@@ -97,6 +99,10 @@ public class KycProcessEventHandler {
                     }
 
                     if (STATUS_PROCESS_CANCELLED.equalsIgnoreCase(event.getStatus())) {
+                        instance.setCompletedAt(event.getUpdatedAt());
+                    }
+
+                    if (STATUS_PROCESS_COMPLETED.equalsIgnoreCase(event.getStatus())) {
                         instance.setCompletedAt(event.getUpdatedAt());
                     }
 
