@@ -19,7 +19,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 public @interface IranianNationalCode {
 
-    String message() default "Invalid Iranian national code";
+    String message() default "error.nationalCode.invalid";
 
     Class<?>[] groups() default {};
 

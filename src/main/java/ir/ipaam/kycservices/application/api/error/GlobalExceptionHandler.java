@@ -14,12 +14,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import org.springframework.context.annotation.Import;
+import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.*;
 
@@ -55,8 +57,13 @@ public class GlobalExceptionHandler {
             details.put("globalErrors", globalErrors);
         }
 
+        String messageKey = findFirstResolvableMessageKey(Stream.concat(
+                        fieldErrors.values().stream().flatMap(List::stream),
+                        globalErrors.stream()))
+                .orElse(VALIDATION_FAILED);
+
         return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
-                VALIDATION_FAILED, VALIDATION_FAILED, details.isEmpty() ? null : details);
+                messageKey, VALIDATION_FAILED, details.isEmpty() ? null : details);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -66,8 +73,10 @@ public class GlobalExceptionHandler {
                         LinkedHashMap::new,
                         Collectors.mapping(ConstraintViolation::getMessage, Collectors.toList())));
         Map<String, Object> details = violations.isEmpty() ? null : Map.of("violations", violations);
+        String messageKey = findFirstResolvableMessageKey(violations.values().stream().flatMap(List::stream))
+                .orElse(VALIDATION_FAILED);
         return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
-                VALIDATION_FAILED, VALIDATION_FAILED, details);
+                messageKey, VALIDATION_FAILED, details);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -129,5 +138,12 @@ public class GlobalExceptionHandler {
                                                         Map<String, ?> details) {
         LocalizedMessage message = localizedErrorMessageService.resolve(messageKey, fallbackKey);
         return ResponseEntity.status(status).body(ErrorResponse.of(code, message, details));
+    }
+
+    private Optional<String> findFirstResolvableMessageKey(Stream<String> candidates) {
+        return candidates
+                .filter(StringUtils::hasText)
+                .filter(messageKey -> localizedErrorMessageService.findMessage(messageKey).isPresent())
+                .findFirst();
     }
 }

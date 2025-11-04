@@ -6,6 +6,7 @@ public final class ErrorMessageKeys {
     }
 
     public static final String VALIDATION_FAILED = "error.validation.failed";
+    public static final String NATIONAL_CODE_INVALID = "error.nationalCode.invalid";
     public static final String COMMAND_EXECUTION_FAILED = "error.command.execution";
     public static final String UNEXPECTED_ERROR = "error.unexpected";
 
