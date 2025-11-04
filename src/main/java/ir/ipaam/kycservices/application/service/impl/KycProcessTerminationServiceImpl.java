@@ -46,10 +46,8 @@ public class KycProcessTerminationServiceImpl implements KycProcessTerminationSe
         long processKey = parseProcessInstanceKey(normalizedProcessId);
 
         try {
-            zeebeClient.newCancelInstanceCommand()
-                    .processInstanceKey(processKey)
-                    .send()
-                    .join();
+            zeebeClient.newCancelInstanceCommand(processKey).send().join();
+
         } catch (Exception ex) {
             log.error("Failed to cancel process instance {}", normalizedProcessId, ex);
             throw new IllegalArgumentException(WORKFLOW_PROCESS_CANCEL_FAILED, ex);

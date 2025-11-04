@@ -3,10 +3,7 @@ package ir.ipaam.kycservices.application.api.controller;
 import io.camunda.zeebe.client.ZeebeClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.api.dto.KycStatusRequest;
-import ir.ipaam.kycservices.application.api.dto.KycStatusResponse;
-import ir.ipaam.kycservices.application.api.dto.StartKycRequest;
-import ir.ipaam.kycservices.application.api.dto.StartKycResponse;
+import ir.ipaam.kycservices.application.api.dto.*;
 import ir.ipaam.kycservices.application.service.KycProcessTerminationService;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
@@ -87,8 +84,8 @@ public class KycProcessController {
             description = "Stops the running Camunda workflow associated with the supplied process instance identifier, "
                     + "marks the process as cancelled, and records the termination timestamp."
     )
-    @DeleteMapping("/process/{processInstanceId}")
-    public ResponseEntity<Map<String, Object>> cancelProcess(@PathVariable String processInstanceId) {
-        return kycProcessTerminationService.cancelProcess(processInstanceId);
+    @PostMapping("/cancel")
+    public ResponseEntity<Map<String, Object>> cancelProcess(@RequestBody CancelProcessRequest request) {
+        return kycProcessTerminationService.cancelProcess(request.getProcessInstanceId());
     }
 }
