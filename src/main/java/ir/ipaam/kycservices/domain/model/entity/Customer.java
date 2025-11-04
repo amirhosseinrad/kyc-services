@@ -20,6 +20,10 @@ public class Customer {
     private String nationalCode;
     private String firstName;
     private String lastName;
+    private String firstName_fa;
+    private String lastName_fa;
+    private String firstName_en;
+    private String lastName_en;
     private LocalDate birthDate;
     private String mobile;
     private String email;
