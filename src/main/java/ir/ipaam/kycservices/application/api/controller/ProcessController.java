@@ -4,7 +4,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.*;
-import ir.ipaam.kycservices.application.service.KycProcessTerminationService;
+import ir.ipaam.kycservices.application.service.ProcessService;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
@@ -14,8 +14,6 @@ import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,19 +26,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "KYC Process", description = "Start new KYC workflows and query their current status.")
-public class KycProcessController {
+public class ProcessController {
 
     private final KycServiceTasks kycServiceTasks;
     private final CommandGateway commandGateway;
     private final ZeebeClient zeebeClient;
-    private final KycProcessTerminationService kycProcessTerminationService;
+    private final ProcessService processService;
 
     @Operation(
             summary = "▶ Start a new KYC process",
             description = "Launches a Camunda workflow for the given national code unless an active instance already "
                     + "exists, returning the process instance identifier and initial status."
     )
-    @PostMapping("/process")
+    @PostMapping("/start")
     public ResponseEntity<StartKycResponse> startProcess(@Valid @RequestBody StartKycRequest request) {
         ProcessInstance existingInstance = kycServiceTasks.checkKycStatus(request.nationalCode());
         if (existingInstance != null) {
@@ -86,6 +84,6 @@ public class KycProcessController {
     )
     @PostMapping("/cancel")
     public ResponseEntity<Map<String, Object>> cancelProcess(@RequestBody CancelProcessRequest request) {
-        return kycProcessTerminationService.cancelProcess(request.getProcessInstanceId());
+        return processService.cancelProcess(request.getProcessInstanceId());
     }
 }

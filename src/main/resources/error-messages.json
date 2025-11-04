@@ -9,7 +9,7 @@
   },
   "error.unexpected": {
     "en": "Unexpected error",
-    "fa": "خطای غیرمنتظره"
+    "fa": "خطای نامشخص"
   },
   "error.process.notFound": {
     "en": "Process instance not found",
@@ -89,7 +89,7 @@
   },
   "error.workflow.cardUpload.failed": {
     "en": "Unable to upload national card images",
-    "fa": "بارگذاری تصاویر کارت ملی امکان‌پذیر نیست"
+    "fa": "بارگذاری کارت ملی امکان‌پذیر نیست"
   },
   "error.workflow.videoUpload.failed": {
     "en": "Unable to upload verification video",
@@ -101,7 +101,7 @@
   },
   "error.workflow.bookletValidation.failed": {
     "en": "Booklet pages were rejected by the validation service",
-    "fa": "اعتبارسنجی صفحات شناسنامه توسط سرویس تایید نشد"
+    "fa": "اعتبار صفحات شناسنامه تایید نشد"
   },
   "error.workflow.idUpload.failed": {
     "en": "Unable to upload ID pages",
@@ -177,7 +177,7 @@
   },
   "error.kyc.card.descriptorsRequired": {
     "en": "Document descriptors must be provided",
-    "fa": "توصیف‌گرهای اسناد کارت باید ارائه شود"
+    "fa": "توصیف‌گر کارت باید ارائه شود"
   },
   "error.kyc.id.descriptorsRequired": {
     "en": "At least one ID page descriptor must be provided",

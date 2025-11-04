@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 
-public interface AddressVerificationService {
+public interface AddressService {
 
     ResponseEntity<Map<String, Object>> collectAddress(AddressVerificationRequest request, String stageHeader);
 }

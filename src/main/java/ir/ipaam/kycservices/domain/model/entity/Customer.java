@@ -18,8 +18,6 @@ public class Customer {
     private Long id;
     @Column(unique = true, nullable = false)
     private String nationalCode;
-    private String firstName;
-    private String lastName;
     private String firstName_fa;
     private String lastName_fa;
     private String firstName_en;

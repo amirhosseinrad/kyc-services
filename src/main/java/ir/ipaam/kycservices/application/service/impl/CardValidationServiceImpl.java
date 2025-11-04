@@ -125,8 +125,6 @@ public class CardValidationServiceImpl {
             if (frontData.nin() != null) {
                 customer.setNationalCode(frontData.nin());
             }
-            customer.setFirstName(frontData.firstName());
-            customer.setLastName(frontData.lastName());
             customer.setFirstName_fa(frontData.firstName());
             customer.setLastName_fa(frontData.lastName());
             customer.setFatherName(frontData.fatherName());

@@ -5,8 +5,6 @@ import java.time.LocalDate;
 
 public record CustomerInfo(
         String nationalCode,
-        String firstName,
-        String lastName,
         String firstNameFa,
         String lastNameFa,
         String firstNameEn,
@@ -28,8 +26,6 @@ public record CustomerInfo(
         }
         return new CustomerInfo(
                 customer.getNationalCode(),
-                customer.getFirstName(),
-                customer.getLastName(),
                 customer.getFirstName_fa(),
                 customer.getLastName_fa(),
                 customer.getFirstName_en(),

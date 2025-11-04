@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * Provides operations to stop previously started Camunda KYC workflow instances.
  */
-public interface KycProcessTerminationService {
+public interface ProcessService {
 
     /**
      * Cancels the workflow identified by the supplied {@code processInstanceId} and

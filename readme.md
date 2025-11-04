@@ -88,18 +88,18 @@ persist it across restarts.
 
 ##  API Overview
 
-| Method | Endpoint                       | Description                                      |
-|-------|---------------------------------|--------------------------------------------------|
-| POST  | `/kyc/process`                  | Start a new KYC process instance                 |
-| DELETE| `/kyc/process/{processInstanceId}` | Cancel a running KYC process instance          |
-| POST  | `/kyc/status`                   | Get current KYC process status                   |
-| POST  | `/kyc/consent`                  | Record the customer's consent for the KYC terms |
-| POST  | `/kyc/selfie`                   | Upload a selfie image for biometric checks       |
-| POST  | `/kyc/signature`                | Upload a handwritten signature image             |
-| POST  | `/kyc/video`                    | Upload a recorded customer video                 |
-| POST  | `/kyc/booklets`                 | Upload 1–4 ID booklet pages                      |
-| POST  | `/kyc/documents/card`           | Upload front/back images of the national card    |
-| POST  | `/bpmn/deploy`        | Deploy a BPMN file (multipart upload)            |
+| Method | Endpoint           | Description                                      |
+|-------|--------------------|--------------------------------------------------|
+| POST  | `/kyc/start`       | Start a new KYC process instance                 |
+| DELETE| `/kyc/cancel`      | Cancel a running KYC process instance          |
+| POST  | `/kyc/card/status` | Get current KYC process status                   |
+| POST  | `/kyc/consent`     | Record the customer's consent for the KYC terms |
+| POST  | `/kyc/selfie`      | Upload a selfie image for biometric checks       |
+| POST  | `/kyc/signature`   | Upload a handwritten signature image             |
+| POST  | `/kyc/video`       | Upload a recorded customer video                 |
+| POST  | `/kyc/booklets`    | Upload 1–4 ID booklet pages                      |
+| POST  | `/kyc/card`        | Upload front/back images of the national card    |
+| POST  | `/bpmn/deploy`     | Deploy a BPMN file (multipart upload)            |
 
 ### Process Cancellation
 

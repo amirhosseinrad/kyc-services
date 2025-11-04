@@ -2,7 +2,7 @@ package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.KycProcessTerminationService;
+import ir.ipaam.kycservices.application.service.ProcessService;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
@@ -26,7 +26,7 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.WORKFL
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class KycProcessTerminationServiceImpl implements KycProcessTerminationService {
+public class ProcessServiceImpl implements ProcessService {
 
     private static final String STATUS_PROCESS_CANCELLED = "PROCESS_CANCELLED";
 

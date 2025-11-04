@@ -3,7 +3,7 @@ package ir.ipaam.kycservices.application.api.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.AddressVerificationRequest;
-import ir.ipaam.kycservices.application.service.AddressVerificationService;
+import ir.ipaam.kycservices.application.service.AddressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,9 +18,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
 @Tag(name = "Address Verification", description = "Collect and validate postal address information for a KYC process.")
-public class AddressVerificationController {
+public class AddressController {
 
-    private final AddressVerificationService addressVerificationService;
+    private final AddressService addressService;
 
     @Operation(
             summary = "Collect postal address details",
@@ -32,7 +32,7 @@ public class AddressVerificationController {
     public ResponseEntity<Map<String, Object>> collectAddress(
             @RequestBody AddressVerificationRequest request,
             @RequestHeader(value = "stage", required = false) String stageHeader) {
-        return addressVerificationService.collectAddress(request, stageHeader);
+        return addressService.collectAddress(request, stageHeader);
     }
 }
 

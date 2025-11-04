@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.AddressVerificationRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.AddressVerificationService;
+import ir.ipaam.kycservices.application.service.AddressService;
 import ir.ipaam.kycservices.domain.command.CollectAddressCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.Address;
@@ -38,7 +38,7 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCES
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AddressVerificationServiceImpl implements AddressVerificationService {
+public class AddressServiceImpl implements AddressService {
 
     private static final String STEP_ADDRESS_AND_ZIPCODE_COLLECTED = "ADDRESS_AND_ZIPCODE_COLLECTED";
     private static final String STEP_ZIPCODE_AND_ADDRESS_VALIDATED = "ZIPCODE_AND_ADDRESS_VALIDATED";
