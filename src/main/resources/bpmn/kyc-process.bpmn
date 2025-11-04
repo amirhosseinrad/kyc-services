@@ -156,10 +156,7 @@
       <bpmn:incoming>Flow_16i0xj4</bpmn:incoming>
     </bpmn:intermediateThrowEvent>
     <bpmn:sequenceFlow id="Flow_16i0xj4" sourceRef="Activity_14yb00p" targetRef="Event_0j0ru6j" />
-    <bpmn:intermediateThrowEvent id="Event_1oraag3">
-      <bpmn:incoming>Flow_0bsxg6p</bpmn:incoming>
-    </bpmn:intermediateThrowEvent>
-    <bpmn:sequenceFlow id="Flow_0bsxg6p" sourceRef="Activity_070byyo" targetRef="Event_1oraag3" />
+    <bpmn:sequenceFlow id="Flow_0bsxg6p" sourceRef="Activity_070byyo" targetRef="Activity_1ox6x3w" />
     <bpmn:sequenceFlow id="Flow_0rcryas" sourceRef="Activity_0h6mzvy" targetRef="Activity_1j0wll2" />
     <bpmn:sequenceFlow id="Flow_1e5xyln" sourceRef="Activity_uploadVideoCard" targetRef="Gateway_039mf43" />
     <bpmn:receiveTask id="Activity_0h6mzvy" name="record tracking number for new Card" messageRef="Message_RecordNationalCardTrackingNumber">
@@ -168,6 +165,7 @@
     </bpmn:receiveTask>
     <bpmn:receiveTask id="Activity_1ox6x3w" name="collect: Zip-Code and address" messageRef="Message_3vdsvnr">
       <bpmn:incoming>Flow_0qttu2i</bpmn:incoming>
+      <bpmn:incoming>Flow_0bsxg6p</bpmn:incoming>
       <bpmn:outgoing>Flow_1qr1csz</bpmn:outgoing>
     </bpmn:receiveTask>
   </bpmn:process>
@@ -259,9 +257,6 @@
       <bpmndi:BPMNShape id="Event_0j0ru6j_di" bpmnElement="Event_0j0ru6j">
         <dc:Bounds x="802" y="112" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_1oraag3_di" bpmnElement="Event_1oraag3">
-        <dc:Bounds x="1362" y="102" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_14eqatz_di" bpmnElement="Activity_0h6mzvy">
         <dc:Bounds x="230" y="400" width="100" height="80" />
       </bpmndi:BPMNShape>
@@ -346,8 +341,9 @@
         <di:waypoint x="802" y="130" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0bsxg6p_di" bpmnElement="Flow_0bsxg6p">
-        <di:waypoint x="1300" y="120" />
-        <di:waypoint x="1362" y="120" />
+        <di:waypoint x="1250" y="120" />
+        <di:waypoint x="1250" y="270" />
+        <di:waypoint x="900" y="270" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0rcryas_di" bpmnElement="Flow_0rcryas">
         <di:waypoint x="330" y="440" />

@@ -9,6 +9,7 @@ import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.AddressVerificationService;
 import ir.ipaam.kycservices.domain.command.CollectAddressCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
+import ir.ipaam.kycservices.domain.model.entity.Address;
 import ir.ipaam.kycservices.infrastructure.repository.AddressVerificationRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
@@ -68,10 +69,22 @@ public class AddressVerificationServiceImpl implements AddressVerificationServic
         kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId)
                 .orElseThrow(() -> new ResourceNotFoundException(PROCESS_NOT_FOUND));
 
-        if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
-                processInstanceId,
-                STEP_ADDRESS_AND_ZIPCODE_COLLECTED)) {
-            return buildConflictResponse(processInstanceId, postalCode, address);
+        Optional<Address> latestVerification = addressVerificationRepository
+                .findTopByProcess_CamundaInstanceIdOrderByIdDesc(processInstanceId);
+
+        boolean addressValidatedInProcess = kycStepStatusRepository
+                .existsByProcess_CamundaInstanceIdAndStepName(
+                        processInstanceId,
+                        STEP_ZIPCODE_AND_ADDRESS_VALIDATED);
+
+        boolean addressAlreadyValidated = latestVerification.map(Address::isZipValid).orElse(false)
+                || addressValidatedInProcess;
+
+        if (addressAlreadyValidated) {
+            Address persisted = latestVerification.orElse(null);
+            String persistedPostalCode = persisted != null ? persisted.getZipCode() : postalCode;
+            String persistedAddress = persisted != null ? persisted.getAddress() : address;
+            return buildConflictResponse(processInstanceId, persistedPostalCode, persistedAddress, true);
         }
 
         CollectAddressCommand command = new CollectAddressCommand(processInstanceId, postalCode, address);
@@ -130,12 +143,19 @@ public class AddressVerificationServiceImpl implements AddressVerificationServic
 
     private ResponseEntity<Map<String, Object>> buildConflictResponse(String processInstanceId,
                                                                        String postalCode,
-                                                                       String address) {
+                                                                       String address,
+                                                                       boolean zipValidated) {
         Map<String, Object> body = new HashMap<>();
         body.put("processInstanceId", processInstanceId);
         body.put("postalCode", postalCode);
         body.put("address", address);
-        body.put("status", STEP_ADDRESS_AND_ZIPCODE_COLLECTED);
+        if (zipValidated) {
+            body.put("status", STEP_ZIPCODE_AND_ADDRESS_VALIDATED);
+            body.put("validationStatus", STEP_ZIPCODE_AND_ADDRESS_VALIDATED);
+            body.put("zipValid", true);
+        } else {
+            body.put("status", STEP_ADDRESS_AND_ZIPCODE_COLLECTED);
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
