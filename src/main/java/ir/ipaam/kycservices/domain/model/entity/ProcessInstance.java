@@ -33,5 +33,5 @@ public class ProcessInstance {
 
     @OneToMany(mappedBy = "process", cascade = CascadeType.ALL)
     @ToString.Exclude
-    private List<AddressVerification> addresses = new ArrayList<>();
+    private List<Address> addresses = new ArrayList<>();
 }

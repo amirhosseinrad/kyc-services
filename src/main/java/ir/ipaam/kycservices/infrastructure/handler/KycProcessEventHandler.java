@@ -164,14 +164,14 @@ public class KycProcessEventHandler {
             return;
         }
 
-        AddressVerification verification = new AddressVerification();
+        Address verification = new Address();
         verification.setProcess(processInstance);
         verification.setAddress(event.getAddress());
         verification.setZipCode(event.getPostalCode());
         verification.setZipValid(false);
         addressVerificationRepository.save(verification);
 
-        List<AddressVerification> addresses = processInstance.getAddresses();
+        List<Address> addresses = processInstance.getAddresses();
         if (addresses == null) {
             addresses = new ArrayList<>();
             processInstance.setAddresses(addresses);

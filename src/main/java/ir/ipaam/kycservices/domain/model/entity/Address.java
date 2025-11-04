@@ -4,13 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "KYC_ADDRESS_VERIFICATION")
+@Table(name = "KYC_ADDRESS")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-public class AddressVerification {
+public class Address {
     @Id
     @GeneratedValue
     private Long id;
