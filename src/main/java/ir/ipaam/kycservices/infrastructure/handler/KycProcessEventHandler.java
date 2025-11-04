@@ -182,8 +182,8 @@ public class KycProcessEventHandler {
     }
 
     private void updateCustomerInfo(Customer customer, EnglishPersonalInfoProvidedEvent event) {
-        customer.setFirstName(event.getFirstNameEn());
-        customer.setLastName(event.getLastNameEn());
+        customer.setFirstName_en(event.getFirstNameEn());
+        customer.setLastName_en(event.getLastNameEn());
         customer.setEmail(event.getEmail());
         customer.setMobile(event.getTelephone());
     }

@@ -127,6 +127,8 @@ public class CardValidationServiceImpl {
             }
             customer.setFirstName(frontData.firstName());
             customer.setLastName(frontData.lastName());
+            customer.setFirstName_fa(frontData.firstName());
+            customer.setLastName_fa(frontData.lastName());
             customer.setFatherName(frontData.fatherName());
             customer.setBirthDate(parseDate(frontData.dateOfBirth()));
             customer.setCardExpirationDate(parseDate(frontData.dateOfExpiration()));
