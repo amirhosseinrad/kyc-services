@@ -41,6 +41,7 @@ public final class ErrorMessageKeys {
     public static final String WORKFLOW_SELFIE_UPLOAD_FAILED = "error.workflow.selfieUpload.failed";
     public static final String WORKFLOW_SELFIE_VALIDATION_FAILED = "error.workflow.selfieValidation.failed";
     public static final String WORKFLOW_BOOKLET_VALIDATION_FAILED = "error.workflow.bookletValidation.failed";
+    public static final String WORKFLOW_PROCESS_CANCEL_FAILED = "error.workflow.processCancel.failed";
 
     public static final String ID_PAGES_REQUIRED = "error.id.pages.required";
     public static final String ID_PAGES_LIMIT = "error.id.pages.limit";

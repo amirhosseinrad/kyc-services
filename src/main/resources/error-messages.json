@@ -111,6 +111,10 @@
     "en": "Unable to upload selfie photo",
     "fa": "بارگذاری تصویر سلفی امکان‌پذیر نیست"
   },
+  "error.workflow.processCancel.failed": {
+    "en": "Unable to cancel the workflow instance",
+    "fa": "لغو فرایند امکان‌پذیر نیست"
+  },
   "error.workflow.selfieValidation.failed": {
     "en": "Selfie image failed biometric validation",
     "fa": "اعتبارسنجی بیومتریک تصویر سلفی با شکست مواجه شد"
