@@ -83,7 +83,8 @@ public class AddressVerificationServiceImpl implements AddressVerificationServic
                 postalCode,
                 address,
                 Map.of(
-                        "kycStatus", STEP_ADDRESS_AND_ZIPCODE_COLLECTED
+                        "kycStatus", STEP_ADDRESS_AND_ZIPCODE_COLLECTED,
+                        "valid", false
                 ));
 
         Map<String, Object> responseBody = new HashMap<>();
