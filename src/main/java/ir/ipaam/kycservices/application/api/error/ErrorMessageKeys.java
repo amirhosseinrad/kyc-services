@@ -15,6 +15,7 @@ public final class ErrorMessageKeys {
     public static final String PROCESS_IDENTIFIER_MISMATCH = "error.process.idMismatch";
     public static final String TERMS_VERSION_REQUIRED = "error.termsVersion.required";
     public static final String CONSENT_MUST_BE_TRUE = "error.consent.accepted";
+    public static final String REQUEST_BODY_INVALID = "error.request.invalidJson";
 
     public static final String BPMN_FILE_REQUIRED = "error.bpmn.noFile";
     public static final String FILE_READ_FAILURE = "error.file.read";
