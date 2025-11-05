@@ -1,12 +1,25 @@
 package ir.ipaam.kycservices.common.validation;
 
+import ir.ipaam.kycservices.config.ValidationProperties;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import org.springframework.stereotype.Component;
 
+@Component
 public class IranianNationalCodeValidator implements ConstraintValidator<IranianNationalCode, String> {
+
+    private final ValidationProperties validationProperties;
+
+    public IranianNationalCodeValidator(ValidationProperties validationProperties) {
+        this.validationProperties = validationProperties;
+    }
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
+        if (!validationProperties.isNationalCodeEnabled()) {
+            return true;
+        }
+
         if (value == null) {
             return true;
         }
