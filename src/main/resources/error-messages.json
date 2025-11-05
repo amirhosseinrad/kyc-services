@@ -43,6 +43,10 @@
     "en": "Unable to read uploaded file",
     "fa": "امکان خواندن فایل بارگذاری‌شده وجود ندارد"
   },
+  "error.file.type": {
+    "en": "Unsupported file type",
+    "fa": "نوع فایل پشتیبانی نمی‌شود"
+  },
   "error.card.front.required": {
     "en": "frontImage must be provided",
     "fa": "تصویر روی کارت ملی باید بارگذاری شود"

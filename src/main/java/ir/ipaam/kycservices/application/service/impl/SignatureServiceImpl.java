@@ -8,6 +8,7 @@ import ir.ipaam.kycservices.application.service.dto.SignatureUploadResult;
 import ir.ipaam.kycservices.domain.command.UploadSignatureCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
+import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_TYPE_NOT_SUPPORTED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SIGNATURE_REQUIRED;
@@ -103,6 +105,11 @@ public class SignatureServiceImpl implements SignatureService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(requiredKey);
         }
+        FileTypeValidator.ensureAllowedType(
+                file,
+                FileTypeValidator.IMAGE_CONTENT_TYPES,
+                FileTypeValidator.IMAGE_EXTENSIONS,
+                FILE_TYPE_NOT_SUPPORTED);
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException(sizeKey);
         }

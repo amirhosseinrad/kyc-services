@@ -9,6 +9,7 @@ import ir.ipaam.kycservices.application.service.dto.LivenessCheckData;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
+import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_TYPE_NOT_SUPPORTED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_REQUIRED;
@@ -53,8 +56,20 @@ public class VideoServiceImpl implements VideoService {
 
     @Override
     public ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, MultipartFile image, String processInstanceId) {
-        validateFile(video, VIDEO_REQUIRED, VIDEO_TOO_LARGE, MAX_VIDEO_SIZE_BYTES);
-        validateFile(image, SELFIE_REQUIRED, SELFIE_TOO_LARGE, MAX_IMAGE_SIZE_BYTES);
+        validateFile(
+                video,
+                VIDEO_REQUIRED,
+                VIDEO_TOO_LARGE,
+                MAX_VIDEO_SIZE_BYTES,
+                FileTypeValidator.VIDEO_CONTENT_TYPES,
+                FileTypeValidator.VIDEO_EXTENSIONS);
+        validateFile(
+                image,
+                SELFIE_REQUIRED,
+                SELFIE_TOO_LARGE,
+                MAX_IMAGE_SIZE_BYTES,
+                FileTypeValidator.IMAGE_CONTENT_TYPES,
+                FileTypeValidator.IMAGE_EXTENSIONS);
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
 
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
@@ -151,10 +166,16 @@ public class VideoServiceImpl implements VideoService {
                 && livenessScore >= LIVENESS_THRESHOLD;
     }
 
-    private void validateFile(MultipartFile file, String requiredKey, String sizeKey, long maxSize) {
+    private void validateFile(MultipartFile file,
+                              String requiredKey,
+                              String sizeKey,
+                              long maxSize,
+                              Set<String> allowedContentTypes,
+                              Set<String> allowedExtensions) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(requiredKey);
         }
+        FileTypeValidator.ensureAllowedType(file, allowedContentTypes, allowedExtensions, FILE_TYPE_NOT_SUPPORTED);
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException(sizeKey);
         }

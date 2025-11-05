@@ -10,6 +10,7 @@ import ir.ipaam.kycservices.domain.command.RecordTrackingNumberCommand;
 import ir.ipaam.kycservices.domain.command.UploadBookletPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
+import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +31,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_TYPE_NOT_SUPPORTED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGE_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGE_TOO_LARGE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGES_LIMIT;
@@ -48,6 +51,12 @@ public class BookletValidationServiceImpl {
     public static final long MAX_PAGE_SIZE_BYTES = 20 * 1024 * 1024; // 2 MB
 
     private static final String STEP_ID_PAGES_UPLOADED = "ID_PAGES_UPLOADED";
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "application/pdf"
+    );
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "pdf");
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
@@ -145,6 +154,11 @@ public class BookletValidationServiceImpl {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(requiredKey);
         }
+        FileTypeValidator.ensureAllowedType(
+                file,
+                ALLOWED_CONTENT_TYPES,
+                ALLOWED_EXTENSIONS,
+                FILE_TYPE_NOT_SUPPORTED);
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException(sizeKey);
         }

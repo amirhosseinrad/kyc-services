@@ -18,11 +18,13 @@ public final class ErrorMessageKeys {
 
     public static final String BPMN_FILE_REQUIRED = "error.bpmn.noFile";
     public static final String FILE_READ_FAILURE = "error.file.read";
+    public static final String FILE_TYPE_NOT_SUPPORTED = "error.file.type";
 
     public static final String CARD_FRONT_REQUIRED = "error.card.front.required";
     public static final String CARD_FRONT_TOO_LARGE = "error.card.front.size";
     public static final String CARD_BACK_REQUIRED = "error.card.back.required";
     public static final String CARD_BACK_TOO_LARGE = "error.card.back.size";
+    public static final String CARD_NATIONAL_CODE_MISMATCH = "error.card.nationalCode.mismatch";
 
     public static final String SELFIE_REQUIRED = "error.selfie.required";
     public static final String SELFIE_TOO_LARGE = "error.selfie.size";

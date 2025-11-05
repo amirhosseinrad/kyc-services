@@ -10,6 +10,7 @@ import ir.ipaam.kycservices.application.service.dto.SelfieUploadResult;
 import ir.ipaam.kycservices.domain.command.UploadSelfieCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
+import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCES
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.SELFIE_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_TYPE_NOT_SUPPORTED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.WORKFLOW_SELFIE_VALIDATION_FAILED;
 
 @Slf4j
@@ -139,6 +141,11 @@ public class SelfieServiceImpl implements SelfieService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(requiredKey);
         }
+        FileTypeValidator.ensureAllowedType(
+                file,
+                FileTypeValidator.IMAGE_CONTENT_TYPES,
+                FileTypeValidator.IMAGE_EXTENSIONS,
+                FILE_TYPE_NOT_SUPPORTED);
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException(sizeKey);
         }
