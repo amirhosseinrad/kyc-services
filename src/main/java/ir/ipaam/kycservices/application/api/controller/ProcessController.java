@@ -62,7 +62,7 @@ public class ProcessController {
                 .join()
                 .getProcessInstanceKey();
         String processInstanceKey = Long.toString(key);
-        commandGateway.send(new StartKycProcessCommand(processInstanceKey, request.nationalCode()));
+        commandGateway.sendAndWait(new StartKycProcessCommand(processInstanceKey, request.nationalCode()));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new StartKycResponse(processInstanceKey, "STARTED"));
     }

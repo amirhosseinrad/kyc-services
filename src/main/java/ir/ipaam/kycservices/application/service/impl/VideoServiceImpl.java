@@ -131,17 +131,8 @@ public class VideoServiceImpl implements VideoService {
         if (hasNewCard != null) {
             variables.put("card", hasNewCard);
         }
-        if (livenessData.livenessScore() != null) {
-            variables.put("livenessScore", livenessData.livenessScore());
-        }
         if (livenessData.isReal() != null) {
             variables.put("isReal", livenessData.isReal());
-        }
-        if (StringUtils.hasText(livenessData.trackId())) {
-            variables.put("livenessTrackId", livenessData.trackId());
-        }
-        if (livenessData.framesCount() != null) {
-            variables.put("framesCount", livenessData.framesCount());
         }
         zeebeClient.newPublishMessageCommand()
                 .messageName("video-uploaded")

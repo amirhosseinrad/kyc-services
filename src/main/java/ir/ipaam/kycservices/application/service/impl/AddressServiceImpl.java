@@ -214,8 +214,6 @@ public class AddressServiceImpl implements AddressService {
                                        Map<String, Object> additionalVariables) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("processInstanceId", processInstanceId);
-        variables.put("postalCode", postalCode);
-        variables.put("address", address);
         if (additionalVariables != null) {
             variables.putAll(additionalVariables);
         }
@@ -253,4 +251,3 @@ public class AddressServiceImpl implements AddressService {
         return address.trim();
     }
 }
-

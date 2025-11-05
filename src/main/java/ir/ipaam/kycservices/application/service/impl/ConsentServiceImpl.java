@@ -78,7 +78,6 @@ public class ConsentServiceImpl implements ConsentService {
                 .correlationKey(processInstanceId)
                 .variables(Map.of(
                         "accepted", true,
-                        "termsVersion", termsVersion,
                         "kycStatus", "CONSENT_ACCEPTED"
                 ))
                 .send()
