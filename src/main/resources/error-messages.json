@@ -63,6 +63,10 @@
     "en": "backImage exceeds maximum size",
     "fa": "حجم تصویر پشت کارت ملی بیشتر از حد مجاز است"
   },
+  "error.card.nationalCode.mismatch": {
+    "en": "Uploaded card does not belong to the current customer",
+    "fa": "کارت ملی بارگذاری‌شده متعلق به این مشتری نیست"
+  },
   "error.selfie.required": {
     "en": "selfie must be provided",
     "fa": "تصویر سلفی باید بارگذاری شود"

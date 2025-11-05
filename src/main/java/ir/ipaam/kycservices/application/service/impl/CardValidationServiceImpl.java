@@ -8,6 +8,7 @@ import ir.ipaam.kycservices.application.service.dto.CardDocumentUploadResult;
 import ir.ipaam.kycservices.application.service.dto.CardOcrBackData;
 import ir.ipaam.kycservices.application.service.dto.CardOcrFrontData;
 import ir.ipaam.kycservices.common.image.ImageCompressionHelper;
+import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.domain.command.UploadCardDocumentsCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -28,11 +29,13 @@ import java.util.Map;
 
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_BACK_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_BACK_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_NATIONAL_CODE_MISMATCH;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_FRONT_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_FRONT_TOO_LARGE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_TYPE_NOT_SUPPORTED;
 
 @Slf4j
 @Service
@@ -85,6 +88,11 @@ public class CardValidationServiceImpl {
             throw ex;
         }
 
+        CardDocumentUploadResult validationResult = validateOcrAgainstCustomer(processInstance, frontData);
+        if (validationResult != null) {
+            return validationResult;
+        }
+
         updateCustomerWithOcr(processInstance, frontData, backData);
 
         UploadCardDocumentsCommand command = new UploadCardDocumentsCommand(
@@ -109,6 +117,25 @@ public class CardValidationServiceImpl {
                 "status", "CARD_DOCUMENTS_RECEIVED"
         );
         return CardDocumentUploadResult.of(HttpStatus.ACCEPTED, body);
+    }
+
+    private CardDocumentUploadResult validateOcrAgainstCustomer(ProcessInstance processInstance,
+                                                                CardOcrFrontData frontData) {
+        if (processInstance.getCustomer() == null || frontData == null || !StringUtils.hasText(frontData.nin())) {
+            return null;
+        }
+
+        String ocrNationalCode = frontData.nin().trim();
+        String customerNationalCode = processInstance.getCustomer().getNationalCode();
+        if (StringUtils.hasText(customerNationalCode)
+                && !ocrNationalCode.equals(customerNationalCode.trim())) {
+            return CardDocumentUploadResult.error(HttpStatus.BAD_REQUEST, CARD_NATIONAL_CODE_MISMATCH, Map.of(
+                    "expected", customerNationalCode.trim(),
+                    "provided", ocrNationalCode
+            ));
+        }
+
+        return null;
     }
 
     private void updateCustomerWithOcr(ProcessInstance processInstance,
@@ -174,6 +201,11 @@ public class CardValidationServiceImpl {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(requiredKey);
         }
+        FileTypeValidator.ensureAllowedType(
+                file,
+                FileTypeValidator.IMAGE_CONTENT_TYPES,
+                FileTypeValidator.IMAGE_EXTENSIONS,
+                FILE_TYPE_NOT_SUPPORTED);
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {

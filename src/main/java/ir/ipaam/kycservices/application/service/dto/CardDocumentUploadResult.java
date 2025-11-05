@@ -9,4 +9,13 @@ public record CardDocumentUploadResult(HttpStatus status, Map<String, Object> bo
     public static CardDocumentUploadResult of(HttpStatus status, Map<String, Object> body) {
         return new CardDocumentUploadResult(status, body);
     }
+
+    public static CardDocumentUploadResult error(HttpStatus status, String messageKey, Map<String, Object> details) {
+        Map<String, Object> body = Map.of(
+                "status", "CARD_DOCUMENTS_REJECTED",
+                "message", messageKey,
+                "details", details == null ? Map.of() : details
+        );
+        return new CardDocumentUploadResult(status, body);
+    }
 }
