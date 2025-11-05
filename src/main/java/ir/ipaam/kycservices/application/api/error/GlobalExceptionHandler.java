@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, ex.getMessage(), VALIDATION_FAILED);
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), VALIDATION_FAILED);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -62,8 +62,8 @@ public class GlobalExceptionHandler {
                         globalErrors.stream()))
                 .orElse(VALIDATION_FAILED);
 
-        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
-                messageKey, VALIDATION_FAILED, details.isEmpty() ? null : details);
+        return buildResponse(HttpStatus.BAD_REQUEST, messageKey, VALIDATION_FAILED,
+                details.isEmpty() ? null : details);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -75,18 +75,17 @@ public class GlobalExceptionHandler {
         Map<String, Object> details = violations.isEmpty() ? null : Map.of("violations", violations);
         String messageKey = findFirstResolvableMessageKey(violations.values().stream().flatMap(List::stream))
                 .orElse(VALIDATION_FAILED);
-        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
-                messageKey, VALIDATION_FAILED, details);
+        return buildResponse(HttpStatus.BAD_REQUEST, messageKey, VALIDATION_FAILED, details);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        return buildResponse(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, ex.getMessage(), PROCESS_NOT_FOUND);
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), PROCESS_NOT_FOUND);
     }
 
     @ExceptionHandler(FileProcessingException.class)
     public ResponseEntity<ErrorResponse> handleFileProcessingException(FileProcessingException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ErrorCode.FILE_PROCESSING_FAILED, ex.getMessage(), FILE_READ_FAILURE);
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), FILE_READ_FAILURE);
     }
 
     @ExceptionHandler(CommandExecutionException.class)
@@ -110,15 +109,14 @@ public class GlobalExceptionHandler {
                 .or(() -> Optional.ofNullable(ex.getMessage()).filter(m -> !m.isBlank()))
                 .orElse(null);
         log.warn("Command execution rejected: {}", messageKey, ex);
-        return buildResponse(HttpStatus.CONFLICT, ErrorCode.COMMAND_REJECTED, messageKey, COMMAND_EXECUTION_FAILED);
+        return buildResponse(HttpStatus.CONFLICT, messageKey, COMMAND_EXECUTION_FAILED);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
         String messageKey = Optional.ofNullable(ex.getMessage()).filter(m -> !m.isBlank()).orElse(null);
         log.error("Unexpected error", ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.UNEXPECTED_ERROR,
-                messageKey, UNEXPECTED_ERROR);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, messageKey, UNEXPECTED_ERROR);
     }
 
     private Throwable resolveRootCause(Throwable throwable) {
@@ -129,15 +127,16 @@ public class GlobalExceptionHandler {
         return cause == null ? throwable : cause;
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, ErrorCode code, String messageKey, String fallbackKey) {
-        return buildResponse(status, code, messageKey, fallbackKey, null);
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String messageKey, String fallbackKey) {
+        return buildResponse(status, messageKey, fallbackKey, null);
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, ErrorCode code,
-                                                        String messageKey, String fallbackKey,
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status,
+                                                        String messageKey,
+                                                        String fallbackKey,
                                                         Map<String, ?> details) {
         LocalizedMessage message = localizedErrorMessageService.resolve(messageKey, fallbackKey);
-        return ResponseEntity.status(status).body(ErrorResponse.of(code, message, details));
+        return ResponseEntity.status(status).body(ErrorResponse.of(message, details));
     }
 
     private Optional<String> findFirstResolvableMessageKey(Stream<String> candidates) {

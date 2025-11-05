@@ -29,9 +29,9 @@ import java.util.Map;
 
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_BACK_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_BACK_TOO_LARGE;
-import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_NATIONAL_CODE_MISMATCH;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_FRONT_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_FRONT_TOO_LARGE;
+import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.CARD_NATIONAL_CODE_MISMATCH;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
@@ -88,10 +88,7 @@ public class CardValidationServiceImpl {
             throw ex;
         }
 
-        CardDocumentUploadResult validationResult = validateOcrAgainstCustomer(processInstance, frontData);
-        if (validationResult != null) {
-            return validationResult;
-        }
+        ensureOcrMatchesCustomer(processInstance, frontData);
 
         updateCustomerWithOcr(processInstance, frontData, backData);
 
@@ -119,23 +116,19 @@ public class CardValidationServiceImpl {
         return CardDocumentUploadResult.of(HttpStatus.ACCEPTED, body);
     }
 
-    private CardDocumentUploadResult validateOcrAgainstCustomer(ProcessInstance processInstance,
-                                                                CardOcrFrontData frontData) {
+    private void ensureOcrMatchesCustomer(ProcessInstance processInstance, CardOcrFrontData frontData) {
         if (processInstance.getCustomer() == null || frontData == null || !StringUtils.hasText(frontData.nin())) {
-            return null;
+            return;
         }
 
         String ocrNationalCode = frontData.nin().trim();
         String customerNationalCode = processInstance.getCustomer().getNationalCode();
         if (StringUtils.hasText(customerNationalCode)
                 && !ocrNationalCode.equals(customerNationalCode.trim())) {
-            return CardDocumentUploadResult.error(HttpStatus.BAD_REQUEST, CARD_NATIONAL_CODE_MISMATCH, Map.of(
-                    "expected", customerNationalCode.trim(),
-                    "provided", ocrNationalCode
-            ));
+            log.warn("OCR national code {} does not match persisted national code {} for process {}",
+                    ocrNationalCode, customerNationalCode, processInstance.getCamundaInstanceId());
+            throw new IllegalArgumentException(CARD_NATIONAL_CODE_MISMATCH);
         }
-
-        return null;
     }
 
     private void updateCustomerWithOcr(ProcessInstance processInstance,

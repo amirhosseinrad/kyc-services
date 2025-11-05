@@ -1,237 +1,296 @@
 {
   "error.validation.failed": {
+    "code": "KYC-1000",
     "en": "Validation failed",
     "fa": "اعتبارسنجی ناموفق بود"
   },
   "error.nationalCode.invalid": {
+    "code": "KYC-1001",
     "en": "nationalCode must be a valid Iranian national code",
     "fa": "کد ملی وارد شده معتبر نیست"
   },
   "error.command.execution": {
+    "code": "KYC-1002",
     "en": "Command execution failed",
     "fa": "اجرای فرمان ناموفق بود"
   },
   "error.unexpected": {
+    "code": "KYC-1999",
     "en": "Unexpected error",
     "fa": "خطای نامشخص"
   },
   "error.process.notFound": {
+    "code": "KYC-2000",
     "en": "Process instance not found",
     "fa": "فرآیند مورد نظر یافت نشد"
   },
   "error.processInstanceId.required": {
+    "code": "KYC-2001",
     "en": "processInstanceId must be provided",
     "fa": "شناسه فرایند باید وارد شود"
   },
   "error.process.idMismatch": {
+    "code": "KYC-2002",
     "en": "Process instance identifier mismatch",
     "fa": "شناسه فرایند با مقدار مورد انتظار مطابقت ندارد"
   },
   "error.termsVersion.required": {
+    "code": "KYC-2003",
     "en": "termsVersion must be provided",
     "fa": "نسخه شرایط و قوانین بهره برداری از سیستم باید مشخص شود"
   },
   "error.consent.accepted": {
+    "code": "KYC-2004",
     "en": "accepted must be true",
     "fa": " شرایط و قوانین بهره برداری از سیستم باید تایید گردد"
   },
   "error.bpmn.noFile": {
+    "code": "KYC-3000",
     "en": "No file uploaded",
     "fa": "هیچ فایلی بارگذاری نشده است"
   },
   "error.file.read": {
+    "code": "KYC-3001",
     "en": "Unable to read uploaded file",
     "fa": "امکان خواندن فایل بارگذاری‌شده وجود ندارد"
   },
   "error.file.type": {
+    "code": "KYC-3002",
     "en": "Unsupported file type",
     "fa": "نوع فایل پشتیبانی نمی‌شود"
   },
   "error.card.front.required": {
+    "code": "KYC-3100",
     "en": "frontImage must be provided",
     "fa": "تصویر روی کارت ملی باید بارگذاری شود"
   },
   "error.card.front.size": {
+    "code": "KYC-3101",
     "en": "frontImage exceeds maximum size",
     "fa": "حجم تصویر روی کارت ملی بیشتر از حد مجاز است"
   },
   "error.card.back.required": {
+    "code": "KYC-3102",
     "en": "backImage must be provided",
     "fa": "تصویر پشت کارت ملی باید بارگذاری شود"
   },
   "error.card.back.size": {
+    "code": "KYC-3103",
     "en": "backImage exceeds maximum size",
     "fa": "حجم تصویر پشت کارت ملی بیشتر از حد مجاز است"
   },
   "error.card.nationalCode.mismatch": {
+    "code": "KYC-3104",
     "en": "Uploaded card does not belong to the current customer",
     "fa": "کارت ملی بارگذاری‌شده متعلق به این مشتری نیست"
   },
   "error.selfie.required": {
+    "code": "KYC-3200",
     "en": "selfie must be provided",
     "fa": "تصویر سلفی باید بارگذاری شود"
   },
   "error.selfie.size": {
+    "code": "KYC-3201",
     "en": "selfie exceeds maximum size",
     "fa": "حجم تصویر سلفی بیشتر از حد مجاز است"
   },
   "error.signature.required": {
+    "code": "KYC-3300",
     "en": "signature must be provided",
     "fa": "امضا باید بارگذاری شود"
   },
   "error.signature.size": {
+    "code": "KYC-3301",
     "en": "signature exceeds maximum size",
     "fa": "حجم امضا بیشتر از حد مجاز است"
   },
   "error.video.required": {
+    "code": "KYC-3400",
     "en": "video must be provided",
     "fa": "ویدئو باید بارگذاری شود"
   },
   "error.video.size": {
+    "code": "KYC-3401",
     "en": "video exceeds maximum size",
     "fa": "حجم ویدئو بیشتر از حد مجاز است"
   },
   "error.workflow.acceptConsent.failed": {
+    "code": "KYC-4000",
     "en": "Unable to record consent decision",
     "fa": "ثبت وضعیت موافقت با شرایط امکان‌پذیر نیست"
   },
   "error.workflow.englishInfo.failed": {
+    "code": "KYC-4001",
     "en": "Unable to save English personal information",
     "fa": "ثبت اطلاعات هویتی انگلیسی امکان‌پذیر نیست"
   },
   "error.workflow.cardUpload.failed": {
+    "code": "KYC-4002",
     "en": "Unable to upload national card images",
     "fa": "بارگذاری کارت ملی امکان‌پذیر نیست"
   },
   "error.workflow.videoUpload.failed": {
+    "code": "KYC-4003",
     "en": "Unable to upload verification video",
     "fa": "بارگذاری ویدئوی احراز هویت امکان‌پذیر نیست"
   },
   "error.workflow.signatureUpload.failed": {
+    "code": "KYC-4004",
     "en": "Unable to upload signature image",
     "fa": "بارگذاری تصویر امضا امکان‌پذیر نیست"
   },
   "error.workflow.bookletValidation.failed": {
+    "code": "KYC-4005",
     "en": "Booklet pages were rejected by the validation service",
     "fa": "اعتبار صفحات شناسنامه تایید نشد"
   },
   "error.workflow.idUpload.failed": {
+    "code": "KYC-4006",
     "en": "Unable to upload ID pages",
     "fa": "بارگذاری صفحات شناسنامه امکان‌پذیر نیست"
   },
   "error.workflow.selfieUpload.failed": {
+    "code": "KYC-4007",
     "en": "Unable to upload selfie photo",
     "fa": "بارگذاری تصویر سلفی امکان‌پذیر نیست"
   },
   "error.workflow.processCancel.failed": {
+    "code": "KYC-4008",
     "en": "Unable to cancel the workflow instance",
     "fa": "لغو فرایند امکان‌پذیر نیست"
   },
   "error.workflow.selfieValidation.failed": {
+    "code": "KYC-4009",
     "en": "Selfie image failed biometric validation",
     "fa": "اعتبارسنجی بیومتریک تصویر سلفی با شکست مواجه شد"
   },
   "error.id.pages.required": {
+    "code": "KYC-4100",
     "en": "At least one ID page must be provided",
     "fa": "حداقل یک صفحه شناسنامه باید بارگذاری شود"
   },
   "error.id.pages.limit": {
+    "code": "KYC-4101",
     "en": "No more than four ID pages may be provided",
     "fa": "بیش از چهار صفحه شناسنامه قابل قبول نیست"
   },
   "error.id.page.required": {
+    "code": "KYC-4102",
     "en": "ID page file must be provided",
     "fa": "فایل صفحه شناسنامه باید بارگذاری شود"
   },
   "error.id.page.size": {
+    "code": "KYC-4103",
     "en": "ID page exceeds maximum size",
     "fa": "حجم صفحه شناسنامه بیشتر از حد مجاز است"
   },
   "error.email.required": {
+    "code": "KYC-4200",
     "en": "email must be provided",
     "fa": "ایمیل باید وارد شود"
   },
   "error.email.invalid": {
+    "code": "KYC-4201",
     "en": "email must be a valid email address",
     "fa": "ایمیل باید معتبر باشد"
   },
   "error.address.required": {
+    "code": "KYC-4300",
     "en": "address must be provided",
     "fa": "نشانی پستی باید وارد شود"
   },
   "error.postalCode.required": {
+    "code": "KYC-4301",
     "en": "postalCode must be provided",
     "fa": "کد پستی باید وارد شود"
   },
   "error.postalCode.invalid": {
+    "code": "KYC-4302",
     "en": "postalCode must contain exactly 10 digits",
     "fa": "کد پستی باید دقیقا ده رقم باشد"
   },
   "error.englishInfo.firstName.required": {
+    "code": "KYC-4400",
     "en": "firstNameEn must be provided",
     "fa": "نام انگلیسی باید وارد شود"
   },
   "error.englishInfo.lastName.required": {
+    "code": "KYC-4401",
     "en": "lastNameEn must be provided",
     "fa": "نام خانوادگی انگلیسی باید وارد شود"
   },
   "error.englishInfo.telephone.required": {
+    "code": "KYC-4402",
     "en": "telephone must be provided",
     "fa": "شماره تماس باید وارد شود"
   },
   "error.kyc.notStarted": {
+    "code": "KYC-4500",
     "en": "KYC process has not been started",
     "fa": "فرآیند احراز هویت آغاز نشده است"
   },
   "error.kyc.status.queryFailed": {
+    "code": "KYC-4501",
     "en": "Unable to query KYC status",
     "fa": "امکان دریافت وضعیت احراز هویت وجود ندارد"
   },
   "error.kyc.card.descriptorsRequired": {
+    "code": "KYC-4600",
     "en": "Document descriptors must be provided",
     "fa": "توصیف‌گر کارت باید ارائه شود"
   },
   "error.kyc.id.descriptorsRequired": {
+    "code": "KYC-4601",
     "en": "At least one ID page descriptor must be provided",
     "fa": "حداقل یک توصیف‌گر صفحه شناسنامه لازم است"
   },
   "error.kyc.id.descriptorLimit": {
+    "code": "KYC-4602",
     "en": "No more than four ID page descriptors are allowed",
     "fa": "بیش از چهار توصیف‌گر صفحه شناسنامه مجاز نیست"
   },
   "error.kyc.id.descriptorNull": {
+    "code": "KYC-4603",
     "en": "ID page descriptors must not be null",
     "fa": "توصیف‌گرهای صفحه شناسنامه نباید تهی باشند"
   },
   "error.kyc.selfie.descriptorRequired": {
+    "code": "KYC-4604",
     "en": "Selfie descriptor must be provided",
     "fa": "توصیف‌گر سلفی باید ارائه شود"
   },
   "error.kyc.signature.descriptorRequired": {
+    "code": "KYC-4605",
     "en": "Signature descriptor must be provided",
     "fa": "توصیف‌گر امضا باید ارائه شود"
   },
   "error.kyc.video.descriptorRequired": {
+    "code": "KYC-4606",
     "en": "Video descriptor must be provided",
     "fa": "توصیف‌گر ویدئو باید ارائه شود"
   },
   "error.kyc.consent.notAccepted": {
+    "code": "KYC-4607",
     "en": "Consent must be accepted",
     "fa": "باید با شرایط موافقت شود"
   },
   "error.document.notFound": {
+    "code": "KYC-4700",
     "en": "Document not found",
     "fa": "سند مورد نظر یافت نشد"
   },
   "error.storage.descriptor.required": {
+    "code": "KYC-4800",
     "en": "Document descriptor must be provided",
     "fa": "توصیف‌گر سند باید ارائه شود"
   },
   "error.storage.documentType.required": {
+    "code": "KYC-4801",
     "en": "documentType must be provided",
     "fa": "نوع سند باید مشخص شود"
   },
   "error.storage.descriptor.dataRequired": {
+    "code": "KYC-4802",
     "en": "Document descriptor data must not be empty",
     "fa": "داده‌های توصیف‌گر سند نباید خالی باشد"
   }

@@ -12,6 +12,7 @@ import java.util.Optional;
 public class LocalizedErrorMessageService {
 
     private static final Logger log = LoggerFactory.getLogger(LocalizedErrorMessageService.class);
+    private static final String DEFAULT_FALLBACK_CODE = "KYC-9999";
 
     private final Map<String, LocalizedMessage> messages;
 
@@ -37,9 +38,9 @@ public class LocalizedErrorMessageService {
         String candidate = StringUtils.hasText(key) ? key : fallbackKey;
         if (StringUtils.hasText(candidate)) {
             log.debug("Missing localized message for key '{}'; using key as fallback text", candidate);
-            return new LocalizedMessage(candidate, candidate);
+            return new LocalizedMessage(DEFAULT_FALLBACK_CODE, candidate, candidate);
         }
-        return new LocalizedMessage("Unexpected error", "خطای غیرمنتظره");
+        return new LocalizedMessage(DEFAULT_FALLBACK_CODE, "Unexpected error", "خطای غیرمنتظره");
     }
 
     public Optional<LocalizedMessage> findMessage(String key) {

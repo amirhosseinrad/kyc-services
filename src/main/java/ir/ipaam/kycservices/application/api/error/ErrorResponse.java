@@ -6,18 +6,17 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record ErrorResponse(ErrorCode code, LocalizedMessage message, Map<String, ?> details) {
+public record ErrorResponse(LocalizedMessage error, Map<String, ?> details) {
 
     public ErrorResponse {
-        Objects.requireNonNull(code, "code must not be null");
-        Objects.requireNonNull(message, "message must not be null");
+        Objects.requireNonNull(error, "error must not be null");
     }
 
-    public static ErrorResponse of(ErrorCode code, LocalizedMessage message) {
-        return new ErrorResponse(code, message, null);
+    public static ErrorResponse of(LocalizedMessage error) {
+        return new ErrorResponse(error, null);
     }
 
-    public static ErrorResponse of(ErrorCode code, LocalizedMessage message, Map<String, ?> details) {
-        return new ErrorResponse(code, message, details);
+    public static ErrorResponse of(LocalizedMessage error, Map<String, ?> details) {
+        return new ErrorResponse(error, details);
     }
 }
