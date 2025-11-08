@@ -3,7 +3,7 @@ package ir.ipaam.kycservices.application.api.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
-public record EnglishPersonalInfoRequest(
+public record CustomerInfoRequest(
         @NotBlank(message = "processInstanceId is required")
         String processInstanceId,
         @NotBlank(message = "firstNameEn is required")

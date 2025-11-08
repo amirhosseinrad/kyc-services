@@ -1,6 +1,6 @@
 package ir.ipaam.kycservices.application.service.dto;
 
-public record EnglishPersonalInfoResponse(
+public record CustomerInfoResponse(
         String processInstanceId,
         String firstNameEn,
         String lastNameEn,

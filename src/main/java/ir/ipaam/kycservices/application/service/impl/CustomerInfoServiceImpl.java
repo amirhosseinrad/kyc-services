@@ -1,10 +1,10 @@
 package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
+import ir.ipaam.kycservices.application.api.dto.CustomerInfoRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
-import ir.ipaam.kycservices.application.service.EnglishPersonalInfoService;
-import ir.ipaam.kycservices.application.service.dto.EnglishPersonalInfoResponse;
+import ir.ipaam.kycservices.application.service.CustomerInfoService;
+import ir.ipaam.kycservices.application.service.dto.CustomerInfoResponse;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -30,11 +30,11 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TELEPH
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoService {
+public class CustomerInfoServiceImpl implements CustomerInfoService {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\\s]+@[^@\\\s]+\\.[^@\\\s]+$");
 
-    private static final String STEP_ENGLISH_PERSONAL_INFO_PROVIDED = "ENGLISH_PERSONAL_INFO_PROVIDED";
+    private static final String STEP_CUSTOMER_INFO_PROVIDED = "ENGLISH_PERSONAL_INFO_PROVIDED";
 
     private final CommandGateway commandGateway;
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
@@ -42,7 +42,7 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
     private final ZeebeClient zeebeClient;
 
     @Override
-    public EnglishPersonalInfoResponse provideEnglishPersonalInfo(EnglishPersonalInfoRequest request) {
+    public CustomerInfoResponse provideCustomerInfo(CustomerInfoRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId)
                 .orElseThrow(() -> {
@@ -52,14 +52,14 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
 
         if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
                 processInstanceId,
-                STEP_ENGLISH_PERSONAL_INFO_PROVIDED)) {
-            return new EnglishPersonalInfoResponse(
+                STEP_CUSTOMER_INFO_PROVIDED)) {
+            return new CustomerInfoResponse(
                     processInstanceId,
                     request.firstNameEn(),
                     request.lastNameEn(),
                     request.email(),
                     request.telephone(),
-                    "ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED"
+                    "CUSTOMER_INFO_ALREADY_PROVIDED"
             );
         }
 
@@ -85,20 +85,20 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
 
         publishWorkflowUpdate(processInstanceId, hasNewCard);
 
-        return new EnglishPersonalInfoResponse(
+        return new CustomerInfoResponse(
                 processInstanceId,
                 firstNameEn,
                 lastNameEn,
                 email,
                 telephone,
-                "ENGLISH_PERSONAL_INFO_PROVIDED"
+                "CUSTOMER_INFO_PROVIDED"
         );
     }
 
     private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("processInstanceId", processInstanceId);
-        variables.put("kycStatus", "ENGLISH_PERSONAL_INFO_PROVIDED");
+        variables.put("kycStatus", STEP_CUSTOMER_INFO_PROVIDED);
         if (hasNewCard != null) {
             variables.put("card", hasNewCard);
         }

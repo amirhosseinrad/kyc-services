@@ -2,9 +2,9 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
-import ir.ipaam.kycservices.application.service.EnglishPersonalInfoService;
-import ir.ipaam.kycservices.application.service.dto.EnglishPersonalInfoResponse;
+import ir.ipaam.kycservices.application.api.dto.CustomerInfoRequest;
+import ir.ipaam.kycservices.application.service.CustomerInfoService;
+import ir.ipaam.kycservices.application.service.dto.CustomerInfoResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,12 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/kyc/english-info")
+@RequestMapping("/kyc/customer-info")
 @Validated
-@Tag(name = "English Personal Info", description = "Capture Latin-script customer information required for downstream compliance.")
-public class EnglishPersonalInfoController {
+@Tag(name = "Customer Info", description = "Capture Latin-script customer information required for downstream compliance.")
+public class CustomerInfoController {
 
-    private final EnglishPersonalInfoService englishPersonalInfoService;
+    private final CustomerInfoService customerInfoService;
 
     @Operation(
             summary = "Provide English personal details",
@@ -30,10 +30,10 @@ public class EnglishPersonalInfoController {
                     + "Publishes a workflow update after the information is accepted."
     )
     @PostMapping
-    public ResponseEntity<EnglishPersonalInfoResponse> provideEnglishPersonalInfo(
-            @Valid @RequestBody EnglishPersonalInfoRequest request) {
-        EnglishPersonalInfoResponse response = englishPersonalInfoService.provideEnglishPersonalInfo(request);
-        HttpStatus status = "ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED".equals(response.status())
+    public ResponseEntity<CustomerInfoResponse> provideCustomerInfo(
+            @Valid @RequestBody CustomerInfoRequest request) {
+        CustomerInfoResponse response = customerInfoService.provideCustomerInfo(request);
+        HttpStatus status = "CUSTOMER_INFO_ALREADY_PROVIDED".equals(response.status())
                 ? HttpStatus.CONFLICT
                 : HttpStatus.ACCEPTED;
         return ResponseEntity.status(status).body(response);
