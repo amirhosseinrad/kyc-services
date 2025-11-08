@@ -159,7 +159,7 @@ public class KycProcessEventHandler {
             instance.setStatus("ENGLISH_PERSONAL_INFO_PROVIDED");
             instance.setCompletedAt(event.getProvidedAt());
             recordSuccessfulStep(processInstance.get(), "ENGLISH_PERSONAL_INFO_PROVIDED", event.getProvidedAt());
-            kycProcessInstanceRepository.save(instance);
+            markProcessCompleted(instance, event.getProvidedAt());
         });
     }
 
@@ -393,6 +393,35 @@ public class KycProcessEventHandler {
         if (!document.isVerified()) {
             log.debug("Document {} for process {} is not verified because branding was skipped or failed", type, processInstanceId);
         }
+    }
+
+    private void markProcessCompleted(ProcessInstance processInstance, LocalDateTime completedAt) {
+        if (processInstance == null) {
+            return;
+        }
+
+        List<StepStatus> statuses = processInstance.getStatuses();
+        if (statuses == null) {
+            statuses = new ArrayList<>();
+            processInstance.setStatuses(statuses);
+        }
+
+        boolean alreadyMarked = statuses.stream()
+                .anyMatch(step -> STATUS_PROCESS_COMPLETED.equalsIgnoreCase(step.getStepName()));
+        processInstance.setStatus(STATUS_PROCESS_COMPLETED);
+        processInstance.setCompletedAt(completedAt);
+
+        if (!alreadyMarked) {
+            StepStatus completionStep = new StepStatus();
+            completionStep.setProcess(processInstance);
+            completionStep.setStepName(STATUS_PROCESS_COMPLETED);
+            completionStep.setTimestamp(completedAt);
+            completionStep.setState(StepStatus.State.PASSED);
+            completionStep.setErrorCause(null);
+            statuses.add(completionStep);
+        }
+
+        kycProcessInstanceRepository.save(processInstance);
     }
 
     private void recordSuccessfulStep(ProcessInstance processInstance, String status, LocalDateTime timestamp) {
