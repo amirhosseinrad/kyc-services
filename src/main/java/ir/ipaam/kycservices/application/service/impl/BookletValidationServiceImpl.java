@@ -1,12 +1,10 @@
 package ir.ipaam.kycservices.application.service.impl;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import ir.ipaam.kycservices.application.api.dto.RecordTrackingNumberRequest;
 import ir.ipaam.kycservices.application.api.error.FileProcessingException;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.EsbBookletValidation;
 import ir.ipaam.kycservices.application.service.dto.BookletValidationData;
-import ir.ipaam.kycservices.domain.command.RecordTrackingNumberCommand;
 import ir.ipaam.kycservices.domain.command.UploadBookletPagesCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -41,7 +39,6 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAG
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.ID_PAGES_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
-import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.TRACKING_NUMBER_REQUIRED;
 
 @Slf4j
 @Service
@@ -200,29 +197,4 @@ public class BookletValidationServiceImpl {
         }
     }
 
-    public ResponseEntity<Map<String, Object>> recordTrackingNumber(RecordTrackingNumberRequest request) {
-        String processInstanceId = normalizeProcessInstanceId(request.getProcessInstanceNumber());
-        String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("processInstanceId", processInstanceId);
-        variables.put("trackingNumber", trackingNumber);
-        variables.put("status", "RECORD_NATIONAL_CARD_TRACKING_NUMBER");
-        RecordTrackingNumberCommand command = new RecordTrackingNumberCommand(trackingNumber, processInstanceId);
-        commandGateway.sendAndWait(command);
-        zeebeClient.newPublishMessageCommand()
-                .messageName("save-national-card-tracking-number")
-                .correlationKey(processInstanceId)
-                .variables(variables)
-                .send()
-                .join();
-
-        return ResponseEntity.ok(variables);
-    }
-
-    private String normalizeTrackingNumber(String trackingNumber) {
-        if (!StringUtils.hasText(trackingNumber)) {
-            throw new IllegalArgumentException(TRACKING_NUMBER_REQUIRED);
-        }
-        return trackingNumber.trim();
-    }
 }

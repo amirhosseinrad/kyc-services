@@ -2,12 +2,14 @@ package ir.ipaam.kycservices.application.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ir.ipaam.kycservices.application.api.dto.RecordTrackingNumberRequest;
 import ir.ipaam.kycservices.application.service.impl.BookletValidationServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -23,13 +25,6 @@ public class BookletController {
 
     private final BookletValidationServiceImpl bookletValidationServiceImpl;
 
-
-    @PostMapping("/record-tracking-national-card-number")
-    public ResponseEntity<Map<String, Object>> recordTrackingNumber(
-            @RequestBody RecordTrackingNumberRequest request) {
-        ResponseEntity<Map<String, Object>> response = bookletValidationServiceImpl.recordTrackingNumber(request);
-        return response;
-    }
 
     @Operation(
             summary = "Upload national ID booklet pages",
