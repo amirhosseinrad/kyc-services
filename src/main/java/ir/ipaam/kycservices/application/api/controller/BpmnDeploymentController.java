@@ -21,15 +21,15 @@ import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.BPMN_F
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.FILE_READ_FAILURE;
 
 @RestController
-@RequestMapping("/bpmn")
+@RequestMapping("/kyc")
 @RequiredArgsConstructor
-@Tag(name = "BPMN Deployment", description = "Manage workflow definitions that power the KYC process.")
+@Tag(name = "Process Service", description = "Manage workflow definitions that power the KYC process.")
 public class BpmnDeploymentController {
 
     private final BpmnDeploymentService service;
 
     @Operation(
-            summary = "Deploy BPMN file",
+            summary = "\uD83D\uDE80 Deploy BPMN file",
             description = "Uploads a BPMN process definition and redeploys it only when the payload differs from the "
                     + "latest deployment. Returns the resulting deployment metadata on success."
     )

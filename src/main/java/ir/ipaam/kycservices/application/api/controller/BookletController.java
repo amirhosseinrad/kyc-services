@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc/booklets")
-@Tag(name = "Booklet Upload", description = "Submit multi-page scans of the customer's national ID booklet.")
+@Tag(name = "Booklet Service", description = "Submit multi-page scans of the customer's national ID booklet.")
 public class BookletController {
 
     public static final long MAX_PAGE_SIZE_BYTES = BookletValidationServiceImpl.MAX_PAGE_SIZE_BYTES;

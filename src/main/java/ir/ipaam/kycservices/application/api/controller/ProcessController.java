@@ -26,7 +26,7 @@ import java.util.Map;
 @RequestMapping("/kyc")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "KYC Process", description = "Start new KYC workflows and query their current status.")
+@Tag(name = "Process Service", description = "Start new KYC workflows and query their current status.")
 public class ProcessController {
 
     private final KycServiceTasks kycServiceTasks;

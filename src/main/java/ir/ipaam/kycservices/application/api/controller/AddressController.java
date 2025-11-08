@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
-@Tag(name = "Address Verification", description = "Collect and validate postal address information for a KYC process.")
+@Tag(name = "Address Service", description = "Collect and validate postal address information for a KYC process.")
 public class AddressController {
 
     private final AddressService addressService;

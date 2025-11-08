@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc/documents")
-@Tag(name = "Document Retrieval", description = "Download previously uploaded KYC artifacts.")
+@Tag(name = "Document Service", description = "Download previously uploaded KYC artifacts.")
 public class DocumentQueryController {
 
     private final DocumentRetrievalService documentRetrievalService;

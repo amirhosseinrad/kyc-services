@@ -18,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
-@Tag(name = "Video Upload", description = "Receive short selfie videos required for liveness validation.")
+@Tag(name = "Biometric Service", description = "Receive short selfie videos required for liveness validation.")
 public class VideoController {
 
     private final VideoService videoService;

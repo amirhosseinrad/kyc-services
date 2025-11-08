@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
-@Tag(name = "Signature Upload", description = "Collect handwritten signatures for contract fulfillment.")
+@Tag(name = "Signature Service", description = "Collect handwritten signatures for contract fulfillment.")
 public class SignatureController {
 
     private final SignatureService signatureService;

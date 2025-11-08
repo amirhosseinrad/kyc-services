@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/kyc")
-@Tag(name = "Selfie Upload", description = "Capture and persist the customer's selfie used for identity verification.")
+@Tag(name = "Biometric Service", description = "Capture and persist the customer's selfie used for identity verification.")
 public class SelfieController {
 
     private final SelfieService selfieService;
