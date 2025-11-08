@@ -4,6 +4,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.EnglishPersonalInfoService;
+import ir.ipaam.kycservices.application.service.dto.EnglishPersonalInfoResponse;
 import ir.ipaam.kycservices.domain.command.ProvideEnglishPersonalInfoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
@@ -11,8 +12,6 @@ import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -43,7 +42,7 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
     private final ZeebeClient zeebeClient;
 
     @Override
-    public ResponseEntity<Map<String, Object>> provideEnglishPersonalInfo(EnglishPersonalInfoRequest request) {
+    public EnglishPersonalInfoResponse provideEnglishPersonalInfo(EnglishPersonalInfoRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(processInstanceId)
                 .orElseThrow(() -> {
@@ -54,10 +53,14 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
         if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
                 processInstanceId,
                 STEP_ENGLISH_PERSONAL_INFO_PROVIDED)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                    "processInstanceId", processInstanceId,
-                    "status", "ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED"
-            ));
+            return new EnglishPersonalInfoResponse(
+                    processInstanceId,
+                    request.firstNameEn(),
+                    request.lastNameEn(),
+                    request.email(),
+                    request.telephone(),
+                    "ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED"
+            );
         }
 
         String firstNameEn = normalizeRequiredText(request.firstNameEn(), ENGLISH_FIRST_NAME_REQUIRED);
@@ -82,14 +85,14 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
 
         publishWorkflowUpdate(processInstanceId, hasNewCard);
 
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
-                "processInstanceId", processInstanceId,
-                "firstNameEn", firstNameEn,
-                "lastNameEn", lastNameEn,
-                "email", email,
-                "telephone", telephone,
-                "status", "ENGLISH_PERSONAL_INFO_PROVIDED"
-        ));
+        return new EnglishPersonalInfoResponse(
+                processInstanceId,
+                firstNameEn,
+                lastNameEn,
+                email,
+                telephone,
+                "ENGLISH_PERSONAL_INFO_PROVIDED"
+        );
     }
 
     private void publishWorkflowUpdate(String processInstanceId, Boolean hasNewCard) {
@@ -129,4 +132,3 @@ public class EnglishPersonalInfoServiceImpl implements EnglishPersonalInfoServic
         return normalized;
     }
 }
-

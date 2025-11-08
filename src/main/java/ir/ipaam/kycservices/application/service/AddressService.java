@@ -1,12 +1,9 @@
 package ir.ipaam.kycservices.application.service;
 
 import ir.ipaam.kycservices.application.api.dto.AddressVerificationRequest;
-import org.springframework.http.ResponseEntity;
-
-import java.util.Map;
+import ir.ipaam.kycservices.application.service.dto.AddressCollectionResponse;
 
 public interface AddressService {
 
-    ResponseEntity<Map<String, Object>> collectAddress(AddressVerificationRequest request, String stageHeader);
+    AddressCollectionResponse collectAddress(AddressVerificationRequest request, String stageHeader);
 }
-

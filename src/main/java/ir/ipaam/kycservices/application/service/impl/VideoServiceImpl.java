@@ -6,6 +6,8 @@ import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.EsbLivenessDetection;
 import ir.ipaam.kycservices.application.service.VideoService;
 import ir.ipaam.kycservices.application.service.dto.LivenessCheckData;
+import ir.ipaam.kycservices.application.service.dto.VideoUploadRequest;
+import ir.ipaam.kycservices.application.service.dto.VideoUploadResponse;
 import ir.ipaam.kycservices.domain.command.UploadVideoCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
@@ -15,10 +17,8 @@ import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -55,7 +55,9 @@ public class VideoServiceImpl implements VideoService {
     private final EsbLivenessDetection livenessDetection;
 
     @Override
-    public ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, MultipartFile image, String processInstanceId) {
+    public VideoUploadResponse uploadVideo(VideoUploadRequest request) {
+        MultipartFile video = request.video();
+        MultipartFile image = request.image();
         validateFile(
                 video,
                 VIDEO_REQUIRED,
@@ -70,7 +72,7 @@ public class VideoServiceImpl implements VideoService {
                 MAX_IMAGE_SIZE_BYTES,
                 FileTypeValidator.IMAGE_CONTENT_TYPES,
                 FileTypeValidator.IMAGE_EXTENSIONS);
-        String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
+        String normalizedProcessId = normalizeProcessInstanceId(request.processInstanceId());
 
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
                 .orElseThrow(() -> {
@@ -81,10 +83,16 @@ public class VideoServiceImpl implements VideoService {
         if (kycStepStatusRepository.existsByProcess_CamundaInstanceIdAndStepName(
                 normalizedProcessId,
                 STEP_VIDEO_UPLOADED)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                    "processInstanceId", normalizedProcessId,
-                    "status", "VIDEO_ALREADY_UPLOADED"
-            ));
+            return new VideoUploadResponse(
+                    normalizedProcessId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "VIDEO_ALREADY_UPLOADED"
+            );
         }
 
         byte[] videoBytes = readFile(video);
@@ -115,24 +123,16 @@ public class VideoServiceImpl implements VideoService {
 
         publishWorkflowUpdate(normalizedProcessId, hasNewCard, match, livenessData);
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("processInstanceId", normalizedProcessId);
-        body.put("videoSize", videoBytes.length);
-        body.put("status", "VIDEO_RECEIVED");
-        body.put("match", match);
-        if (livenessData.livenessScore() != null) {
-            body.put("livenessScore", livenessData.livenessScore());
-        }
-        if (livenessData.isReal() != null) {
-            body.put("isReal", livenessData.isReal());
-        }
-        if (StringUtils.hasText(livenessData.trackId())) {
-            body.put("livenessTrackId", livenessData.trackId());
-        }
-        if (livenessData.framesCount() != null) {
-            body.put("framesCount", livenessData.framesCount());
-        }
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+        return new VideoUploadResponse(
+                normalizedProcessId,
+                videoBytes.length,
+                match,
+                livenessData.livenessScore(),
+                livenessData.isReal(),
+                livenessData.trackId(),
+                livenessData.framesCount(),
+                "VIDEO_RECEIVED"
+        );
     }
 
     private void publishWorkflowUpdate(String processInstanceId,

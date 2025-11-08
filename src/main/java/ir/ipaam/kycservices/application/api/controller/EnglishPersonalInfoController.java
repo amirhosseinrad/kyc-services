@@ -4,16 +4,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.EnglishPersonalInfoRequest;
 import ir.ipaam.kycservices.application.service.EnglishPersonalInfoService;
+import ir.ipaam.kycservices.application.service.dto.EnglishPersonalInfoResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.validation.Valid;
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,8 +30,12 @@ public class EnglishPersonalInfoController {
                     + "Publishes a workflow update after the information is accepted."
     )
     @PostMapping
-    public ResponseEntity<Map<String, Object>> provideEnglishPersonalInfo(@Valid @RequestBody EnglishPersonalInfoRequest request
-    ) {
-        return englishPersonalInfoService.provideEnglishPersonalInfo(request);
+    public ResponseEntity<EnglishPersonalInfoResponse> provideEnglishPersonalInfo(
+            @Valid @RequestBody EnglishPersonalInfoRequest request) {
+        EnglishPersonalInfoResponse response = englishPersonalInfoService.provideEnglishPersonalInfo(request);
+        HttpStatus status = "ENGLISH_PERSONAL_INFO_ALREADY_PROVIDED".equals(response.status())
+                ? HttpStatus.CONFLICT
+                : HttpStatus.ACCEPTED;
+        return ResponseEntity.status(status).body(response);
     }
 }

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.*;
 import ir.ipaam.kycservices.application.service.ProcessService;
+import ir.ipaam.kycservices.application.service.dto.CancelProcessResponse;
 import ir.ipaam.kycservices.domain.command.StartKycProcessCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.service.KycServiceTasks;
@@ -83,7 +84,8 @@ public class ProcessController {
                     + "marks the process as cancelled, and records the termination timestamp."
     )
     @PostMapping("/cancel")
-    public ResponseEntity<Map<String, Object>> cancelProcess(@RequestBody CancelProcessRequest request) {
-        return processService.cancelProcess(request.getProcessInstanceId());
+    public ResponseEntity<CancelProcessResponse> cancelProcess(@RequestBody CancelProcessRequest request) {
+        CancelProcessResponse response = processService.cancelProcess(request.getProcessInstanceId());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 }

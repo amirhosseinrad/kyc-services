@@ -4,16 +4,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.application.service.ConsentService;
+import ir.ipaam.kycservices.application.service.dto.ConsentResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.validation.Valid;
-import java.util.Map;
  
 @RestController
 @RequiredArgsConstructor
@@ -30,7 +30,11 @@ public class ConsentController {
                     + "acceptance and emits a consent-accepted message to the workflow engine."
     )
     @PostMapping
-    public ResponseEntity<Map<String, Object>> acceptConsent(@Valid @RequestBody ConsentRequest request) {
-        return consentService.acceptConsent(request);
+    public ResponseEntity<ConsentResponse> acceptConsent(@Valid @RequestBody ConsentRequest request) {
+        ConsentResponse response = consentService.acceptConsent(request);
+        HttpStatus status = "CONSENT_ALREADY_ACCEPTED".equals(response.status())
+                ? HttpStatus.CONFLICT
+                : HttpStatus.ACCEPTED;
+        return ResponseEntity.status(status).body(response);
     }
 }

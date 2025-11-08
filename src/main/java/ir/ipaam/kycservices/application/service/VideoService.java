@@ -1,11 +1,9 @@
 package ir.ipaam.kycservices.application.service;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
+import ir.ipaam.kycservices.application.service.dto.VideoUploadRequest;
+import ir.ipaam.kycservices.application.service.dto.VideoUploadResponse;
 
 public interface VideoService {
 
-    ResponseEntity<Map<String, Object>> uploadVideo(MultipartFile video, MultipartFile image, String processInstanceId);
+    VideoUploadResponse uploadVideo(VideoUploadRequest request);
 }

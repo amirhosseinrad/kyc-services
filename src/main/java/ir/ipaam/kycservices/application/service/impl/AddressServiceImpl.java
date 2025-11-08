@@ -7,6 +7,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.AddressVerificationRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.AddressService;
+import ir.ipaam.kycservices.application.service.dto.AddressCollectionResponse;
 import ir.ipaam.kycservices.domain.command.CollectAddressCommand;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.Address;
@@ -17,9 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -61,7 +60,7 @@ public class AddressServiceImpl implements AddressService {
     private String defaultStage;
 
     @Override
-    public ResponseEntity<Map<String, Object>> collectAddress(AddressVerificationRequest request, String stageHeader) {
+    public AddressCollectionResponse collectAddress(AddressVerificationRequest request, String stageHeader) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
         String postalCode = normalizePostalCode(request.postalCode());
         String address = normalizeAddress(request.address());
@@ -100,19 +99,9 @@ public class AddressServiceImpl implements AddressService {
                         "valid", true
                 ));
 
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("processInstanceId", processInstanceId);
-        responseBody.put("postalCode", postalCode);
-        responseBody.put("address", address);
-        responseBody.put("status", STEP_ADDRESS_AND_ZIPCODE_COLLECTED);
-
-        Optional<Map<String, Object>> validationResult = validateWithExternalService(postalCode, address, stageHeader);
-        validationResult.ifPresent(result -> {
-            responseBody.put("validation", result);
-            responseBody.put("validationStatus", STEP_ZIPCODE_AND_ADDRESS_VALIDATED);
-        });
-
-        validationResult.ifPresent(result -> {
+        Map<String, Object> validationResult = validateWithExternalService(postalCode, address, stageHeader)
+                .orElse(null);
+        if (validationResult != null) {
             addressVerificationRepository
                     .findTopByProcess_CamundaInstanceIdOrderByIdDesc(processInstanceId)
                     .ifPresent(verification -> {
@@ -136,27 +125,45 @@ public class AddressServiceImpl implements AddressService {
                     postalCode,
                     address,
                     variables);
-        });
+        }
 
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responseBody);
+        String status = validationResult != null
+                ? STEP_ZIPCODE_AND_ADDRESS_VALIDATED
+                : STEP_ADDRESS_AND_ZIPCODE_COLLECTED;
+        String validationStatus = validationResult != null ? STEP_ZIPCODE_AND_ADDRESS_VALIDATED : null;
+        Boolean zipValid = validationResult != null ? Boolean.TRUE : null;
+
+        return new AddressCollectionResponse(
+                processInstanceId,
+                postalCode,
+                address,
+                status,
+                validationStatus,
+                zipValid,
+                validationResult,
+                false
+        );
     }
 
-    private ResponseEntity<Map<String, Object>> buildConflictResponse(String processInstanceId,
-                                                                       String postalCode,
-                                                                       String address,
-                                                                       boolean zipValidated) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("processInstanceId", processInstanceId);
-        body.put("postalCode", postalCode);
-        body.put("address", address);
-        if (zipValidated) {
-            body.put("status", STEP_ZIPCODE_AND_ADDRESS_VALIDATED);
-            body.put("validationStatus", STEP_ZIPCODE_AND_ADDRESS_VALIDATED);
-            body.put("zipValid", true);
-        } else {
-            body.put("status", STEP_ADDRESS_AND_ZIPCODE_COLLECTED);
-        }
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    private AddressCollectionResponse buildConflictResponse(String processInstanceId,
+                                                            String postalCode,
+                                                            String address,
+                                                            boolean zipValidated) {
+        String status = zipValidated
+                ? STEP_ZIPCODE_AND_ADDRESS_VALIDATED
+                : STEP_ADDRESS_AND_ZIPCODE_COLLECTED;
+        String validationStatus = zipValidated ? STEP_ZIPCODE_AND_ADDRESS_VALIDATED : null;
+        Boolean zipValid = zipValidated ? Boolean.TRUE : null;
+        return new AddressCollectionResponse(
+                processInstanceId,
+                postalCode,
+                address,
+                status,
+                validationStatus,
+                zipValid,
+                null,
+                true
+        );
     }
 
     private Optional<Map<String, Object>> validateWithExternalService(String postalCode,

@@ -3,6 +3,7 @@ package ir.ipaam.kycservices.application.service.impl;
 import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.ProcessService;
+import ir.ipaam.kycservices.application.service.dto.CancelProcessResponse;
 import ir.ipaam.kycservices.domain.command.UpdateKycStatusCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.domain.model.entity.StepStatus;
@@ -10,15 +11,10 @@ import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceReposito
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_INSTANCE_ID_REQUIRED;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.PROCESS_NOT_FOUND;
 import static ir.ipaam.kycservices.application.api.error.ErrorMessageKeys.WORKFLOW_PROCESS_CANCEL_FAILED;
@@ -35,7 +31,7 @@ public class ProcessServiceImpl implements ProcessService {
     private final CommandGateway commandGateway;
 
     @Override
-    public ResponseEntity<Map<String, Object>> cancelProcess(String processInstanceId) {
+    public CancelProcessResponse cancelProcess(String processInstanceId) {
         String normalizedProcessId = normalizeProcessInstanceId(processInstanceId);
         ProcessInstance processInstance = kycProcessInstanceRepository.findByCamundaInstanceId(normalizedProcessId)
                 .orElseThrow(() -> {
@@ -65,11 +61,11 @@ public class ProcessServiceImpl implements ProcessService {
         processInstance.setCompletedAt(canceledAt);
         kycProcessInstanceRepository.save(processInstance);
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("processInstanceId", normalizedProcessId);
-        body.put("status", STATUS_PROCESS_CANCELLED);
-        body.put("canceledAt", canceledAt);
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+        return new CancelProcessResponse(
+                normalizedProcessId,
+                STATUS_PROCESS_CANCELLED,
+                canceledAt
+        );
     }
 
     private String normalizeProcessInstanceId(String processInstanceId) {
@@ -87,4 +83,3 @@ public class ProcessServiceImpl implements ProcessService {
         }
     }
 }
-

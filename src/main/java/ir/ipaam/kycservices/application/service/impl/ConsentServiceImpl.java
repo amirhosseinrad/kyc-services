@@ -4,6 +4,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import ir.ipaam.kycservices.application.api.dto.ConsentRequest;
 import ir.ipaam.kycservices.application.api.error.ResourceNotFoundException;
 import ir.ipaam.kycservices.application.service.ConsentService;
+import ir.ipaam.kycservices.application.service.dto.ConsentResponse;
 import ir.ipaam.kycservices.domain.command.AcceptConsentCommand;
 import ir.ipaam.kycservices.domain.model.entity.ProcessInstance;
 import ir.ipaam.kycservices.infrastructure.repository.ConsentRepository;
@@ -11,8 +12,6 @@ import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceReposito
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -34,7 +33,7 @@ public class ConsentServiceImpl implements ConsentService {
     private final ConsentRepository consentRepository;
 
     @Override
-    public ResponseEntity<Map<String, Object>> acceptConsent(ConsentRequest request) {
+    public ConsentResponse acceptConsent(ConsentRequest request) {
         String processInstanceId = normalizeProcessInstanceId(request.processInstanceId());
         String termsVersion = normalizeTermsVersion(request.termsVersion());
 
@@ -48,11 +47,12 @@ public class ConsentServiceImpl implements ConsentService {
 
         if (consentRepository.findByProcessAndAccepted(processInstance, true).isPresent()) {
             log.info("Consent already accepted for process {}", processInstanceId);
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                    "processInstanceId", processInstanceId,
-                    "termsVersion", termsVersion,
-                    "status", "CONSENT_ALREADY_ACCEPTED"
-            ));
+            return new ConsentResponse(
+                    processInstanceId,
+                    termsVersion,
+                    true,
+                    "CONSENT_ALREADY_ACCEPTED"
+            );
         }
 
         AcceptConsentCommand command = new AcceptConsentCommand(
@@ -64,11 +64,12 @@ public class ConsentServiceImpl implements ConsentService {
         commandGateway.sendAndWait(command);
         updateWorkflowVariables(processInstanceId, termsVersion);
 
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
-                "processInstanceId", processInstanceId,
-                "termsVersion", termsVersion,
-                "status", "CONSENT_ACCEPTED"
-        ));
+        return new ConsentResponse(
+                processInstanceId,
+                termsVersion,
+                true,
+                "CONSENT_ACCEPTED"
+        );
     }
 
     private void updateWorkflowVariables(String processInstanceId, String termsVersion) {
