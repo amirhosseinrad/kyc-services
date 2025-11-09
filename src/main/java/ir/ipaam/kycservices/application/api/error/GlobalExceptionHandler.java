@@ -94,6 +94,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), FILE_READ_FAILURE);
     }
 
+    @ExceptionHandler(ObjectStorageUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleObjectStorageUnavailableException(ObjectStorageUnavailableException ex) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), STORAGE_UNAVAILABLE);
+    }
+
     @ExceptionHandler(CommandExecutionException.class)
     public ResponseEntity<ErrorResponse> handleCommandExecutionException(CommandExecutionException ex) {
         Throwable rootCause = resolveRootCause(ex);

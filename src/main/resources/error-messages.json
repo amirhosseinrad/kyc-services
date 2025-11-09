@@ -298,5 +298,10 @@
     "code": "KYC-4802",
     "en": "Document descriptor data must not be empty",
     "fa": "داده‌های توصیف‌گر سند نباید خالی باشد"
+  },
+  "error.storage.unavailable": {
+    "code": "KYC-4803",
+    "en": "Object storage is unavailable. Please retry later.",
+    "fa": "ذخیره‌ساز فایل در دسترس نیست. لطفا بعدا دوباره تلاش کنید."
   }
 }

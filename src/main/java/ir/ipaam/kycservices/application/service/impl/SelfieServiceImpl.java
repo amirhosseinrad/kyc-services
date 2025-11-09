@@ -13,6 +13,7 @@ import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -51,6 +52,7 @@ public class SelfieServiceImpl implements SelfieService {
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
     private final EsbFaceDetection faceDetection;
+    private final MinioStorageService minioStorageService;
 
     @Override
     public SelfieUploadResult uploadSelfie(MultipartFile selfie, String processInstanceId) {
@@ -71,6 +73,8 @@ public class SelfieServiceImpl implements SelfieService {
                     "status", "SELFIE_ALREADY_UPLOADED"
             ));
         }
+
+        minioStorageService.assertAvailable();
 
         byte[] selfieBytes = readFile(selfie);
 

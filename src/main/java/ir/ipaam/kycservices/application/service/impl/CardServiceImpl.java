@@ -24,6 +24,7 @@ import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.repository.CustomerRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -63,6 +64,7 @@ public class CardServiceImpl implements CardService {
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
     private final EsbNationalCardValidation esbNationalCardValidation;
+    private final MinioStorageService minioStorageService;
 
     @Override
     public CardDocumentUploadResponse uploadCardDocuments(CardDocumentUploadRequest request) {
@@ -88,6 +90,8 @@ public class CardServiceImpl implements CardService {
                     "CARD_DOCUMENTS_ALREADY_UPLOADED"
             );
         }
+
+        minioStorageService.assertAvailable();
 
         byte[] frontBytes = ensureWithinLimit(readFile(frontImage), CARD_FRONT_TOO_LARGE);
         byte[] backBytes = ensureWithinLimit(readFile(backImage), CARD_BACK_TOO_LARGE);

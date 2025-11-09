@@ -11,6 +11,7 @@ import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -60,6 +61,7 @@ public class BookletValidationServiceImpl {
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
     private final EsbBookletValidation esbBookletValidation;
+    private final MinioStorageService minioStorageService;
 
     public ResponseEntity<Map<String, Object>> uploadBookletPages(List<MultipartFile> pages, String processInstanceId) {
         List<MultipartFile> normalizedPages = pages == null ? List.of() : pages;
@@ -86,6 +88,8 @@ public class BookletValidationServiceImpl {
                     "status", "ID_PAGES_ALREADY_UPLOADED"
             ));
         }
+
+        minioStorageService.assertAvailable();
 
         List<DocumentPayloadDescriptor> descriptors = new ArrayList<>();
         List<Integer> sizes = new ArrayList<>();

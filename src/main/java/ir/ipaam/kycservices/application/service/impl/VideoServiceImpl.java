@@ -14,6 +14,7 @@ import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -53,6 +54,7 @@ public class VideoServiceImpl implements VideoService {
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
     private final EsbLivenessDetection livenessDetection;
+    private final MinioStorageService minioStorageService;
 
     @Override
     public VideoUploadResponse uploadVideo(VideoUploadRequest request) {
@@ -94,6 +96,8 @@ public class VideoServiceImpl implements VideoService {
                     "VIDEO_ALREADY_UPLOADED"
             );
         }
+
+        minioStorageService.assertAvailable();
 
         byte[] videoBytes = readFile(video);
         byte[] imageBytes = readFile(image);

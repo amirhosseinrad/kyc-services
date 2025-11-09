@@ -11,6 +11,7 @@ import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.common.validation.FileTypeValidator;
 import ir.ipaam.kycservices.infrastructure.repository.KycProcessInstanceRepository;
 import ir.ipaam.kycservices.infrastructure.repository.KycStepStatusRepository;
+import ir.ipaam.kycservices.infrastructure.service.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -43,6 +44,7 @@ public class SignatureServiceImpl implements SignatureService {
     private final KycProcessInstanceRepository kycProcessInstanceRepository;
     private final KycStepStatusRepository kycStepStatusRepository;
     private final ZeebeClient zeebeClient;
+    private final MinioStorageService minioStorageService;
 
     @Override
     public SignatureUploadResult uploadSignature(MultipartFile signature, String processInstanceId) {
@@ -63,6 +65,8 @@ public class SignatureServiceImpl implements SignatureService {
                     "status", "SIGNATURE_ALREADY_UPLOADED"
             ));
         }
+
+        minioStorageService.assertAvailable();
 
         byte[] signatureBytes = readFile(signature);
 

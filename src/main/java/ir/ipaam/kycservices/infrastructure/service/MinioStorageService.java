@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import ir.ipaam.kycservices.application.api.error.ErrorMessageKeys;
+import ir.ipaam.kycservices.application.api.error.ObjectStorageUnavailableException;
 import ir.ipaam.kycservices.domain.model.value.DocumentPayloadDescriptor;
 import ir.ipaam.kycservices.infrastructure.service.dto.DocumentMetadata;
 
@@ -118,6 +119,15 @@ public class MinioStorageService {
             metadata.setEncryptionIv(Base64.getEncoder().encodeToString(encryption.initializationVector()));
         }
         return metadata;
+    }
+
+    public void assertAvailable() {
+        try {
+            minioClient.listBuckets();
+        } catch (Exception ex) {
+            log.error("Object storage health check failed", ex);
+            throw new ObjectStorageUnavailableException(ex);
+        }
     }
 
     public byte[] download(String storagePath) {

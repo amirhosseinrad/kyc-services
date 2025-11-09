@@ -81,4 +81,5 @@ public final class ErrorMessageKeys {
     public static final String STORAGE_DESCRIPTOR_REQUIRED = "error.storage.descriptor.required";
     public static final String STORAGE_DOCUMENT_TYPE_REQUIRED = "error.storage.documentType.required";
     public static final String STORAGE_DESCRIPTOR_DATA_REQUIRED = "error.storage.descriptor.dataRequired";
+    public static final String STORAGE_UNAVAILABLE = "error.storage.unavailable";
 }
