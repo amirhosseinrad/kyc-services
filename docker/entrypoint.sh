@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -15,6 +14,21 @@ DB_NAME="${DB_NAME:-kyc_services}"
 DB_USER="${DB_USER:-postgres}"
 DB_PASSWORD="${DB_PASSWORD:-Amir@123456}"
 DB_SCHEMA="${DB_SCHEMA:-public}"
+
+MINIO_BIN="${MINIO_BIN:-/usr/local/bin/minio}"
+ENABLE_MINIO="${ENABLE_MINIO:-true}"
+MINIO_DATA_DIR="${MINIO_DATA_DIR:-/var/lib/minio/data}"
+MINIO_PORT="${MINIO_PORT:-9000}"
+MINIO_CONSOLE_PORT="${MINIO_CONSOLE_PORT:-9001}"
+MINIO_PID=""
+
+cleanup() {
+  if [[ -n "${MINIO_PID:-}" ]]; then
+    echo "Stopping MinIO (pid ${MINIO_PID}) ..."
+    kill "${MINIO_PID}" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
 
 PG_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
 PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
@@ -123,19 +137,52 @@ if [[ -n "${DB_SCHEMA}" ]]; then
   fi
 fi
 
-# --- MinIO Auto-Start ---
-echo "Checking for MinIO container..."
-if ! docker ps --format '{{.Names}}' | grep -q '^minio$'; then
-  echo "No MinIO container found. Launching one..."
-  docker run -d \
-    --name minio \
-    -p 9000:9000 -p 9001:9001 \
-    -e MINIO_ROOT_USER=${STORAGE_MINIO_ACCESS_KEY:-minioadmin} \
-    -e MINIO_ROOT_PASSWORD=${STORAGE_MINIO_SECRET_KEY:-minioadmin} \
-    quay.io/minio/minio server /data --console-address ":9001"
-else
-  echo "MinIO already running."
-fi
+start_minio_server() {
+  local enable="${ENABLE_MINIO,,}"
+  if [[ "${enable}" != "true" ]]; then
+    echo "Skipping MinIO startup (ENABLE_MINIO=${ENABLE_MINIO})."
+    return
+  fi
+
+  if [[ ! -x "${MINIO_BIN}" ]]; then
+    echo "MinIO binary not found at ${MINIO_BIN}; skipping startup."
+    return
+  fi
+
+  local root_user root_password
+  root_user="${STORAGE_MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}"
+  root_password="${STORAGE_MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}"
+
+  mkdir -p "${MINIO_DATA_DIR}"
+  echo "Starting MinIO server on :${MINIO_PORT} (console :${MINIO_CONSOLE_PORT}) ..."
+  MINIO_ROOT_USER="${root_user}" \
+  MINIO_ROOT_PASSWORD="${root_password}" \
+    "${MINIO_BIN}" server "${MINIO_DATA_DIR}" \
+      --address ":${MINIO_PORT}" \
+      --console-address ":${MINIO_CONSOLE_PORT}" &
+  MINIO_PID=$!
+  export STORAGE_MINIO_ACCESS_KEY="${root_user}"
+  export STORAGE_MINIO_SECRET_KEY="${root_password}"
+}
+
+wait_for_minio() {
+  if [[ -z "${MINIO_PID:-}" ]]; then
+    return
+  fi
+
+  local retries=30
+  until curl -fs "http://127.0.0.1:${MINIO_PORT}/minio/health/ready" >/dev/null 2>&1; do
+    if (( retries-- <= 0 )); then
+      echo "Timed out waiting for MinIO readiness; continuing startup." >&2
+      return
+    fi
+    sleep 1
+  done
+  echo "MinIO is ready."
+}
+
+start_minio_server
+wait_for_minio
 
 # Launch the Spring Boot application.
 echo "Starting KYC services application ..."
