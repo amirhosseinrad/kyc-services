@@ -48,7 +48,10 @@ ENV DB_HOST=localhost \
     MINIO_CONSOLE_PORT=9001 \
     ENABLE_MINIO=true \
     STORAGE_MINIO_ACCESS_KEY=minioadmin \
-    STORAGE_MINIO_SECRET_KEY=minioadmin
+    STORAGE_MINIO_SECRET_KEY=minioadmin \
+    ENABLE_REMOTE_DEBUG=false \
+    REMOTE_DEBUG_PORT=5005 \
+    REMOTE_DEBUG_SUSPEND=n
 
 # PostgreSQL expects a couple of directories to exist when running as root in a container.
 RUN mkdir -p /var/run/postgresql && chown postgres:postgres /var/run/postgresql
@@ -58,6 +61,6 @@ COPY --from=build /workspace/target/*.jar /app/app.jar
 COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-EXPOSE 8002 5432
+EXPOSE 8002 5432 5005
 
 ENTRYPOINT ["/app/entrypoint.sh"]

@@ -20,6 +20,9 @@ ENABLE_MINIO="${ENABLE_MINIO:-true}"
 MINIO_DATA_DIR="${MINIO_DATA_DIR:-/var/lib/minio/data}"
 MINIO_PORT="${MINIO_PORT:-9000}"
 MINIO_CONSOLE_PORT="${MINIO_CONSOLE_PORT:-9001}"
+ENABLE_REMOTE_DEBUG="${ENABLE_REMOTE_DEBUG:-false}"
+REMOTE_DEBUG_PORT="${REMOTE_DEBUG_PORT:-5005}"
+REMOTE_DEBUG_SUSPEND="${REMOTE_DEBUG_SUSPEND:-n}"
 MINIO_PID=""
 
 cleanup() {
@@ -183,6 +186,13 @@ wait_for_minio() {
 
 start_minio_server
 wait_for_minio
+
+# Configure optional JDWP remote debugging.
+if [[ "${ENABLE_REMOTE_DEBUG,,}" == "true" ]]; then
+  debug_opts="-agentlib:jdwp=transport=dt_socket,server=y,suspend=${REMOTE_DEBUG_SUSPEND},address=*:${REMOTE_DEBUG_PORT}"
+  export JAVA_OPTS="${JAVA_OPTS:-} ${debug_opts}"
+  echo "Remote debugging enabled on port ${REMOTE_DEBUG_PORT} (suspend=${REMOTE_DEBUG_SUSPEND})."
+fi
 
 # Launch the Spring Boot application.
 echo "Starting KYC services application ..."

@@ -72,7 +72,29 @@ image:
 All PostgreSQL data lives inside the container; mount `/var/lib/postgresql` to
 persist it across restarts.
 
----
+### Remote Debugging
+
+The container can optionally expose a JDWP socket so you can attach IntelliJ or VS Code to a running instance (for example on `192.168.179.21`). Set the following environment variables when you `docker run`:
+
+| Variable               | Default | Description                                                                 |
+|------------------------|---------|-----------------------------------------------------------------------------|
+| `ENABLE_REMOTE_DEBUG`  | `false` | Turn JDWP on/off.                                                           |
+| `REMOTE_DEBUG_PORT`    | `5005`  | Socket the agent listens on (publish this port when running the container). |
+| `REMOTE_DEBUG_SUSPEND` | `n`     | Pass `y` to make the JVM wait for the debugger before starting Spring.      |
+
+Example:
+
+```bash
+docker run -d --name kyc-services \
+  -p 8002:8002 -p 5432:5432 -p 5005:5005 \
+  -e ENABLE_REMOTE_DEBUG=true \
+  -e REMOTE_DEBUG_PORT=5005 \
+  kyc-services:latest
+```
+
+From your IDE create a “Remote JVM Debug” configuration that attaches to `192.168.179.21:5005`.
+
+--- 
 
 ##  Tech Stack
 
